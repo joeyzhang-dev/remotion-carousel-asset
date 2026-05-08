@@ -3104,8 +3104,8 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
               src={staticFile("folk-mark.png")}
               style={{
                 position: "absolute",
-                left: 24 * scale,
-                top: 24 * scale,
+                left: -8 * scale,
+                top: -28 * scale,
                 width: 180 * scale,
                 height: 180 * scale,
                 filter: `brightness(0) invert(1) drop-shadow(0 ${2 * scale}px ${4 * scale}px rgba(0,0,0,0.4)) drop-shadow(0 ${-1 * scale}px 0 rgba(0,0,0,0.35))`,
