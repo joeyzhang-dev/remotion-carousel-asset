@@ -2367,7 +2367,7 @@ const Scene3: React.FC<Scene3Props> = ({
   // Opacity ramp: gets visible quickly during the first ~0.18s of
   // the open so we don't render a tiny invisible point. Holds at
   // its final value (0.55) once visible.
-  const igFeedOpacity = interpolate(
+  const igFeedFadeIn = interpolate(
     local,
     [igFeedFadeStart, igFeedFadeStart + sec(0.18, fps)],
     [0, 0.55],
@@ -2375,6 +2375,37 @@ const Scene3: React.FC<Scene3Props> = ({
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
       easing: Easing.out(Easing.cubic),
+    },
+  );
+  // Exit transition: as the image flies into the chat, the IG layer
+  // fades out and drifts upward by ~50px. Reads as the profile page
+  // "lifting away" once the user has tapped what they wanted, so the
+  // chat replies that follow have a clean white background instead
+  // of competing with a still-scrolling feed.
+  const igExitFadeStart = igFlightStart;
+  const igExitFadeEnd = igFlightEnd + sec(0.1, fps);
+  const igExitFadeMul = interpolate(
+    local,
+    [igExitFadeStart, igExitFadeEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const igFeedOpacity = igFeedFadeIn * igExitFadeMul;
+  // Upward drift during the exit. Anchored to the same window as the
+  // exit fade so they land together. Subtle (~50px scale-aware) — the
+  // page rises slightly as it dissolves.
+  const igExitDriftY = interpolate(
+    local,
+    [igExitFadeStart, igExitFadeEnd],
+    [0, -50 * scale],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
     },
   );
 
@@ -2660,7 +2691,7 @@ const Scene3: React.FC<Scene3Props> = ({
             // The "Instagram" icon on most home screens is in the
             // bottom rows, generally toward the right side.
             transformOrigin: `${width * 0.78}px ${height * 0.82}px`,
-            transform: `scale(${igOpenScale})`,
+            transform: `translateY(${igExitDriftY}px) scale(${igOpenScale})`,
             // Round the corners during the open so the card looks
             // like an iOS app icon shrinking up. As the scale
             // approaches 1, the corner radius reaches 0.
