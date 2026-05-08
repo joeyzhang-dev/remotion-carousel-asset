@@ -649,6 +649,394 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   );
 };
 
+/**
+ * Instagram profile-page background. Renders a simplified IG profile
+ * (header section + 3-column post grid), holds for a beat, then
+ * scrolls the page down so more grid posts come into view.
+ *
+ * The chrome is intentionally minimal (just profile header + grid)
+ * so the background reads as "they're looking through her profile"
+ * without competing with the bubbles in the foreground.
+ *
+ * Placeholder colors fill each grid cell; real images can be dropped
+ * in later by replacing each cell's `background` with a `<Img>` /
+ * staticFile().
+ */
+type InstagramProfileProps = {
+  /** Frame index relative to when the background appears. The first
+   * `holdFrames` of this drive a static profile view; after that the
+   * page scrolls down at a steady pace. */
+  driveFrame: number;
+  fps: number;
+  /** Layout dimensions of the canvas region this fills. */
+  width: number;
+  height: number;
+  scale: number;
+  /** Master opacity for the whole background (0..1). */
+  opacity: number;
+};
+
+// Placeholder colors for each grid cell. The user will swap these for
+// real images once the layout is locked.
+const PROFILE_GRID_COLORS = [
+  "#F5C9C0", "#E8D5B7", "#B8C9A7",
+  "#D4B5DB", "#F2D9A8", "#C0CBD9",
+  "#EDB89A", "#A9C4C9", "#DCC1B0",
+  "#C9D6BB", "#E5B5C8", "#B0C2D4",
+  "#F0CFA8", "#C8B8D6", "#D9C4A8",
+  "#A8C0BE", "#E8C0A8", "#C4D4C0",
+  "#D8B8B0", "#B0C4C0", "#E0CFB8",
+  "#C8D0B8", "#D4B5C0", "#B8D0C4",
+];
+
+const InstagramProfile: React.FC<InstagramProfileProps> = ({
+  driveFrame,
+  fps,
+  width,
+  height,
+  scale,
+  opacity,
+}) => {
+  // ── Profile-header dimensions ──────────────────────────────────
+  const headerPadX = 24 * scale;
+  const navHeight = 88 * scale;
+  const avatarSize = 180 * scale;
+  const profileSectionH = 280 * scale; // avatar + stats row
+  const bioH = 110 * scale;
+  const buttonsH = 90 * scale;
+  const tabBarH = 70 * scale;
+  const headerTotalH =
+    navHeight + profileSectionH + bioH + buttonsH + tabBarH;
+
+  // ── Grid dimensions ────────────────────────────────────────────
+  // 3 columns, 1px gap between cells (real IG uses very thin gaps).
+  const gridGap = 4 * scale;
+  const cellSize = (width - gridGap * 2) / 3;
+  // Render enough rows that the profile + ~6 rows of grid is taller
+  // than the canvas, so we have content to scroll through.
+  const gridRows = 8;
+  const gridHeight = cellSize * gridRows + gridGap * (gridRows - 1);
+  const totalContentH = headerTotalH + gridHeight;
+
+  // ── Scroll behavior ───────────────────────────────────────────
+  // Hold the profile fully visible for ~0.4s, then scroll down at a
+  // comfortable browsing pace. "Scroll down" = page content
+  // translates UPWARD (negative Y), so more grid comes into view.
+  const holdSec = 0.4;
+  const holdFrames = sec(holdSec, fps);
+  const pxPerSec = 200 * scale;
+  const postHoldFrames = Math.max(0, driveFrame - holdFrames);
+  // Maximum scroll: enough to bring the bottom of the content into
+  // view, but never so far that the canvas goes blank.
+  const maxScroll = Math.max(0, totalContentH - height);
+  const scrollPx = Math.min(maxScroll, (postHoldFrames / fps) * pxPerSec);
+  const pageY = -scrollPx;
+
+  // Stat block (followers / following / posts).
+  const renderStat = (label: string, value: string) => (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 4 * scale,
+        flex: 1,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: FONT_STACK,
+          fontSize: 28 * scale,
+          fontWeight: 700,
+          color: "#000",
+        }}
+      >
+        {value}
+      </div>
+      <div
+        style={{
+          fontFamily: FONT_STACK,
+          fontSize: 20 * scale,
+          color: "#262626",
+        }}
+      >
+        {label}
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        overflow: "hidden",
+        opacity,
+        // Subtle dim + small blur so the bubbles stay the focal
+        // point. Tune `brightness` if real images come in too dark.
+        filter: `blur(${3 * scale}px) brightness(0.94) saturate(0.92)`,
+        pointerEvents: "none",
+        background: "#FFFFFF", // IG light-mode background
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width,
+          transform: `translateY(${pageY}px)`,
+        }}
+      >
+        {/* ── Nav header (back arrow + username + ...) ─────────── */}
+        <div
+          style={{
+            height: navHeight,
+            paddingLeft: headerPadX,
+            paddingRight: headerPadX,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderBottom: `${1 * scale}px solid #DBDBDB`,
+          }}
+        >
+          {/* back chevron */}
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 36 * scale,
+              color: "#000",
+              fontWeight: 300,
+            }}
+          >
+            ‹
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 26 * scale,
+              fontWeight: 600,
+              color: "#000",
+            }}
+          >
+            _placeholder
+          </div>
+          {/* hamburger / dots */}
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 26 * scale,
+              color: "#000",
+              fontWeight: 600,
+            }}
+          >
+            ⋯
+          </div>
+        </div>
+
+        {/* ── Profile section (avatar + stats) ─────────────────── */}
+        <div
+          style={{
+            height: profileSectionH,
+            paddingLeft: headerPadX,
+            paddingRight: headerPadX,
+            display: "flex",
+            alignItems: "center",
+            gap: 24 * scale,
+          }}
+        >
+          {/* Avatar */}
+          <div
+            style={{
+              width: avatarSize,
+              height: avatarSize,
+              borderRadius: "50%",
+              background: PROFILE_GRID_COLORS[0],
+              border: `${2 * scale}px solid #fff`,
+              boxShadow: `0 0 0 ${2 * scale}px #DBDBDB`,
+              flexShrink: 0,
+            }}
+          />
+          {/* Stats row */}
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-around",
+            }}
+          >
+            {renderStat("posts", "284")}
+            {renderStat("followers", "1.2k")}
+            {renderStat("following", "537")}
+          </div>
+        </div>
+
+        {/* ── Bio (display name + caption) ─────────────────────── */}
+        <div
+          style={{
+            height: bioH,
+            paddingLeft: headerPadX,
+            paddingRight: headerPadX,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: 6 * scale,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 24 * scale,
+              fontWeight: 700,
+              color: "#000",
+            }}
+          >
+            placeholder name
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              color: "#262626",
+            }}
+          >
+            living life ✨ · sf → la
+          </div>
+        </div>
+
+        {/* ── Action buttons (Follow / Message / +) ───────────── */}
+        <div
+          style={{
+            height: buttonsH,
+            paddingLeft: headerPadX,
+            paddingRight: headerPadX,
+            display: "flex",
+            alignItems: "center",
+            gap: 8 * scale,
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              height: 60 * scale,
+              borderRadius: 8 * scale,
+              background: "#0095F6",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              fontWeight: 600,
+              color: "#fff",
+            }}
+          >
+            Follow
+          </div>
+          <div
+            style={{
+              flex: 1,
+              height: 60 * scale,
+              borderRadius: 8 * scale,
+              background: "#EFEFEF",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              fontWeight: 600,
+              color: "#000",
+            }}
+          >
+            Message
+          </div>
+          <div
+            style={{
+              width: 60 * scale,
+              height: 60 * scale,
+              borderRadius: 8 * scale,
+              background: "#EFEFEF",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_STACK,
+              fontSize: 24 * scale,
+              fontWeight: 600,
+              color: "#000",
+            }}
+          >
+            +
+          </div>
+        </div>
+
+        {/* ── Tab bar (grid icon highlighted) ───────────────────── */}
+        <div
+          style={{
+            height: tabBarH,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-around",
+            borderTop: `${1 * scale}px solid #DBDBDB`,
+            borderBottom: `${1 * scale}px solid #DBDBDB`,
+          }}
+        >
+          {/* grid icon (active) */}
+          <div
+            style={{
+              width: 28 * scale,
+              height: 28 * scale,
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gridTemplateRows: "1fr 1fr 1fr",
+              gap: 2 * scale,
+            }}
+          >
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div key={i} style={{ background: "#000" }} />
+            ))}
+          </div>
+          {/* reels / tagged placeholders */}
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              style={{
+                width: 28 * scale,
+                height: 28 * scale,
+                borderRadius: 4 * scale,
+                background: "rgba(0,0,0,0.45)",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* ── Post grid (3 columns) ────────────────────────────── */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(3, ${cellSize}px)`,
+            gap: gridGap,
+          }}
+        >
+          {Array.from({ length: gridRows * 3 }).map((_, idx) => (
+            <div
+              key={idx}
+              style={{
+                width: cellSize,
+                height: cellSize,
+                background:
+                  PROFILE_GRID_COLORS[idx % PROFILE_GRID_COLORS.length],
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Scene 1 — 0s–2s: "In your messages"
 // Folk logo spins, then continuously morphs (size + color + glyph) into the
 // iMessage send button. Single shared circular container so the transition
@@ -1589,6 +1977,45 @@ const Scene3: React.FC<Scene3Props> = ({
       extrapolateRight: "clamp",
     },
   );
+  // Instagram profile background uses an "iOS open app" entry: the
+  // page starts as a small rounded card in the lower-right of the
+  // canvas (where an app icon would live on a home screen) and
+  // expands outward with a spring-driven scale, while its corner
+  // radius shrinks from icon-rounded to flat. Reads like the agent
+  // tapping the IG icon while drafting the message.
+  //
+  // Three drivers compose the entry:
+  //   - openProgress (0→1): a spring-eased ramp that drives both
+  //     scale and corner-radius together so they animate in lockstep.
+  //   - igFeedOpacity: a fast opacity ramp early in the entry so the
+  //     small starting card isn't an invisible point.
+  const igFeedFadeStart = typing2PopEnd + sec(0.15, fps);
+  const igOpenSpring = spring({
+    frame: local - igFeedFadeStart,
+    fps,
+    config: { damping: 16, stiffness: 110, mass: 0.65 },
+  });
+  // Spring drives a smooth 0→1 with a small overshoot/settle.
+  const openProgress = igOpenSpring;
+  // Scale: 0.15 (icon-sized) → 1.0 (full screen).
+  const igOpenScale = interpolate(openProgress, [0, 1], [0.15, 1]);
+  // Corner radius: 80px (iOS app icon corner) → 0 (flush). Both
+  // values scale-aware so the visual feel stays consistent across
+  // canvas sizes.
+  const igOpenRadius = interpolate(openProgress, [0, 1], [80 * scale, 0]);
+  // Opacity ramp: gets visible quickly during the first ~0.18s of
+  // the open so we don't render a tiny invisible point. Holds at
+  // its final value (0.55) once visible.
+  const igFeedOpacity = interpolate(
+    local,
+    [igFeedFadeStart, igFeedFadeStart + sec(0.18, fps)],
+    [0, 0.55],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
   // Dots animate via the same sine-driven pulse as typing #1, but
   // anchored to typing2PopEnd so the wave starts fresh for this
   // bubble.
@@ -1709,6 +2136,45 @@ const Scene3: React.FC<Scene3Props> = ({
 
   return (
     <AbsoluteFill style={{ opacity: envOpacity }}>
+      {/* Instagram profile-page background — appears AFTER typing #2
+          has popped in and pulsed for a beat, with an iOS-style
+          "open app" entry: starts as a small rounded card anchored to
+          the lower-right of the canvas (where an app icon lives on a
+          home screen) and expands outward into the full profile page.
+          Sits behind every bubble (rendered first in the AbsoluteFill). */}
+      {igFeedOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            // Transform-origin lower-right so the card grows OUT of
+            // where an app icon would sit on the iOS home screen.
+            // The "Instagram" icon on most home screens is in the
+            // bottom rows, generally toward the right side.
+            transformOrigin: `${width * 0.78}px ${height * 0.82}px`,
+            transform: `scale(${igOpenScale})`,
+            // Round the corners during the open so the card looks
+            // like an iOS app icon shrinking up. As the scale
+            // approaches 1, the corner radius reaches 0.
+            borderRadius: igOpenRadius,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <InstagramProfile
+            driveFrame={local - igFeedFadeStart}
+            fps={fps}
+            width={width}
+            height={height}
+            scale={scale}
+            opacity={igFeedOpacity}
+          />
+        </div>
+      )}
+
       {/* Sent message row (input → bubble morph + send button). */}
       <div
         style={{
