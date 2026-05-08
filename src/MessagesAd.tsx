@@ -3493,6 +3493,108 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
   const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll + wobble));
   const pageY = -scrollPx;
 
+  // ── Speedup montage (rapid email-by-email replies) ────────────
+  // After the email-detail card slides up, the agent rapid-fire
+  // cycles through several emails — each one flashes with a
+  // typewriter reply showing in a "Reply" preview box at the
+  // bottom. Then it settles on a final email for the Reply All
+  // tap. Targets ~6-8 emails per second (very fast / superhuman).
+  type SpeedupEmail = {
+    initial: string;
+    color: string;
+    name: string;
+    subject: string;
+    body: string;
+    reply: string;
+  };
+  const speedupEmails: SpeedupEmail[] = [
+    {
+      initial: "B",
+      color: "#5F6368",
+      name: "Boss",
+      subject: "Q4 review deck — needs your input",
+      body: "Hey, can you take a look at the deck before tomorrow? I need you to update slides 4-7 with the latest revenue numbers.",
+      reply: "On it — slides 4-7 updated and pushed.",
+    },
+    {
+      initial: "S",
+      color: "#1A73E8",
+      name: "Sarah",
+      subject: "Re: expense reports",
+      body: "Got it, processing those now. Just need confirmation on the November totals before I close the books.",
+      reply: "Confirmed — November totals are correct.",
+    },
+    {
+      initial: "M",
+      color: "#EA4335",
+      name: "Mom",
+      subject: "Sunday dinner?",
+      body: "Are you coming this Sunday? I'm making the lasagna you like, with garlic bread and that salad your father wants.",
+      reply: "Yes, see you Sunday at 6 ❤",
+    },
+    {
+      initial: "G",
+      color: "#1A73E8",
+      name: "GitHub",
+      subject: "PR #2841 needs review",
+      body: "ben-w opened a pull request to acme/api. 12 files changed, +384 -127. Please review when you have a chance.",
+      reply: "Reviewed and approved. LGTM ✓",
+    },
+    {
+      initial: "K",
+      color: "#1A73E8",
+      name: "Kevin Lee",
+      subject: "Friday's design review",
+      body: "Can we move it to 3pm? I've got a conflict at noon and won't be able to make the original time.",
+      reply: "3pm works — calendar updated.",
+    },
+    {
+      initial: "J",
+      color: "#0F9D58",
+      name: "Jenna Park",
+      subject: "RE: dinner Friday?",
+      body: "yesss I'm in. 7:30 at Maialino works. let me know if you want me to book or you're handling it.",
+      reply: "Booked! Reservation under your name.",
+    },
+    {
+      initial: "T",
+      color: "#1A73E8",
+      name: "Thomas Kim",
+      subject: "Re: contract review",
+      body: "Thanks for sending this over. I have a few questions about clauses 4.2 and 7.1 — when can we chat?",
+      reply: "Free at 2pm — sending invite now.",
+    },
+  ];
+  // Montage timing in driveSec.
+  const montageStart = 1.4;
+  const montageEnd = 2.4;
+  const cyclesPerSec = 6.5;
+  const cycleDur = 1 / cyclesPerSec;
+  // Active speedup-email index. Before montageStart, hold on email 0.
+  // After montageEnd, settle on email 0 again so the Reply All tap
+  // lands on the same context the inbox showed.
+  const activeSpeedupIndex = (() => {
+    if (driveSec < montageStart) return 0;
+    if (driveSec > montageEnd) return 0;
+    const cycle = Math.floor((driveSec - montageStart) / cycleDur);
+    return cycle % speedupEmails.length;
+  })();
+  const activeEmail = speedupEmails[activeSpeedupIndex];
+  // Typewriter progress for the reply text within the current cycle.
+  // Reply types fully across the cycle window so each cycle ends
+  // with the full reply visible right before snapping to the next.
+  const cycleProgress = (() => {
+    if (driveSec < montageStart) return 0;
+    if (driveSec > montageEnd) return 1;
+    const inCycle = ((driveSec - montageStart) % cycleDur) / cycleDur;
+    return inCycle;
+  })();
+  const typedReplyChars = Math.floor(
+    cycleProgress * activeEmail.reply.length,
+  );
+  const typedReplyText = activeEmail.reply.slice(0, typedReplyChars);
+  const replyPreviewVisible = driveSec >= montageStart;
+
   // Email detail card slides up from the bottom starting around
   // driveSec 1.0s, fully covering the inbox by 1.4s. Stays visible
   // through the rest of the lifetime.
@@ -3584,6 +3686,132 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
       subject: "Re: contract review",
       snippet: "Thanks for sending this over. I have a few questions...",
       time: "Yesterday",
+      unread: false,
+    },
+    {
+      initial: "A",
+      color: "#7B1FA2",
+      name: "Apple",
+      subject: "Your receipt from Apple",
+      snippet: "Apple Music · $10.99 — billed to ····4829 on May 6...",
+      time: "Yesterday",
+      unread: false,
+    },
+    {
+      initial: "J",
+      color: "#0F9D58",
+      name: "Jenna Park",
+      subject: "RE: dinner Friday?",
+      snippet: "yesss I'm in. 7:30 at Maialino works. let me know if...",
+      time: "Yesterday",
+      unread: true,
+    },
+    {
+      initial: "G",
+      color: "#1A73E8",
+      name: "GitHub",
+      subject: "[acme/api] PR #2841 needs review",
+      snippet: "ben-w opened a pull request. 12 files changed, +384...",
+      time: "Yesterday",
+      unread: true,
+    },
+    {
+      initial: "S",
+      color: "#1DB954",
+      name: "Spotify",
+      subject: "Your Daylist · evening reset",
+      snippet: "We made you a playlist for tonight — based on what you've...",
+      time: "Yesterday",
+      unread: false,
+    },
+    {
+      initial: "D",
+      color: "#FBBC04",
+      name: "Dropbox",
+      subject: "3 files shared with you",
+      snippet: "alex@designteam.co shared budget-q4-final.xlsx and 2 more...",
+      time: "Tue",
+      unread: false,
+    },
+    {
+      initial: "N",
+      color: "#EA4335",
+      name: "Netflix",
+      subject: "New on Netflix this week",
+      snippet: "Continue watching — 2 episodes left in season 3 of...",
+      time: "Tue",
+      unread: false,
+    },
+    {
+      initial: "U",
+      color: "#000000",
+      name: "Uber",
+      subject: "Your trip with Marcus on May 4",
+      snippet: "$24.50 · 18 min · Castro to Mission. Rate your driver...",
+      time: "Mon",
+      unread: false,
+    },
+    {
+      initial: "K",
+      color: "#1A73E8",
+      name: "Kevin Lee",
+      subject: "Friday's design review",
+      snippet: "Can we move it to 3pm? I've got a conflict at noon...",
+      time: "Mon",
+      unread: true,
+    },
+    {
+      initial: "P",
+      color: "#FF6F00",
+      name: "Patagonia",
+      subject: "20% off all fleeces this week",
+      snippet: "Limited-time offer for members. Use code COZY at checkout...",
+      time: "Mon",
+      unread: false,
+    },
+    {
+      initial: "R",
+      color: "#34A853",
+      name: "Robinhood",
+      subject: "Earnings report: AAPL beat expectations",
+      snippet: "Apple reported Q2 earnings of $1.52/share, beating the...",
+      time: "Sun",
+      unread: false,
+    },
+    {
+      initial: "E",
+      color: "#5F6368",
+      name: "Eventbrite",
+      subject: "You're going to Designers Mixer NYC",
+      snippet: "Saved for May 18 · 7pm — your ticket is in your wallet...",
+      time: "Sun",
+      unread: false,
+    },
+    {
+      initial: "V",
+      color: "#1A73E8",
+      name: "Vercel",
+      subject: "Deployment ready · main",
+      snippet: "marketing-site.vercel.app is live. Build took 42s, 0 errors...",
+      time: "Sun",
+      unread: false,
+    },
+    {
+      initial: "F",
+      color: "#1877F2",
+      name: "Facebook",
+      subject: "You have 4 new memories",
+      snippet: "On this day in 2019 — you and Jenna at Dolores Park...",
+      time: "Sat",
+      unread: false,
+    },
+    {
+      initial: "Z",
+      color: "#2D8CFF",
+      name: "Zoom",
+      subject: "Your meeting recording is ready",
+      snippet: "Q2 Planning · 47 min · transcript available in your...",
+      time: "Sat",
       unread: false,
     },
   ];
@@ -3840,7 +4068,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
             <span>⋯</span>
           </div>
         </div>
-        {/* Subject */}
+        {/* Subject — driven by current speedup email */}
         <div
           style={{
             paddingLeft: padX,
@@ -3854,7 +4082,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
             lineHeight: 1.25,
           }}
         >
-          Q4 review deck — needs your input
+          {activeEmail.subject}
         </div>
         {/* Sender row */}
         <div
@@ -3872,7 +4100,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
               width: 56 * scale,
               height: 56 * scale,
               borderRadius: "50%",
-              background: "#5F6368",
+              background: activeEmail.color,
               color: "#fff",
               fontSize: 28 * scale,
               fontWeight: 600,
@@ -3881,7 +4109,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
               justifyContent: "center",
             }}
           >
-            B
+            {activeEmail.initial}
           </div>
           <div
             style={{
@@ -3893,7 +4121,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
             }}
           >
             <div style={{ fontSize: 22 * scale, fontWeight: 600, color: G_TEXT }}>
-              Boss
+              {activeEmail.name}
             </div>
             <div style={{ fontSize: 18 * scale, color: G_LIGHT }}>
               to me · 9:42 AM
@@ -3906,7 +4134,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
             paddingLeft: padX,
             paddingRight: padX,
             paddingTop: 12 * scale,
-            paddingBottom: 24 * scale,
+            paddingBottom: 16 * scale,
             fontFamily: FONT_STACK,
             fontSize: 22 * scale,
             color: G_TEXT,
@@ -3915,16 +4143,65 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
           }}
         >
           <div style={{ marginBottom: 16 * scale }}>
-            Hey, can you take a look at the deck before tomorrow? I need
-            you to update slides 4-7 with the latest revenue numbers and
-            add a section on Q1 outlook.
+            {activeEmail.body}
           </div>
-          <div style={{ marginBottom: 16 * scale }}>
-            Also let me know if you have time to jump on a quick call
-            this afternoon to align on the messaging.
-          </div>
-          <div style={{ color: G_LIGHT }}>Thanks,</div>
+          <div style={{ color: G_LIGHT }}>—</div>
         </div>
+        {/* Inline reply preview — agent's typed-out response. Only
+            visible during the speedup montage. Reads as the AI
+            assistant drafting + sending replies in real time. */}
+        {replyPreviewVisible && (
+          <div
+            style={{
+              marginLeft: padX,
+              marginRight: padX,
+              marginBottom: 12 * scale,
+              padding: `${14 * scale}px ${18 * scale}px`,
+              borderRadius: 14 * scale,
+              background: "#E6F4EA",
+              border: `${1.5 * scale}px solid #34A853`,
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 12 * scale,
+              fontFamily: FONT_STACK,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 14 * scale,
+                fontWeight: 700,
+                color: "#34A853",
+                letterSpacing: 0.5 * scale,
+                paddingTop: 4 * scale,
+                whiteSpace: "nowrap",
+              }}
+            >
+              REPLY
+            </div>
+            <div
+              style={{
+                flex: 1,
+                fontSize: 20 * scale,
+                color: "#202124",
+                lineHeight: 1.4,
+              }}
+            >
+              {typedReplyText}
+              {/* Blinking-style cursor (always-on during montage) */}
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 2 * scale,
+                  height: 22 * scale,
+                  marginLeft: 3 * scale,
+                  background: "#34A853",
+                  verticalAlign: "text-bottom",
+                  transform: "translateY(2px)",
+                }}
+              />
+            </div>
+          </div>
+        )}
         {/* Reply chips */}
         <div
           style={{
