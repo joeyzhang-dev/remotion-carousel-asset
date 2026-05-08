@@ -1420,14 +1420,13 @@ const AmazonProduct: React.FC<AmazonProductProps> = ({
             justifyContent: "center",
           }}
         >
-          {/* simple "product" placeholder block */}
-          <div
+          {/* Product hero image */}
+          <Img
+            src={staticFile("trojan-magnum.jpg")}
             style={{
-              width: heroImageH * 0.55,
-              height: heroImageH * 0.7,
-              background: "#D4A04F",
-              borderRadius: 8 * scale,
-              boxShadow: `0 ${8 * scale}px ${24 * scale}px rgba(0,0,0,0.1)`,
+              width: heroImageH * 0.85,
+              height: heroImageH * 0.85,
+              objectFit: "contain",
             }}
           />
         </div>
