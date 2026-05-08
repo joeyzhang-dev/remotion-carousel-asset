@@ -3,6 +3,7 @@ import { Composition } from "remotion";
 import { AppCarousel } from "./AppCarousel";
 import { AIOrgChart } from "./AIOrgChart";
 import { MessagesAd, MessagesAdHorizontal } from "./MessagesAd";
+import { Showcase } from "./Showcase";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -20,6 +21,16 @@ export const RemotionRoot: React.FC = () => {
         component={AIOrgChart}
         durationInFrames={150}
         fps={60}
+        width={1080}
+        height={1920}
+      />
+
+      {/* Showcase — typing iMessage bubble. */}
+      <Composition
+        id="Showcase"
+        component={Showcase}
+        durationInFrames={90}
+        fps={30}
         width={1080}
         height={1920}
       />
