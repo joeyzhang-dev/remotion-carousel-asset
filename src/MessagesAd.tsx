@@ -2058,97 +2058,8 @@ const Scene3: React.FC<Scene3Props> = ({
     },
   );
 
-  // First conversation shift (when gray bubble appears): sent drifts up
-  // by half a bubble height + half a gap so sent + gray are centered
-  // around the midline.
-  const conversationShift1End = -(bubbleHeight / 2 + receivedGap / 2);
-  const conversationShift1 = interpolate(
-    local,
-    [receivedStart, receivedEnd],
-    [0, conversationShift1End],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.out(Easing.cubic),
-    },
-  );
-  // Second conversation shift (when sent2 appears): another shift up
-  // by the same amount, so the THREE bubbles end up centered with the
-  // gray (middle) bubble at the midline.
-  const conversationShift2Delta = -(bubbleHeight / 2 + receivedGap / 2);
-  const conversationShift2 = interpolate(
-    local,
-    [sent2Start, sent2End],
-    [0, conversationShift2Delta],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.out(Easing.cubic),
-    },
-  );
-  // Third conversation shift (when typing #2 appears): another half-row
-  // up so the FOUR bubbles end up balanced around the screen midline.
-  const conversationShift3Delta = -(bubbleHeight / 2 + receivedGap / 2);
-  const conversationShift3 = interpolate(
-    local,
-    [typing2Start, typing2PopEnd],
-    [0, conversationShift3Delta],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.out(Easing.cubic),
-    },
-  );
-  // Fourth conversation shift (when the image attachment arrives):
-  // the image bubble is much taller than a normal bubble (~4.2× the
-  // single-line height), so the stack needs a bigger upward drift to
-  // keep things balanced around the screen midline. Timed to fire as
-  // the image flies into place.
-  const conversationShift4Delta = -(bubbleHeight * 1.8); // tuned empirically
-  const conversationShift4 = interpolate(
-    local,
-    [igFlightStart, igFlightEnd],
-    [0, conversationShift4Delta],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.out(Easing.cubic),
-    },
-  );
-  // Fifth conversation shift (when received #3 appears, the second
-  // text reply): one more small drift up to balance the new bubble.
-  const conversationShift5Delta = -(bubbleHeight / 2 + 8 * scale / 2);
-  const conversationShift5 = interpolate(
-    local,
-    [sec(12.6, fps), sec(12.95, fps)],
-    [0, conversationShift5Delta],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.out(Easing.cubic),
-    },
-  );
-  // Sixth conversation shift (when sent #3 appears below received #3):
-  // sender changes from gray to blue, so we use the full inter-sender
-  // gap when balancing for the new row.
-  const conversationShift6Delta = -(bubbleHeight / 2 + receivedGap / 2);
-  const conversationShift6 = interpolate(
-    local,
-    [sec(13.4, fps), sec(13.85, fps)],
-    [0, conversationShift6Delta],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.out(Easing.cubic),
-    },
-  );
-  const conversationShift =
-    conversationShift1 +
-    conversationShift2 +
-    conversationShift3 +
-    conversationShift4 +
-    conversationShift5 +
-    conversationShift6;
+  // (Conversation shift is computed below, after bubble dimensions
+  // are defined — see the block right before `sentBubbleY`.)
 
   // The typing-indicator-then-message bubble pops in at `typingStart`
   // (as a small pill with three pulsing dots) and STAYS visible
@@ -2647,6 +2558,92 @@ const Scene3: React.FC<Scene3Props> = ({
   // like the other blue bubbles.
   const sent3YOffset =
     received3TopAnchorY + received3Height + receivedGap + sent3Height / 2;
+
+  // ── Conversation shift (newest bubble at midline) ────────────────
+  //
+  // Instead of balancing the stack around the screen midline (where
+  // older bubbles drift up and newer ones extend below), we keep
+  // the NEWEST bubble centered on the midline. Each new bubble that
+  // arrives ramps `conversationShift` toward `-thatBubbleYOffset`,
+  // so that bubble (positioned at `sentBubbleY + thatBubbleYOffset`)
+  // lands exactly at `height/2`. Older bubbles, which have smaller
+  // YOffsets, drift upward off-screen.
+  //
+  // Easing is cubic-out per segment so each shift decelerates into
+  // place. Each new bubble's shift is anchored to that bubble's
+  // pop-in window, so the stack scrolls in sync with the bubble
+  // settling.
+  // typing #2 settles to bubbleHeight/2 below typing2TopAnchorAfter
+  // (the post-slide position).
+  const typing2YOffsetSettled =
+    typing2TopAnchorAfter + bubbleHeight / 2;
+  let conversationShift = 0;
+  // 1) Received #1 becomes the newest.
+  conversationShift = interpolate(
+    local,
+    [receivedStart, receivedEnd],
+    [conversationShift, -receivedYOffset],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  // 2) Sent #2 becomes the newest.
+  conversationShift = interpolate(
+    local,
+    [sent2Start, sent2End],
+    [conversationShift, -sent2YOffset],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  // 3) Image attachment becomes the newest (lands via the IG flight).
+  conversationShift = interpolate(
+    local,
+    [igFlightStart, igFlightEnd],
+    [conversationShift, -imageBubbleYOffset],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  // 4) Typing #2 → received #2 (text reply).
+  conversationShift = interpolate(
+    local,
+    [typing2MorphStart, typing2MorphEnd],
+    [conversationShift, -typing2YOffsetSettled],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  // 5) Received #3.
+  conversationShift = interpolate(
+    local,
+    [sec(12.6, fps), sec(12.95, fps)],
+    [conversationShift, -received3YOffset],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  // 6) Sent #3 (closing reply) becomes the newest.
+  conversationShift = interpolate(
+    local,
+    [sec(13.4, fps), sec(13.85, fps)],
+    [conversationShift, -sent3YOffset],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
 
   // Anchor for the entire conversation, so receipt indicators and the
   // received bubble all move with the sent bubble when it scrolls up.
