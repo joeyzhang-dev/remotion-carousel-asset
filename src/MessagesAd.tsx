@@ -3098,112 +3098,42 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
 
             {/* ── Foreground content ──────────────────────────── */}
 
-            {/* Top-left — etched Apple wordmark + brand */}
+            {/* Top — big white folk mark, centered horizontally.
+                The PNG is black, so we tint it white via a CSS
+                filter (brightness 0 → invert 1 → drop-shadow for
+                metal emboss). */}
+            <img
+              src={staticFile("folk-mark.png")}
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: 36 * scale,
+                width: 240 * scale,
+                height: 240 * scale,
+                transform: "translateX(-50%)",
+                filter: `brightness(0) invert(1) drop-shadow(0 ${2 * scale}px ${4 * scale}px rgba(0,0,0,0.4)) drop-shadow(0 ${-1 * scale}px 0 rgba(0,0,0,0.35))`,
+                opacity: 0.96,
+              }}
+            />
+
+            {/* Hero cardholder name — Steve Jobs energy:
+                huge typography front and center, no labels */}
             <div
               style={{
                 position: "absolute",
                 left: 44 * scale,
-                top: 52 * scale,
-                display: "flex",
-                flexDirection: "column",
-                gap: 14 * scale,
-              }}
-            >
-              {/* Apple glyph — etched chrome */}
-              <svg
-                width={42 * scale}
-                height={52 * scale}
-                viewBox="0 0 384 512"
-                style={{
-                  filter: `drop-shadow(0 ${1 * scale}px 0 rgba(255,255,255,0.35)) drop-shadow(0 ${-1 * scale}px 0 rgba(0,0,0,0.45))`,
-                }}
-              >
-                <path
-                  fill="rgba(245,245,247,0.88)"
-                  d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"
-                />
-              </svg>
-              <div
-                style={{
-                  fontSize: 30 * scale,
-                  fontWeight: 600,
-                  letterSpacing: -0.3 * scale,
-                  lineHeight: 1.05,
-                  color: "rgba(245,245,247,0.95)",
-                  textShadow: `0 ${1 * scale}px 0 rgba(255,255,255,0.18), 0 ${-1 * scale}px 0 rgba(0,0,0,0.45)`,
-                }}
-              >
-                Chase Sapphire
-              </div>
-            </div>
-
-            {/* Top-right — Visa wordmark engraved */}
-            <div
-              style={{
-                position: "absolute",
                 right: 44 * scale,
-                top: 52 * scale,
-                fontSize: 38 * scale,
-                fontWeight: 800,
-                fontStyle: "italic",
-                letterSpacing: 1.5 * scale,
-                color: "rgba(245,245,247,0.92)",
-                textShadow: `0 ${1 * scale}px 0 rgba(255,255,255,0.20), 0 ${-1 * scale}px 0 rgba(0,0,0,0.45)`,
-              }}
-            >
-              VISA
-            </div>
-
-            {/* Big embossed cardholder name — Steve Jobs energy:
-                hero typography front and center, no labels */}
-            <div
-              style={{
-                position: "absolute",
-                left: 44 * scale,
                 bottom: 44 * scale,
-                fontSize: 36 * scale,
-                fontWeight: 600,
-                letterSpacing: 2 * scale,
-                color: "rgba(245,245,247,0.96)",
-                textShadow: `0 ${1 * scale}px 0 rgba(255,255,255,0.22), 0 ${-1 * scale}px 0 rgba(0,0,0,0.50)`,
+                fontSize: 64 * scale,
+                fontWeight: 700,
+                letterSpacing: 3 * scale,
+                color: "rgba(245,245,247,0.97)",
+                textShadow: `0 ${1 * scale}px 0 rgba(255,255,255,0.25), 0 ${-1 * scale}px 0 rgba(0,0,0,0.55)`,
+                lineHeight: 1,
               }}
             >
               {cardholderName}
             </div>
-
-            {/* Last 4 digits — small monospace, low key */}
-            <div
-              style={{
-                position: "absolute",
-                right: 44 * scale,
-                bottom: 50 * scale,
-                fontSize: 22 * scale,
-                fontWeight: 500,
-                letterSpacing: 4 * scale,
-                color: "rgba(245,245,247,0.55)",
-                fontFamily: "monospace",
-              }}
-            >
-              ··· 4829
-            </div>
-
-            {/* Apple Pay contactless arc — tiny, top-edge mid */}
-            <svg
-              width={28 * scale}
-              height={32 * scale}
-              viewBox="0 0 36 40"
-              fill="none"
-              style={{
-                position: "absolute",
-                right: 44 * scale,
-                bottom: 92 * scale,
-                opacity: 0.55,
-              }}
-            >
-              <path d="M14 8 Q22 20 14 32" stroke="#F5F5F7" strokeWidth="2" strokeLinecap="round" fill="none" />
-              <path d="M20 4 Q30 20 20 36" stroke="#F5F5F7" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-              <path d="M26 0 Q38 20 26 40" stroke="#F5F5F7" strokeWidth="3" strokeLinecap="round" fill="none" />
-            </svg>
           </div>
         </div>
         {/* Stat tiles: Card Balance (with Past-due pill) + Upcoming Payment */}
