@@ -1080,9 +1080,18 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
               fontFamily: FONT_STACK,
               fontSize: 22 * scale,
               color: "#262626",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6 * scale,
             }}
           >
-            living life ✨ · sf → la
+            <span>living life</span>
+            <svg width={20 * scale} height={20 * scale} viewBox="0 0 24 24" fill="none">
+              <path d="M12 2 L13.5 9 L20 10.5 L13.5 12 L12 19 L10.5 12 L4 10.5 L10.5 9 Z" fill="#262626" />
+              <path d="M19 3 L19.6 5 L21.5 5.6 L19.6 6.2 L19 8.2 L18.4 6.2 L16.5 5.6 L18.4 5 Z" fill="#262626" />
+              <path d="M5 16 L5.5 17.5 L7 18 L5.5 18.5 L5 20 L4.5 18.5 L3 18 L4.5 17.5 Z" fill="#262626" />
+            </svg>
+            <span>· sf → la</span>
           </div>
         </div>
 
@@ -2247,7 +2256,13 @@ const FlightSearch: React.FC<FlightSearchProps> = ({
           }}
         >
           <div>⇄ Round trip ▾</div>
-          <div>👤 1 ▾</div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8 * scale }}>
+            <svg width={20 * scale} height={20 * scale} viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="8" r="4" stroke={G_TEXT} strokeWidth="2" fill="none" />
+              <path d="M4 21 C4 16 8 14 12 14 C16 14 20 16 20 21" stroke={G_TEXT} strokeWidth="2" fill="none" strokeLinecap="round" />
+            </svg>
+            <span>1 ▾</span>
+          </div>
           <div>Economy ▾</div>
         </div>
 
@@ -2301,7 +2316,14 @@ const FlightSearch: React.FC<FlightSearchProps> = ({
               color: G_TEXT,
             }}
           >
-            <span>📅 Fri, May 8</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 * scale }}>
+              <svg width={22 * scale} height={22 * scale} viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="5" width="18" height="16" rx="2" stroke={G_TEXT} strokeWidth="2" fill="none" />
+                <path d="M3 9 H21" stroke={G_TEXT} strokeWidth="2" />
+                <path d="M8 3 V7 M16 3 V7" stroke={G_TEXT} strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              Fri, May 8
+            </span>
             <span style={{ color: G_LIGHT }}>—</span>
             <span>Fri, May 15</span>
           </div>
@@ -2751,7 +2773,10 @@ const FlightSearch: React.FC<FlightSearchProps> = ({
                     gap: 6 * scale,
                   }}
                 >
-                  <span style={{ fontSize: 14 * scale }}>🌱</span>
+                  <svg width={16 * scale} height={16 * scale} viewBox="0 0 24 24" fill="none">
+                    <path d="M3 21 C3 12 12 3 21 3 C21 12 12 21 3 21 Z" fill="#188038" />
+                    <path d="M3 21 C8 16 14 13 19 12" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                  </svg>
                   Carbon offset included · 412 kg
                 </div>
               </div>
@@ -3248,9 +3273,21 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 fontSize: 20 * scale,
                 fontWeight: 600,
                 letterSpacing: 0.2 * scale,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8 * scale,
               }}
             >
-              {isPaid ? "✓ Paid" : "● Past due"}
+              {isPaid ? (
+                <svg width={16 * scale} height={16 * scale} viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12 L10 17 L19 7" stroke="#1B6E2C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                </svg>
+              ) : (
+                <svg width={12 * scale} height={12 * scale} viewBox="0 0 24 24" fill="#B91C1C">
+                  <circle cx="12" cy="12" r="6" />
+                </svg>
+              )}
+              {isPaid ? "Paid" : "Past due"}
             </div>
           </div>
           {/* Right tile — Upcoming Payment */}
@@ -3578,7 +3615,9 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
       >
         {isPaid ? (
           <>
-            <span style={{ fontSize: 28 * scale }}>✓</span>
+            <svg width={28 * scale} height={28 * scale} viewBox="0 0 24 24" fill="none">
+              <path d="M5 12 L10 17 L19 7" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
             <span>Paid</span>
           </>
         ) : showFaceID ? (
@@ -4088,7 +4127,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
       signoff: "Love,",
       signature: ["Mom", "xoxo"],
       reply:
-        "Yes, see you Sunday at 6! Will text Aunt Carol tonight ❤",
+        "Yes, see you Sunday at 6! Will text Aunt Carol tonight.",
     },
     {
       initial: "G",
@@ -4102,11 +4141,11 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
         "feat(orders): add idempotency keys to checkout endpoint · 12 files changed, +384 −127 · branch feat/idempotent-checkout → main",
         "This PR introduces idempotency keys on POST /api/v1/orders to prevent duplicate charges when the client retries on flaky network. Includes new middleware, DB migration for the idempotency_keys table, and updated integration tests.",
         "@ben-w wrote: \"This is the fix for the duplicate-order bug from incident #4421. I'd love a second pair of eyes on the migration before we ship — happy to walk through it on a call if easier.\"",
-        "Required review from: @joey, @priya-l. CI status: ✓ all checks passed.",
+        "Required review from: @joey, @priya-l. CI status: all checks passed.",
       ],
       signoff: "—",
       signature: ["GitHub", "github.com/acme/api/pull/2841"],
-      reply: "Reviewed and approved. Migration looks safe. LGTM ✓",
+      reply: "Reviewed and approved. Migration looks safe. LGTM.",
     },
     {
       initial: "K",
@@ -4139,7 +4178,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
       ],
       signoff: "xx",
       signature: ["jenna"],
-      reply: "I'll grab the res. Down for Becca's — count me in 🎉",
+      reply: "I'll grab the res. Down for Becca's — count me in!",
     },
     {
       initial: "T",
@@ -4576,15 +4615,19 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
                   }}
                 >
                   {e.unread && (
-                    <span
+                    <svg
+                      width={14 * scale}
+                      height={14 * scale}
+                      viewBox="0 0 24 24"
+                      fill={G_YELLOW}
                       style={{
-                        color: G_YELLOW,
-                        fontWeight: 800,
                         marginRight: 6 * scale,
+                        verticalAlign: "middle",
+                        flexShrink: 0,
                       }}
                     >
-                      ❯
-                    </span>
+                      <path d="M6 4 L18 12 L6 20 Z" />
+                    </svg>
                   )}
                   {e.name}
                 </div>
@@ -4630,13 +4673,19 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
             {/* Star (right side) */}
             <div
               style={{
-                fontSize: 32 * scale,
-                color: G_LIGHT,
                 flexShrink: 0,
                 paddingTop: 30 * scale,
               }}
             >
-              ☆
+              <svg width={28 * scale} height={28 * scale} viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 2 L14.9 8.5 L22 9.3 L16.6 14 L18.2 21 L12 17.3 L5.8 21 L7.4 14 L2 9.3 L9.1 8.5 Z"
+                  stroke={G_LIGHT}
+                  strokeWidth="1.6"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+              </svg>
             </div>
           </div>
         ))}
@@ -4782,13 +4831,23 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
                 fontWeight: 500,
                 color: G_YELLOW,
                 whiteSpace: "nowrap",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6 * scale,
               }}
             >
-              ❯ Inbox
+              <svg width={14 * scale} height={14 * scale} viewBox="0 0 24 24" fill={G_YELLOW}>
+                <path d="M6 4 L18 12 L6 20 Z" />
+              </svg>
+              Inbox
             </span>
           </div>
           {/* Star (filled blue, like the reference) */}
-          <div style={{ fontSize: 36 * scale, color: G_BLUE, paddingTop: 4 * scale }}>★</div>
+          <div style={{ paddingTop: 4 * scale }}>
+            <svg width={32 * scale} height={32 * scale} viewBox="0 0 24 24" fill={G_BLUE}>
+              <path d="M12 2 L14.9 8.5 L22 9.3 L16.6 14 L18.2 21 L12 17.3 L5.8 21 L7.4 14 L2 9.3 L9.1 8.5 Z" />
+            </svg>
+          </div>
         </div>
         {/* Sender row */}
         <div
@@ -4857,7 +4916,12 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
           </div>
           {/* Right cluster: smile, back-arrow, ⋯ — like the iOS ref */}
           <div style={{ display: "flex", gap: 18 * scale, alignItems: "center", flexShrink: 0 }}>
-            <span style={{ fontSize: 24 * scale, color: G_LIGHT }}>☺</span>
+            <svg width={24 * scale} height={24 * scale} viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke={G_LIGHT} strokeWidth="1.6" fill="none" />
+              <circle cx="9" cy="10" r="1" fill={G_LIGHT} />
+              <circle cx="15" cy="10" r="1" fill={G_LIGHT} />
+              <path d="M8 14 Q12 17 16 14" stroke={G_LIGHT} strokeWidth="1.6" strokeLinecap="round" fill="none" />
+            </svg>
             <svg width={28 * scale} height={28 * scale} viewBox="0 0 24 24" fill="none">
               <path d="M9 10 L4 14 L9 18" stroke={G_LIGHT} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M4 14 H14 C17 14 20 12 20 8 V6" stroke={G_LIGHT} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -5236,9 +5300,15 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
               World History Essay - Final.docx
             </div>
           </div>
-          <div style={{ display: "flex", gap: 22 * scale, fontSize: 26 * scale, color: D_LIGHT }}>
-            <span>👥</span>
-            <span>⋯</span>
+          <div style={{ display: "flex", gap: 22 * scale, alignItems: "center", color: D_LIGHT }}>
+            {/* People / collaborators icon */}
+            <svg width={26 * scale} height={26 * scale} viewBox="0 0 24 24" fill="none">
+              <circle cx="9" cy="9" r="3" stroke={D_LIGHT} strokeWidth="1.6" fill="none" />
+              <circle cx="16" cy="10" r="2.4" stroke={D_LIGHT} strokeWidth="1.6" fill="none" />
+              <path d="M3 19 C3 16 6 14 9 14 C12 14 15 16 15 19" stroke={D_LIGHT} strokeWidth="1.6" fill="none" strokeLinecap="round" />
+              <path d="M14 19 C14 17 16 16 18 16 C20 16 21 17 21 19" stroke={D_LIGHT} strokeWidth="1.6" fill="none" strokeLinecap="round" />
+            </svg>
+            <span style={{ fontSize: 26 * scale }}>⋯</span>
           </div>
         </div>
         {/* Toolbar */}
@@ -5644,7 +5714,10 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
                   fontWeight: 600,
                 }}
               >
-                <span>🛡</span>
+                <svg width={18 * scale} height={18 * scale} viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2 L20 5 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V5 Z" fill="#0F9D58" />
+                  <path d="M8 12 L11 15 L16 9" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                </svg>
                 Originality: 100% original
               </div>
               <div style={{ color: "#0F9D58", fontWeight: 600 }}>
