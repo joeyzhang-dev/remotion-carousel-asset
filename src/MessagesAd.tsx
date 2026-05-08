@@ -1786,6 +1786,1322 @@ const AmazonProduct: React.FC<AmazonProductProps> = ({
   );
 };
 
+/**
+ * Google-Flights-style search results page background. Mirrors the
+ * AmazonProduct component's role — sits behind the chat as ambient
+ * context — but redesigned for a flight booking flow. Includes a
+ * tap-pulse on a flight result card and a "Booking confirmed"
+ * overlay that flashes briefly after the tap, before the page
+ * exits.
+ */
+type FlightSearchProps = {
+  driveFrame: number;
+  fps: number;
+  width: number;
+  height: number;
+  scale: number;
+  /** Master opacity for the whole background (0..1). */
+  opacity: number;
+  /** Optional scale to apply to the tapped flight result card. */
+  cardTapScale?: number;
+  /** Index of the card that's been tapped — that card stays scaled
+   * up + highlighted after the tap. -1 = no card tapped yet. */
+  tappedCardIndex?: number;
+  /** When > 0, freezes the scroll at the position it had at the
+   * given driveSec value. Used so the page stops scrolling when a
+   * card is tapped (the tapped card stays in view). */
+  scrollFreezeAtSec?: number;
+  /** Opacity for the "Booking confirmed" overlay (0..1). */
+  bookingConfirmOpacity?: number;
+};
+
+const FlightSearch: React.FC<FlightSearchProps> = ({
+  driveFrame,
+  fps,
+  width,
+  height,
+  scale,
+  opacity,
+  cardTapScale = 1,
+  tappedCardIndex = -1,
+  scrollFreezeAtSec,
+  bookingConfirmOpacity = 0,
+}) => {
+  // Mobile-scaled layout: bigger fonts, more vertical breathing
+  // room. Cards stack vertically (no desktop-style multi-column row)
+  // so each one reads as a tappable list item rather than a table
+  // row.
+  const padX = 28 * scale;
+  const navHeight = 100 * scale;
+  const searchRowH = 160 * scale;
+  const filterChipsH = 100 * scale;
+  const tabsH = 110 * scale;
+  const sectionHeaderH = 90 * scale;
+  const flightCardH = 200 * scale;
+  const flightCardGap = 12 * scale;
+  const headerTotalH =
+    navHeight + searchRowH + filterChipsH + tabsH + sectionHeaderH;
+  const totalContentH = headerTotalH + flightCardH * 12 + 800 * scale;
+  const maxScroll = Math.max(0, totalContentH - height);
+
+  // Scroll: same shape as Amazon — slow scan, then settle. Once
+  // `scrollFreezeAtSec` is reached, the scroll clamps at its
+  // position from that moment forward (used after a card is tapped
+  // so the focus card stays in view).
+  const rawDriveSec = driveFrame / fps;
+  const driveSec =
+    scrollFreezeAtSec != null && rawDriveSec > scrollFreezeAtSec
+      ? scrollFreezeAtSec
+      : rawDriveSec;
+  const t = {
+    holdEnd: 0.4,
+    flickEnd: 1.1,
+    settleEnd: 1.5,
+    cruiseEnd: 3.0,
+  };
+  let baseScroll: number;
+  if (driveSec < t.holdEnd) {
+    baseScroll = 0;
+  } else if (driveSec < t.flickEnd) {
+    baseScroll = interpolate(
+      driveSec,
+      [t.holdEnd, t.flickEnd],
+      [0, maxScroll * 0.45],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.out(Easing.cubic),
+      },
+    );
+  } else if (driveSec < t.settleEnd) {
+    baseScroll = maxScroll * 0.45;
+  } else {
+    baseScroll = interpolate(
+      driveSec,
+      [t.settleEnd, t.cruiseEnd],
+      [maxScroll * 0.45, maxScroll * 0.7],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.inOut(Easing.cubic),
+      },
+    );
+  }
+  const wobbleAmp = 4 * scale;
+  const wobbleHz = 2.5;
+  const wobbleEnabled = driveSec > t.holdEnd ? 1 : 0;
+  const wobble =
+    wobbleEnabled *
+    wobbleAmp *
+    Math.sin(2 * Math.PI * wobbleHz * (driveSec - t.holdEnd));
+  const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll + wobble));
+  const pageY = -scrollPx;
+
+  // Google blue + signature greys.
+  const G_BLUE = "#1A73E8";
+  const G_GREEN = "#188038";
+  const G_TEXT = "#202124";
+  const G_LIGHT = "#5F6368";
+  const G_BORDER = "#DADCE0";
+  const G_BG = "#FFFFFF";
+
+  type FlightCard = {
+    airline: string;
+    color: string;
+    times: string;
+    duration: string;
+    stops: string;
+    co2: string;
+    co2note: string;
+    co2color: string;
+    price: string;
+  };
+  const flightCards: FlightCard[] = [
+    {
+      airline: "American",
+      color: "#C8102E",
+      times: "10:15 PM – 6:59 AM",
+      duration: "5 hr 44 min",
+      stops: "Nonstop",
+      co2: "573 kg CO2e",
+      co2note: "+65% emissions",
+      co2color: "#C0392B",
+      price: "$568",
+    },
+    {
+      airline: "Alaska",
+      color: "#005DAA",
+      times: "11:11 PM – 7:59 AM",
+      duration: "5 hr 48 min",
+      stops: "Nonstop",
+      co2: "311 kg CO2e",
+      co2note: "-10% emissions",
+      co2color: G_GREEN,
+      price: "$593",
+    },
+    {
+      airline: "JetBlue",
+      color: "#003876",
+      times: "2:45 PM – 11:38 PM",
+      duration: "5 hr 53 min",
+      stops: "Nonstop",
+      co2: "415 kg CO2e",
+      co2note: "+20% emissions",
+      co2color: "#C0392B",
+      price: "$677",
+    },
+    {
+      airline: "Delta",
+      color: "#003366",
+      times: "12:47 PM – 9:30 PM",
+      duration: "5 hr 43 min",
+      stops: "Nonstop",
+      co2: "573 kg CO2e",
+      co2note: "+65% emissions",
+      co2color: "#C0392B",
+      price: "$568",
+    },
+    {
+      airline: "United",
+      color: "#005DAA",
+      times: "6:20 AM – 2:55 PM",
+      duration: "5 hr 35 min",
+      stops: "Nonstop",
+      co2: "402 kg CO2e",
+      co2note: "+15% emissions",
+      co2color: "#C0392B",
+      price: "$612",
+    },
+    {
+      airline: "Southwest",
+      color: "#304CB2",
+      times: "9:30 AM – 8:25 PM",
+      duration: "8 hr 55 min",
+      stops: "1 stop · DEN",
+      co2: "498 kg CO2e",
+      co2note: "+44% emissions",
+      co2color: "#C0392B",
+      price: "$402",
+    },
+    {
+      airline: "Spirit",
+      color: "#FFE114",
+      times: "5:55 AM – 5:15 PM",
+      duration: "9 hr 20 min",
+      stops: "1 stop · LAS",
+      co2: "385 kg CO2e",
+      co2note: "+11% emissions",
+      co2color: "#C0392B",
+      price: "$348",
+    },
+    {
+      airline: "Frontier",
+      color: "#00A551",
+      times: "7:14 PM – 8:30 AM",
+      duration: "10 hr 16 min",
+      stops: "1 stop · DFW",
+      co2: "412 kg CO2e",
+      co2note: "+19% emissions",
+      co2color: "#C0392B",
+      price: "$362",
+    },
+    {
+      airline: "American",
+      color: "#C8102E",
+      times: "8:45 AM – 5:11 PM",
+      duration: "5 hr 26 min",
+      stops: "Nonstop",
+      co2: "560 kg CO2e",
+      co2note: "+62% emissions",
+      co2color: "#C0392B",
+      price: "$598",
+    },
+    {
+      airline: "JetBlue",
+      color: "#003876",
+      times: "11:55 PM – 8:42 AM",
+      duration: "5 hr 47 min",
+      stops: "Nonstop",
+      co2: "418 kg CO2e",
+      co2note: "+21% emissions",
+      co2color: "#C0392B",
+      price: "$641",
+    },
+    {
+      airline: "Alaska",
+      color: "#005DAA",
+      times: "3:30 PM – 11:58 PM",
+      duration: "5 hr 28 min",
+      stops: "Nonstop",
+      co2: "298 kg CO2e",
+      co2note: "-13% emissions",
+      co2color: G_GREEN,
+      price: "$615",
+    },
+    {
+      airline: "Delta",
+      color: "#003366",
+      times: "5:05 PM – 1:45 AM",
+      duration: "5 hr 40 min",
+      stops: "Nonstop",
+      co2: "569 kg CO2e",
+      co2note: "+64% emissions",
+      co2color: "#C0392B",
+      price: "$579",
+    },
+  ];
+
+  // Tap target — driven by prop (defaults to -1 = no tap). The
+  // parent picks an index that's mid-screen at tap time so the
+  // expanded card stays visible.
+  const TAPPED_CARD_INDEX = tappedCardIndex;
+
+  const renderFilterChip = (label: string, active = false) => (
+    <div
+      key={label}
+      style={{
+        height: 64 * scale,
+        paddingLeft: 22 * scale,
+        paddingRight: 22 * scale,
+        borderRadius: 999,
+        background: active ? "#E8F0FE" : G_BG,
+        border: `${1.5 * scale}px solid ${active ? G_BLUE : G_BORDER}`,
+        display: "flex",
+        alignItems: "center",
+        fontFamily: FONT_STACK,
+        fontSize: 24 * scale,
+        color: active ? G_BLUE : G_TEXT,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+    </div>
+  );
+
+  const renderFlightCard = (card: FlightCard, idx: number) => {
+    const isTapped = idx === TAPPED_CARD_INDEX;
+    // After the tap pulse settles (cardTapScale returns near 1) AND
+    // the scroll is frozen, treat the card as "selected" and keep
+    // it highlighted with a blue outline + larger shadow so it
+    // visibly stands out from the un-tapped rows.
+    const isSelected = isTapped && scrollFreezeAtSec != null;
+    return (
+      <div
+        key={idx}
+        style={{
+          height: flightCardH,
+          marginBottom: flightCardGap,
+          paddingLeft: padX,
+          paddingRight: padX,
+          paddingTop: 22 * scale,
+          paddingBottom: 22 * scale,
+          background: G_BG,
+          borderTop: isSelected ? "none" : `${1 * scale}px solid ${G_BORDER}`,
+          border: isSelected
+            ? `${3 * scale}px solid ${G_BLUE}`
+            : undefined,
+          borderRadius: isSelected ? 14 * scale : 0,
+          marginLeft: isSelected ? padX * 0.5 : 0,
+          marginRight: isSelected ? padX * 0.5 : 0,
+          boxShadow: isSelected
+            ? `0 ${8 * scale}px ${28 * scale}px rgba(26, 115, 232, 0.25)`
+            : undefined,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          gap: 12 * scale,
+          transform: isTapped ? `scale(${cardTapScale})` : undefined,
+          transformOrigin: "center",
+        }}
+      >
+        {/* Top row: times (big) + price (right-aligned, big green) */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16 * scale,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 30 * scale,
+              color: G_TEXT,
+              fontWeight: 600,
+              letterSpacing: -0.3 * scale,
+            }}
+          >
+            {card.times}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: 2 * scale,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: FONT_STACK,
+                fontSize: 32 * scale,
+                color: G_GREEN,
+                fontWeight: 600,
+                letterSpacing: -0.5 * scale,
+              }}
+            >
+              {card.price}
+            </div>
+            <div
+              style={{
+                fontFamily: FONT_STACK,
+                fontSize: 16 * scale,
+                color: G_LIGHT,
+              }}
+            >
+              round trip
+            </div>
+          </div>
+        </div>
+        {/* Bottom row: logo + airline / duration / stops + CO2 note */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14 * scale,
+          }}
+        >
+          <div
+            style={{
+              width: 36 * scale,
+              height: 36 * scale,
+              borderRadius: "50%",
+              background: card.color,
+              flexShrink: 0,
+            }}
+          />
+          <div
+            style={{
+              flex: 1,
+              fontFamily: FONT_STACK,
+              fontSize: 18 * scale,
+              color: G_LIGHT,
+              display: "flex",
+              alignItems: "center",
+              gap: 8 * scale,
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={{ color: G_TEXT, fontWeight: 500 }}>
+              {card.airline}
+            </span>
+            <span style={{ color: G_BORDER }}>·</span>
+            <span>{card.duration}</span>
+            <span style={{ color: G_BORDER }}>·</span>
+            <span>{card.stops}</span>
+            <span style={{ color: G_BORDER }}>·</span>
+            <span style={{ color: card.co2color }}>{card.co2note}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        overflow: "hidden",
+        opacity,
+        filter: `blur(${3 * scale}px) brightness(0.94) saturate(0.92)`,
+        pointerEvents: "none",
+        background: G_BG,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width,
+          transform: `translateY(${pageY}px)`,
+        }}
+      >
+        {/* ── Top status row (round trip · 1 · economy) ───────── */}
+        <div
+          style={{
+            height: navHeight,
+            paddingLeft: padX,
+            paddingRight: padX,
+            display: "flex",
+            alignItems: "center",
+            gap: 18 * scale,
+            fontFamily: FONT_STACK,
+            fontSize: 24 * scale,
+            color: G_TEXT,
+          }}
+        >
+          <div>⇄ Round trip ▾</div>
+          <div>👤 1 ▾</div>
+          <div>Economy ▾</div>
+        </div>
+
+        {/* ── Search row: cities + dates (stacked vertically for
+              mobile-friendly readability) ─────────────────────── */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 8 * scale,
+            paddingBottom: 16 * scale,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10 * scale,
+          }}
+        >
+          {/* Cities row */}
+          <div
+            style={{
+              height: 70 * scale,
+              borderRadius: 12 * scale,
+              border: `${1.5 * scale}px solid ${G_BORDER}`,
+              display: "flex",
+              alignItems: "center",
+              paddingLeft: 22 * scale,
+              paddingRight: 22 * scale,
+              gap: 16 * scale,
+              fontFamily: FONT_STACK,
+              fontSize: 26 * scale,
+              color: G_TEXT,
+              fontWeight: 500,
+            }}
+          >
+            <span>○ San Francisco</span>
+            <span style={{ color: G_LIGHT, fontSize: 22 * scale }}>⇄</span>
+            <span>New York</span>
+          </div>
+          {/* Dates row */}
+          <div
+            style={{
+              height: 70 * scale,
+              borderRadius: 12 * scale,
+              border: `${1.5 * scale}px solid ${G_BORDER}`,
+              display: "flex",
+              alignItems: "center",
+              paddingLeft: 22 * scale,
+              paddingRight: 22 * scale,
+              gap: 16 * scale,
+              fontFamily: FONT_STACK,
+              fontSize: 24 * scale,
+              color: G_TEXT,
+            }}
+          >
+            <span>📅 Fri, May 8</span>
+            <span style={{ color: G_LIGHT }}>—</span>
+            <span>Fri, May 15</span>
+          </div>
+        </div>
+
+        {/* ── Filter chips row ─────────────────────────────────── */}
+        <div
+          style={{
+            height: filterChipsH,
+            paddingLeft: padX,
+            paddingRight: padX,
+            display: "flex",
+            gap: 12 * scale,
+            alignItems: "center",
+            overflow: "hidden",
+          }}
+        >
+          {renderFilterChip("⇌ All filters", true)}
+          {renderFilterChip("Stops")}
+          {renderFilterChip("Airlines")}
+          {renderFilterChip("Bags")}
+          {renderFilterChip("Price")}
+          {renderFilterChip("Times")}
+        </div>
+
+        {/* ── Best / Cheapest tabs ────────────────────────────── */}
+        <div
+          style={{
+            height: tabsH,
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 12 * scale,
+            display: "flex",
+            gap: 10 * scale,
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              height: tabsH - 24 * scale,
+              borderRadius: 12 * scale,
+              border: `${2.5 * scale}px solid ${G_BLUE}`,
+              background: "#E8F0FE",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_STACK,
+              fontSize: 26 * scale,
+              fontWeight: 600,
+              color: G_BLUE,
+            }}
+          >
+            Best
+          </div>
+          <div
+            style={{
+              flex: 1,
+              height: tabsH - 24 * scale,
+              borderRadius: 12 * scale,
+              border: `${1.5 * scale}px solid ${G_BORDER}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_STACK,
+              fontSize: 24 * scale,
+              color: G_TEXT,
+            }}
+          >
+            Cheapest · from $348
+          </div>
+        </div>
+
+        {/* ── "Top departing flights" header ──────────────────── */}
+        <div
+          style={{
+            height: sectionHeaderH,
+            paddingLeft: padX,
+            paddingRight: padX,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontFamily: FONT_STACK,
+          }}
+        >
+          <div style={{ fontSize: 28 * scale, fontWeight: 700, color: G_TEXT }}>
+            Top departing flights
+          </div>
+          <div style={{ fontSize: 20 * scale, color: G_BLUE }}>
+            Sort ⇅
+          </div>
+        </div>
+
+        {/* ── Flight result cards (top 6) ─────────────────────── */}
+        {flightCards.slice(0, 6).map((card, idx) => renderFlightCard(card, idx))}
+
+        {/* ── Tip strip ────────────────────────────────────────── */}
+        <div
+          style={{
+            margin: padX,
+            padding: 22 * scale,
+            background: "#E8F0FE",
+            borderRadius: 12 * scale,
+            display: "flex",
+            alignItems: "center",
+            gap: 18 * scale,
+            fontFamily: FONT_STACK,
+            fontSize: 22 * scale,
+            color: G_TEXT,
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <div>Cheapest time is usually 1–4 months before takeoff</div>
+          </div>
+          <div style={{ width: 1.5 * scale, height: 50 * scale, background: G_BORDER }} />
+          <div style={{ flex: 1 }}>
+            <div>Prices are currently <span style={{ color: "#C0392B", fontWeight: 600 }}>high</span></div>
+          </div>
+        </div>
+
+        {/* ── "Other departing flights" header ────────────────── */}
+        <div
+          style={{
+            height: sectionHeaderH,
+            paddingLeft: padX,
+            paddingRight: padX,
+            display: "flex",
+            alignItems: "center",
+            fontFamily: FONT_STACK,
+            fontSize: 28 * scale,
+            fontWeight: 700,
+            color: G_TEXT,
+          }}
+        >
+          Other departing flights
+        </div>
+
+        {/* ── More flight result cards (rest of the list) ───── */}
+        {flightCards.slice(6).map((card, idx) => renderFlightCard(card, idx + 6))}
+      </div>
+
+      {/* ── "Flight Booked" confirmation card. Takes over much of
+            the canvas as a substantial confirmation panel — like an
+            Apple Pay or airline-app confirmation screen. Rendered
+            absolutely outside the scrolling container so it stays
+            centered on screen. ─────────────────────────────────── */}
+      {bookingConfirmOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: bookingConfirmOpacity,
+            pointerEvents: "none",
+            // Slight dim of the page behind the confirmation card.
+            background: "rgba(0,0,0,0.35)",
+          }}
+        >
+          <div
+            style={{
+              width: width * 0.84,
+              padding: `${48 * scale}px ${36 * scale}px`,
+              borderRadius: 24 * scale,
+              background: "#FFFFFF",
+              fontFamily: FONT_STACK,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 18 * scale,
+              boxShadow: `0 ${20 * scale}px ${60 * scale}px rgba(0,0,0,0.35)`,
+            }}
+          >
+            {/* Big green check circle */}
+            <div
+              style={{
+                width: 130 * scale,
+                height: 130 * scale,
+                borderRadius: "50%",
+                background: G_GREEN,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 80 * scale,
+                color: "#FFFFFF",
+                fontWeight: 700,
+                boxShadow: `0 ${6 * scale}px ${20 * scale}px rgba(24, 128, 56, 0.35)`,
+              }}
+            >
+              ✓
+            </div>
+            {/* Title */}
+            <div
+              style={{
+                fontSize: 44 * scale,
+                fontWeight: 700,
+                color: G_TEXT,
+                letterSpacing: -0.5 * scale,
+                marginTop: 8 * scale,
+              }}
+            >
+              Flight Booked
+            </div>
+            <div
+              style={{
+                fontSize: 22 * scale,
+                color: G_LIGHT,
+                textAlign: "center",
+                lineHeight: 1.35,
+              }}
+            >
+              Confirmation #{" "}
+              <span style={{ color: G_TEXT, fontWeight: 600 }}>
+                AX9F4Q-7K
+              </span>
+            </div>
+            {/* Divider */}
+            <div
+              style={{
+                width: "100%",
+                height: 1 * scale,
+                background: G_BORDER,
+                marginTop: 4 * scale,
+                marginBottom: 4 * scale,
+              }}
+            />
+            {/* Flight summary */}
+            <div
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12 * scale,
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 * scale }}>
+                <div style={{ fontSize: 32 * scale, fontWeight: 700, color: G_TEXT }}>
+                  SFO
+                </div>
+                <div style={{ fontSize: 18 * scale, color: G_LIGHT }}>
+                  Fri · 11:11 PM
+                </div>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8 * scale,
+                  paddingLeft: 12 * scale,
+                  paddingRight: 12 * scale,
+                }}
+              >
+                <div style={{ flex: 1, height: 2 * scale, background: G_BORDER }} />
+                <span style={{ fontSize: 22 * scale, color: G_LIGHT }}>✈</span>
+                <div style={{ flex: 1, height: 2 * scale, background: G_BORDER }} />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 * scale, alignItems: "flex-end" }}>
+                <div style={{ fontSize: 32 * scale, fontWeight: 700, color: G_TEXT }}>
+                  JFK
+                </div>
+                <div style={{ fontSize: 18 * scale, color: G_LIGHT }}>
+                  Sat · 7:59 AM
+                </div>
+              </div>
+            </div>
+            <div
+              style={{
+                fontSize: 20 * scale,
+                color: G_LIGHT,
+                marginTop: 4 * scale,
+              }}
+            >
+              Alaska · 5h 48m · Nonstop · 2 passengers
+            </div>
+            {/* Total paid */}
+            <div
+              style={{
+                width: "100%",
+                marginTop: 12 * scale,
+                padding: `${18 * scale}px ${22 * scale}px`,
+                borderRadius: 14 * scale,
+                background: "#F1F8F4",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ fontSize: 22 * scale, color: G_LIGHT }}>
+                Total paid
+              </div>
+              <div style={{ fontSize: 36 * scale, fontWeight: 700, color: G_GREEN }}>
+                $1,186.00
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Apple Wallet-style mobile background. Used as the agent "pays off
+ * a credit card" in the closing edit sequence. iOS app-open zoom +
+ * scroll + tap on the Pay button + a "Payment Sent" confirmation
+ * panel that mirrors the FlightSearch confirmation card style.
+ */
+type AppleWalletProps = {
+  driveFrame: number;
+  fps: number;
+  width: number;
+  height: number;
+  scale: number;
+  opacity: number;
+  /** Tap-pulse on the Pay pill (1 = no pulse). */
+  payButtonScale?: number;
+  /** Opacity for the "Payment Sent" confirmation overlay. */
+  paymentConfirmOpacity?: number;
+};
+
+const AppleWallet: React.FC<AppleWalletProps> = ({
+  driveFrame,
+  fps,
+  width,
+  height,
+  scale,
+  opacity,
+  payButtonScale = 1,
+  paymentConfirmOpacity = 0,
+}) => {
+  const padX = 28 * scale;
+  const titleH = 110 * scale;
+  const cardStackH = width * 0.62; // tall card stack
+  const balanceH = 200 * scale;
+  const payButtonH = 100 * scale;
+  const txnRowH = 90 * scale;
+  const totalContentH =
+    titleH + cardStackH + balanceH + payButtonH + txnRowH * 6 + 200 * scale;
+  const maxScroll = Math.max(0, totalContentH - height);
+
+  const driveSec = driveFrame / fps;
+  let baseScroll = 0;
+  if (driveSec < 0.4) {
+    baseScroll = 0;
+  } else if (driveSec < 1.1) {
+    baseScroll = interpolate(driveSec, [0.4, 1.1], [0, maxScroll * 0.5], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    });
+  } else {
+    baseScroll = maxScroll * 0.5;
+  }
+  const wobble =
+    driveSec > 0.4
+      ? 4 * scale * Math.sin(2 * Math.PI * 2.5 * (driveSec - 0.4))
+      : 0;
+  const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll + wobble));
+  const pageY = -scrollPx;
+
+  const W_BG = "#FFFFFF";
+  const W_TEXT = "#1C1C1E";
+  const W_LIGHT = "#8E8E93";
+  const W_BORDER = "#E5E5EA";
+  const W_GREEN = "#34C759";
+  const W_RED = "#FF3B30";
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        overflow: "hidden",
+        opacity,
+        filter: `blur(${3 * scale}px) brightness(0.94) saturate(0.92)`,
+        pointerEvents: "none",
+        background: W_BG,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width,
+          transform: `translateY(${pageY}px)`,
+        }}
+      >
+        {/* Title */}
+        <div
+          style={{
+            height: titleH,
+            paddingLeft: padX,
+            paddingRight: padX,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontFamily: FONT_STACK,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 44 * scale,
+              fontWeight: 700,
+              color: W_TEXT,
+              letterSpacing: -0.5 * scale,
+            }}
+          >
+            Wallet
+          </div>
+          <div
+            style={{
+              width: 44 * scale,
+              height: 44 * scale,
+              borderRadius: "50%",
+              background: "#F2F2F7",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 28 * scale,
+              color: W_LIGHT,
+            }}
+          >
+            +
+          </div>
+        </div>
+        {/* Card stack */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            position: "relative",
+            height: cardStackH,
+          }}
+        >
+          {/* Bottom card (Apple Card, peeking) */}
+          <div
+            style={{
+              position: "absolute",
+              left: padX + 20 * scale,
+              right: padX + 20 * scale,
+              top: 16 * scale,
+              height: cardStackH * 0.55,
+              borderRadius: 22 * scale,
+              background:
+                "linear-gradient(135deg, #E8E8EC 0%, #C8C8CD 100%)",
+              boxShadow: `0 ${8 * scale}px ${20 * scale}px rgba(0,0,0,0.12)`,
+              padding: 22 * scale,
+              fontFamily: FONT_STACK,
+              color: W_TEXT,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ fontSize: 22 * scale, fontWeight: 600 }}>
+              Apple Card
+            </div>
+            <div style={{ fontSize: 18 * scale, color: W_LIGHT }}>
+              ···· 2841
+            </div>
+          </div>
+          {/* Top card (Sapphire-ish, primary) */}
+          <div
+            style={{
+              position: "absolute",
+              left: padX,
+              right: padX,
+              top: cardStackH * 0.32,
+              height: cardStackH * 0.62,
+              borderRadius: 22 * scale,
+              background:
+                "linear-gradient(135deg, #0F1F3D 0%, #1A2F5C 60%, #2C4373 100%)",
+              boxShadow: `0 ${10 * scale}px ${28 * scale}px rgba(0,0,0,0.25)`,
+              padding: 22 * scale,
+              fontFamily: FONT_STACK,
+              color: "#fff",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+              }}
+            >
+              <div style={{ fontSize: 24 * scale, fontWeight: 600 }}>
+                Chase Sapphire
+              </div>
+              <div
+                style={{
+                  fontSize: 24 * scale,
+                  fontStyle: "italic",
+                  fontWeight: 700,
+                  letterSpacing: 1 * scale,
+                }}
+              >
+                VISA
+              </div>
+            </div>
+            <div>
+              <div
+                style={{
+                  fontSize: 24 * scale,
+                  letterSpacing: 4 * scale,
+                  fontFamily: "monospace",
+                }}
+              >
+                ···· ···· ···· 4829
+              </div>
+              <div
+                style={{
+                  fontSize: 16 * scale,
+                  color: "rgba(255,255,255,0.7)",
+                  marginTop: 8 * scale,
+                }}
+              >
+                CARDHOLDER
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Balance section */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 24 * scale,
+            paddingBottom: 16 * scale,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8 * scale,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 20 * scale,
+              color: W_LIGHT,
+              fontFamily: FONT_STACK,
+            }}
+          >
+            Current balance
+          </div>
+          <div
+            style={{
+              fontSize: 56 * scale,
+              fontWeight: 700,
+              color: W_RED,
+              fontFamily: FONT_STACK,
+              letterSpacing: -1 * scale,
+            }}
+          >
+            $2,847.13
+          </div>
+          <div
+            style={{
+              fontSize: 18 * scale,
+              color: W_LIGHT,
+              fontFamily: FONT_STACK,
+            }}
+          >
+            Statement balance · due May 22
+          </div>
+        </div>
+        {/* Pay button */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 12 * scale,
+            paddingBottom: 24 * scale,
+          }}
+        >
+          <div
+            style={{
+              height: payButtonH,
+              borderRadius: 999,
+              background: "#000000",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_STACK,
+              fontSize: 28 * scale,
+              fontWeight: 600,
+              color: "#fff",
+              transform: `scale(${payButtonScale})`,
+              transformOrigin: "center",
+              boxShadow: `0 ${4 * scale}px ${16 * scale}px rgba(0,0,0,0.2)`,
+            }}
+          >
+            Pay $2,847.13
+          </div>
+        </div>
+        {/* Recent transactions */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 24 * scale,
+            paddingBottom: 12 * scale,
+            borderTop: `${1 * scale}px solid ${W_BORDER}`,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 24 * scale,
+              fontWeight: 700,
+              color: W_TEXT,
+              fontFamily: FONT_STACK,
+              marginBottom: 16 * scale,
+            }}
+          >
+            Recent transactions
+          </div>
+          {[
+            { name: "Whole Foods", date: "May 7", amount: "−$42.18" },
+            { name: "Uber", date: "May 6", amount: "−$14.50" },
+            { name: "Spotify", date: "May 5", amount: "−$9.99" },
+            { name: "Trader Joe's", date: "May 4", amount: "−$67.34" },
+            { name: "Starbucks", date: "May 4", amount: "−$6.45" },
+            { name: "Amazon", date: "May 3", amount: "−$129.00" },
+          ].map((tx, i) => (
+            <div
+              key={i}
+              style={{
+                height: txnRowH,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderBottom: `${1 * scale}px solid ${W_BORDER}`,
+                fontFamily: FONT_STACK,
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 * scale }}>
+                <div style={{ fontSize: 22 * scale, color: W_TEXT, fontWeight: 500 }}>
+                  {tx.name}
+                </div>
+                <div style={{ fontSize: 18 * scale, color: W_LIGHT }}>
+                  {tx.date}
+                </div>
+              </div>
+              <div style={{ fontSize: 22 * scale, color: W_TEXT }}>
+                {tx.amount}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Payment Sent confirmation card */}
+      {paymentConfirmOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: paymentConfirmOpacity,
+            pointerEvents: "none",
+            background: "rgba(0,0,0,0.35)",
+          }}
+        >
+          <div
+            style={{
+              width: width * 0.84,
+              padding: `${48 * scale}px ${36 * scale}px`,
+              borderRadius: 24 * scale,
+              background: "#FFFFFF",
+              fontFamily: FONT_STACK,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 18 * scale,
+              boxShadow: `0 ${20 * scale}px ${60 * scale}px rgba(0,0,0,0.35)`,
+            }}
+          >
+            <div
+              style={{
+                width: 130 * scale,
+                height: 130 * scale,
+                borderRadius: "50%",
+                background: W_GREEN,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 80 * scale,
+                color: "#FFFFFF",
+                fontWeight: 700,
+                boxShadow: `0 ${6 * scale}px ${20 * scale}px rgba(52, 199, 89, 0.35)`,
+              }}
+            >
+              ✓
+            </div>
+            <div
+              style={{
+                fontSize: 44 * scale,
+                fontWeight: 700,
+                color: W_TEXT,
+                letterSpacing: -0.5 * scale,
+                marginTop: 8 * scale,
+              }}
+            >
+              Payment Sent
+            </div>
+            <div
+              style={{
+                fontSize: 22 * scale,
+                color: W_LIGHT,
+                textAlign: "center",
+              }}
+            >
+              Confirmation #{" "}
+              <span style={{ color: W_TEXT, fontWeight: 600 }}>
+                WL2K-9X4M
+              </span>
+            </div>
+            <div
+              style={{
+                width: "100%",
+                height: 1 * scale,
+                background: W_BORDER,
+                marginTop: 4 * scale,
+                marginBottom: 4 * scale,
+              }}
+            />
+            <div
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12 * scale,
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 * scale }}>
+                <div style={{ fontSize: 24 * scale, fontWeight: 600, color: W_TEXT }}>
+                  Sapphire ····4829
+                </div>
+                <div style={{ fontSize: 18 * scale, color: W_LIGHT }}>
+                  Paid · Fri May 8
+                </div>
+              </div>
+              <div
+                style={{
+                  fontSize: 22 * scale,
+                  color: W_LIGHT,
+                }}
+              >
+                →
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 * scale, alignItems: "flex-end" }}>
+                <div style={{ fontSize: 24 * scale, fontWeight: 600, color: W_TEXT }}>
+                  Statement
+                </div>
+                <div style={{ fontSize: 18 * scale, color: W_LIGHT }}>
+                  Balance cleared
+                </div>
+              </div>
+            </div>
+            <div
+              style={{
+                width: "100%",
+                marginTop: 12 * scale,
+                padding: `${18 * scale}px ${22 * scale}px`,
+                borderRadius: 14 * scale,
+                background: "#F1F8F4",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ fontSize: 22 * scale, color: W_LIGHT }}>
+                Total paid
+              </div>
+              <div style={{ fontSize: 36 * scale, fontWeight: 700, color: W_GREEN }}>
+                $2,847.13
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Scene 1 — 0s–2s: "In your messages"
 // Folk logo spins, then continuously morphs (size + color + glyph) into the
 // iMessage send button. Single shared circular container so the transition
@@ -2983,13 +4299,16 @@ const Scene3: React.FC<Scene3Props> = ({
   const sent2TailExt = sent2CornerRadius * 0.5;
   const sent2TailHook = sent2CornerRadius * 0.2;
 
-  // Sent3 (third blue bubble) — pops in after received #3, no
-  // delivered/read receipts (we're closing the conversation here).
-  const sent3Phrase = "bet, order some protection";
+  // Sent3 (third blue bubble) — pops in after received #3 with the
+  // initial phrase, then gets "edited": the user backspaces the
+  // existing text and types a new phrase ("book my flight and
+  // hotel") in its place. The bubble width animates in lockstep so
+  // it always snugly fits the current text.
+  const sent3PhraseInitial = "bet, order some protection";
+  const sent3PhraseEdited = "book my flight and hotel";
+  const sent3PhraseEdited2 = "pay off my credit card";
   const sent3FontSize = bubbleFontSize;
-  const sent3TextWidth = measureTextEm(sent3Phrase) * sent3FontSize;
   const sent3PadX = bubblePadX;
-  const sent3Width = sent3TextWidth + sent3PadX * 2;
   const sent3Height = bubbleHeight;
   const sent3CornerRadius = sent3Height * 0.42;
   const sent3TailExt = sent3CornerRadius * 0.5;
@@ -3020,6 +4339,126 @@ const Scene3: React.FC<Scene3Props> = ({
       easing: Easing.out(Easing.cubic),
     },
   );
+
+  // ── Sent #3 "edit" animation ────────────────────────────────────
+  // After the Amazon page has dismissed, sent #3 simulates a user
+  // editing the message: the existing text backspaces character by
+  // character, brief pause, then a new phrase types out in its
+  // place. The bubble width animates to fit the current text so it
+  // always snugly wraps whatever's visible.
+  //
+  // ── Edit phase array ─────────────────────────────────────────
+  // Each phase is one "rewrite": backspace the previous phrase, then
+  // type a new phrase in its place. The state machine walks through
+  // the array sequentially based on `local` time. To add another
+  // edit, just append to `editPhases`.
+  const editBackspaceCharsPerSec = 30;
+  const editTypeCharsPerSec = 25;
+  const editPauseDurSec = 0.2;
+  type EditPhase = {
+    backspaceStart: number; // frames (Scene 3 local)
+    fromPhrase: string;
+    toPhrase: string;
+  };
+  const editPhases: EditPhase[] = [
+    {
+      backspaceStart: sec(14.3, fps),
+      fromPhrase: sent3PhraseInitial,
+      toPhrase: sent3PhraseEdited,
+    },
+    {
+      // Edit 2 — happens during Apple Wallet's open. Backspace
+      // begins ~0.4s after Wallet's iOS open-app starts so the
+      // viewer reads the previous phrase against the new background
+      // for a beat before it morphs.
+      backspaceStart: sec(19.4, fps),
+      fromPhrase: sent3PhraseEdited,
+      toPhrase: sent3PhraseEdited2,
+    },
+  ];
+
+  // Compute, for each phase, its derived timestamps.
+  type EditPhaseTiming = {
+    backspaceStart: number;
+    backspaceEnd: number;
+    typeStart: number;
+    typeEnd: number;
+    fromPhrase: string;
+    toPhrase: string;
+  };
+  const editPhaseTimings: EditPhaseTiming[] = editPhases.map((p) => {
+    const backspaceDur = sec(
+      p.fromPhrase.length / editBackspaceCharsPerSec,
+      fps,
+    );
+    const typeDur = sec(p.toPhrase.length / editTypeCharsPerSec, fps);
+    const backspaceEnd = p.backspaceStart + backspaceDur;
+    const typeStart = backspaceEnd + sec(editPauseDurSec, fps);
+    const typeEnd = typeStart + typeDur;
+    return {
+      backspaceStart: p.backspaceStart,
+      backspaceEnd,
+      typeStart,
+      typeEnd,
+      fromPhrase: p.fromPhrase,
+      toPhrase: p.toPhrase,
+    };
+  });
+
+  // Walk phases to figure out the visible text right now.
+  let sent3VisibleText: string = sent3PhraseInitial;
+  for (let i = 0; i < editPhaseTimings.length; i++) {
+    const phase = editPhaseTimings[i];
+    if (local < phase.backspaceStart) {
+      sent3VisibleText =
+        i === 0 ? sent3PhraseInitial : editPhaseTimings[i - 1].toPhrase;
+      break;
+    } else if (local < phase.backspaceEnd) {
+      const elapsed = (local - phase.backspaceStart) / fps;
+      const removed = Math.floor(elapsed * editBackspaceCharsPerSec);
+      sent3VisibleText = phase.fromPhrase.slice(
+        0,
+        Math.max(0, phase.fromPhrase.length - removed),
+      );
+      break;
+    } else if (local < phase.typeStart) {
+      sent3VisibleText = "";
+      break;
+    } else if (local < phase.typeEnd) {
+      const elapsed = (local - phase.typeStart) / fps;
+      const typed = Math.floor(elapsed * editTypeCharsPerSec);
+      sent3VisibleText = phase.toPhrase.slice(
+        0,
+        Math.min(phase.toPhrase.length, typed),
+      );
+      break;
+    } else {
+      sent3VisibleText = phase.toPhrase;
+    }
+  }
+
+  // Bubble width tracks the current visible text's width so the
+  // bubble snugly fits whatever's showing.
+  const sent3CurrentTextWidth =
+    measureTextEm(sent3VisibleText) * sent3FontSize;
+  const sent3MinTextWidth = sent3FontSize * 0.5;
+  const sent3Width =
+    Math.max(sent3CurrentTextWidth, sent3MinTextWidth) + sent3PadX * 2;
+
+  // Cursor blink — visible during ANY edit phase. Hidden once all
+  // phases have settled.
+  const firstPhase = editPhaseTimings[0];
+  const lastPhase = editPhaseTimings[editPhaseTimings.length - 1];
+  const editActive =
+    local >= firstPhase.backspaceStart && local <= lastPhase.typeEnd;
+  const cursorBlinkPeriodFrames = sec(0.5, fps);
+  const cursorVisibleSent3 =
+    editActive &&
+    Math.floor(
+      (local - firstPhase.backspaceStart) / cursorBlinkPeriodFrames,
+    ) %
+      2 ===
+      0;
 
   // Prior-bubbles + caption fade-out, timed JUST BEFORE sent #3
   // arrives. By the time sent #3 starts springing in, the rest of
@@ -3125,6 +4564,228 @@ const Scene3: React.FC<Scene3Props> = ({
     },
   );
   const amazonOpacity = amazonFadeIn * amazonExitFadeMul;
+
+  // ── Flight search page (after Amazon dismisses) ─────────────────
+  // Same iOS app-open pattern, but anchored to the lower-CENTER of
+  // the canvas this time (different from IG's lower-right and
+  // Amazon's lower-left). Reads as the agent opening a 3rd app
+  // mid-task. Includes a tap-pulse on the cheapest flight result +
+  // a "Booking confirmed" toast.
+  const flightFadeStart = amazonExitEnd + sec(0.05, fps);
+  const flightOpenSpring = spring({
+    frame: local - flightFadeStart,
+    fps,
+    config: { damping: 16, stiffness: 110, mass: 0.65 },
+  });
+  const flightOpenScale = interpolate(flightOpenSpring, [0, 1], [0.15, 1]);
+  const flightOpenRadius = interpolate(
+    flightOpenSpring,
+    [0, 1],
+    [80 * scale, 0],
+  );
+  const flightFadeIn = interpolate(
+    local,
+    [flightFadeStart, flightFadeStart + sec(0.18, fps)],
+    [0, 0.45],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+
+  // Tap on the cheapest flight result card.
+  const flightTapStart = sec(16.5, fps);
+  const flightTapEnd = sec(16.7, fps);
+  const flightTapHalf = (flightTapEnd - flightTapStart) / 2;
+  const flightTapDown = interpolate(
+    local,
+    [flightTapStart, flightTapStart + flightTapHalf],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  const flightTapUp = interpolate(
+    local,
+    [flightTapStart + flightTapHalf, flightTapEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  const flightCardTapScale = 1 - flightTapDown * 0.04 + flightTapUp * 0.04;
+  // Index of the card the agent taps. Picks a card that's visible
+  // mid-screen at tap time given the flight page's scroll position.
+  // (At driveSec ≈ 1.25s the page is in `flickEnd` state, so cards
+  // 3-5 are roughly mid-canvas. Index 3 lands well-centered.)
+  const flightTappedCardIndex = 3;
+  // Scroll freezes the moment the tap fires so the selected card
+  // stays in view while the booking confirmation overlays it.
+  const flightScrollFreezeAtSec =
+    (flightTapStart - flightFadeStart) / fps;
+
+  // Booking-confirmed card: appears after the tap, holds for a
+  // longer beat so viewers can read the flight details, then fades.
+  const bookingToastInStart = flightTapEnd;
+  const bookingToastInEnd = bookingToastInStart + sec(0.25, fps);
+  const bookingToastOutStart = bookingToastInStart + sec(1.4, fps);
+  const bookingToastOutEnd = bookingToastOutStart + sec(0.35, fps);
+  const bookingToastIn = interpolate(
+    local,
+    [bookingToastInStart, bookingToastInEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  const bookingToastOut = interpolate(
+    local,
+    [bookingToastOutStart, bookingToastOutEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const bookingConfirmOpacity = bookingToastIn * bookingToastOut;
+
+  // Flight page exit — fade + drift up after the toast fades.
+  const flightExitStart = bookingToastOutEnd;
+  const flightExitEnd = flightExitStart + sec(0.5, fps);
+  const flightExitFadeMul = interpolate(
+    local,
+    [flightExitStart, flightExitEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const flightExitDriftY = interpolate(
+    local,
+    [flightExitStart, flightExitEnd],
+    [0, -50 * scale],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const flightOpacity = flightFadeIn * flightExitFadeMul;
+
+  // ── Apple Wallet (edit 3: "pay off my credit card") ────────────
+  // Opens after Flight Search exits, with the iOS app-open zoom
+  // anchored to the UPPER-RIGHT of the canvas so the home-screen
+  // origin doesn't repeat across the 4 backgrounds we now have.
+  const walletFadeStart = flightExitEnd + sec(0.05, fps);
+  const walletOpenSpring = spring({
+    frame: local - walletFadeStart,
+    fps,
+    config: { damping: 16, stiffness: 110, mass: 0.65 },
+  });
+  const walletOpenScale = interpolate(walletOpenSpring, [0, 1], [0.15, 1]);
+  const walletOpenRadius = interpolate(
+    walletOpenSpring,
+    [0, 1],
+    [80 * scale, 0],
+  );
+  const walletFadeIn = interpolate(
+    local,
+    [walletFadeStart, walletFadeStart + sec(0.18, fps)],
+    [0, 0.45],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+
+  // Pay button tap window.
+  const payTapStart = sec(21.5, fps);
+  const payTapEnd = sec(21.7, fps);
+  const payTapHalf = (payTapEnd - payTapStart) / 2;
+  const payTapDown = interpolate(
+    local,
+    [payTapStart, payTapStart + payTapHalf],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  const payTapUp = interpolate(
+    local,
+    [payTapStart + payTapHalf, payTapEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  const payButtonTapScale = 1 - payTapDown * 0.06 + payTapUp * 0.06;
+
+  // "Payment Sent" confirmation toast.
+  const paymentToastInStart = payTapEnd;
+  const paymentToastInEnd = paymentToastInStart + sec(0.25, fps);
+  const paymentToastOutStart = paymentToastInStart + sec(1.3, fps);
+  const paymentToastOutEnd = paymentToastOutStart + sec(0.35, fps);
+  const paymentToastIn = interpolate(
+    local,
+    [paymentToastInStart, paymentToastInEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  const paymentToastOut = interpolate(
+    local,
+    [paymentToastOutStart, paymentToastOutEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const paymentConfirmOpacity = paymentToastIn * paymentToastOut;
+
+  // Wallet page exit.
+  const walletExitStart = paymentToastOutEnd;
+  const walletExitEnd = walletExitStart + sec(0.5, fps);
+  const walletExitFadeMul = interpolate(
+    local,
+    [walletExitStart, walletExitEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const walletExitDriftY = interpolate(
+    local,
+    [walletExitStart, walletExitEnd],
+    [0, -50 * scale],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const walletOpacity = walletFadeIn * walletExitFadeMul;
 
   // ── Received bubbles #2 and #3 ──────────────────────────────────
   // Real conversations come in as multiple short messages, not one
@@ -3441,6 +5102,77 @@ const Scene3: React.FC<Scene3Props> = ({
             scale={scale}
             opacity={amazonOpacity}
             buyButtonScale={buyButtonTapScale}
+          />
+        </div>
+      )}
+
+      {/* Flight search page — appears after Amazon dismisses, with
+          the iOS "open app" zoom anchored to the LOWER-CENTER of the
+          canvas so it feels distinct from the IG (lower-right) and
+          Amazon (lower-left) entries. Tap-pulse on the cheapest
+          flight + a "Booking confirmed" toast, then exits. */}
+      {flightOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            transformOrigin: `${width * 0.5}px ${height * 0.85}px`,
+            transform: `translateY(${flightExitDriftY}px) scale(${flightOpenScale})`,
+            borderRadius: flightOpenRadius,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <FlightSearch
+            driveFrame={local - flightFadeStart}
+            fps={fps}
+            width={width}
+            height={height}
+            scale={scale}
+            opacity={flightOpacity}
+            cardTapScale={flightCardTapScale}
+            tappedCardIndex={flightTappedCardIndex}
+            // Freeze scroll once the tap fires so the selected card
+            // stays in view while the confirmation overlays the page.
+            scrollFreezeAtSec={
+              local >= flightTapStart ? flightScrollFreezeAtSec : undefined
+            }
+            bookingConfirmOpacity={bookingConfirmOpacity}
+          />
+        </div>
+      )}
+
+      {/* Apple Wallet — opens after Flight Search dismisses, with
+          the iOS app-open zoom anchored to the UPPER-RIGHT (a fresh
+          home-screen origin not used by the previous three apps).
+          Tap-pulse on the Pay button + "Payment Sent" confirmation. */}
+      {walletOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            transformOrigin: `${width * 0.78}px ${height * 0.18}px`,
+            transform: `translateY(${walletExitDriftY}px) scale(${walletOpenScale})`,
+            borderRadius: walletOpenRadius,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <AppleWallet
+            driveFrame={local - walletFadeStart}
+            fps={fps}
+            width={width}
+            height={height}
+            scale={scale}
+            opacity={walletOpacity}
+            payButtonScale={payButtonTapScale}
+            paymentConfirmOpacity={paymentConfirmOpacity}
           />
         </div>
       )}
@@ -3915,7 +5647,21 @@ const Scene3: React.FC<Scene3Props> = ({
             fontSize={sent3FontSize}
             paddingX={sent3PadX}
             letterSpacing={-0.3 * scale}
-            text={sent3Phrase}
+            // During the edit, text is dynamic (backspace → empty →
+            // retype). Otherwise it's the static initial phrase.
+            text={sent3VisibleText}
+            // White cursor blinks during the edit window so the
+            // bubble reads as actively being typed in.
+            cursor={{
+              visible: cursorVisibleSent3,
+              color: "#FFFFFF",
+              widthPx: 2 * scale,
+            }}
+            // Left-align the text during the edit so the cursor sits
+            // at the natural end-of-text position; center it once
+            // editing is done so the final phrase doesn't have
+            // right-side slack.
+            textAlign={editActive ? "start" : "center"}
             shadowOpacity={0.18}
             shadowBlur={20 * scale}
             shadowOffsetY={4 * scale}
@@ -4071,10 +5817,11 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
         />
       </Sequence>
 
-      {/* Scene 3 — starts at 5s. Extended to 15.7s to fit the
-          Amazon Buy Now tap + page exit after the closing punchline
-          appears. */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(15.7, fps)}>
+      {/* Scene 3 — starts at 5s. Extended to 18.5s to fit the
+          closing-punchline edit animation + the flight search
+          background, tap on a flight, "Booking confirmed" toast,
+          and the page exit. */}
+      <Sequence from={sec(5, fps)} durationInFrames={sec(24, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
@@ -4088,7 +5835,7 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           sent #3 sits alone on screen as the focal point. */}
       <Sequence
         from={sec(5 - xfade, fps)}
-        durationInFrames={sec(15.7 + xfade, fps)}
+        durationInFrames={sec(24 + xfade, fps)}
       >
         <Caption
           text="schedule a date with my crush"
