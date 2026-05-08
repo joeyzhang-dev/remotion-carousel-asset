@@ -3102,6 +3102,696 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
   );
 };
 
+/**
+ * Gmail-style inbox + open-email background. The agent "responds to
+ * all emails" — the inbox shows a list, then a focused email detail
+ * slides up over it, and the Reply All chip is tapped, triggering a
+ * "Replied to 47 emails" confirmation card.
+ */
+type GmailInboxProps = {
+  driveFrame: number;
+  fps: number;
+  width: number;
+  height: number;
+  scale: number;
+  opacity: number;
+  /** Tap-pulse on the Reply All chip. */
+  replyAllScale?: number;
+  /** Opacity for the "Replied" confirmation overlay. */
+  replySentOpacity?: number;
+};
+
+const GmailInbox: React.FC<GmailInboxProps> = ({
+  driveFrame,
+  fps,
+  width,
+  height,
+  scale,
+  opacity,
+  replyAllScale = 1,
+  replySentOpacity = 0,
+}) => {
+  const padX = 22 * scale;
+  const navH = 90 * scale;
+  const searchH = 90 * scale;
+  const tabsH = 80 * scale;
+  const emailItemH = 150 * scale;
+  // Inbox content spans behind the (eventually) visible email
+  // detail card. Total content height set generous for scroll.
+  const totalContentH =
+    navH + searchH + tabsH + emailItemH * 12 + 200 * scale;
+  const maxScroll = Math.max(0, totalContentH - height);
+
+  const driveSec = driveFrame / fps;
+  // Inbox scroll: hold briefly, then a small flick + settle.
+  let baseScroll = 0;
+  if (driveSec < 0.4) {
+    baseScroll = 0;
+  } else if (driveSec < 1.0) {
+    baseScroll = interpolate(driveSec, [0.4, 1.0], [0, maxScroll * 0.35], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    });
+  } else {
+    baseScroll = maxScroll * 0.35;
+  }
+  const wobble =
+    driveSec > 0.4
+      ? 4 * scale * Math.sin(2 * Math.PI * 2.5 * (driveSec - 0.4))
+      : 0;
+  const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll + wobble));
+  const pageY = -scrollPx;
+
+  // Email detail card slides up from the bottom starting around
+  // driveSec 1.0s, fully covering the inbox by 1.4s. Stays visible
+  // through the rest of the lifetime.
+  const detailSlideStart = 1.0;
+  const detailSlideEnd = 1.4;
+  const detailSlideProgress = interpolate(
+    driveSec,
+    [detailSlideStart, detailSlideEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  const detailY = interpolate(detailSlideProgress, [0, 1], [height, 0]);
+
+  // Gmail palette.
+  const G_BG = "#FFFFFF";
+  const G_TEXT = "#202124";
+  const G_LIGHT = "#5F6368";
+  const G_BORDER = "#E8EAED";
+  const G_RED = "#EA4335";
+  const G_BLUE = "#1A73E8";
+  const G_GREEN = "#34A853";
+  const G_BG_GREY = "#F1F3F4";
+
+  type Email = {
+    initial: string;
+    color: string;
+    name: string;
+    subject: string;
+    snippet: string;
+    time: string;
+    unread: boolean;
+  };
+  const emails: Email[] = [
+    {
+      initial: "B",
+      color: "#5F6368",
+      name: "Boss",
+      subject: "Q4 review deck — needs your input",
+      snippet:
+        "Hey, can you take a look at the deck before tomorrow? A few...",
+      time: "9:42 AM",
+      unread: true,
+    },
+    {
+      initial: "S",
+      color: "#1A73E8",
+      name: "Sarah from accounting",
+      subject: "Re: expense reports",
+      snippet: "Got it, processing those now. Just need confirmation on...",
+      time: "9:18 AM",
+      unread: true,
+    },
+    {
+      initial: "M",
+      color: "#EA4335",
+      name: "Mom",
+      subject: "Sunday dinner?",
+      snippet:
+        "Are you coming this Sunday? I'm making the lasagna you like...",
+      time: "8:55 AM",
+      unread: true,
+    },
+    {
+      initial: "L",
+      color: "#34A853",
+      name: "LinkedIn",
+      subject: "5 new job recommendations for you",
+      snippet:
+        "Senior Engineer at Acme · Director at Globex · and 3 more...",
+      time: "8:30 AM",
+      unread: false,
+    },
+    {
+      initial: "C",
+      color: "#FBBC04",
+      name: "Calendar",
+      subject: "Reminder: Team standup at 10:00",
+      snippet: "You have a meeting in 18 minutes...",
+      time: "8:42 AM",
+      unread: false,
+    },
+    {
+      initial: "T",
+      color: "#1A73E8",
+      name: "Thomas Kim",
+      subject: "Re: contract review",
+      snippet: "Thanks for sending this over. I have a few questions...",
+      time: "Yesterday",
+      unread: false,
+    },
+  ];
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        overflow: "hidden",
+        opacity,
+        filter: `blur(${3 * scale}px) brightness(0.94) saturate(0.92)`,
+        pointerEvents: "none",
+        background: G_BG,
+      }}
+    >
+      {/* Inbox view */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width,
+          transform: `translateY(${pageY}px)`,
+        }}
+      >
+        {/* Search bar */}
+        <div
+          style={{
+            height: navH + searchH,
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: navH,
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              height: 70 * scale,
+              borderRadius: 999,
+              background: G_BG_GREY,
+              display: "flex",
+              alignItems: "center",
+              paddingLeft: 22 * scale,
+              gap: 16 * scale,
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              color: G_LIGHT,
+            }}
+          >
+            <span style={{ fontSize: 26 * scale }}>≡</span>
+            <span>Search in mail</span>
+          </div>
+        </div>
+        {/* Primary tab strip */}
+        <div
+          style={{
+            height: tabsH,
+            paddingLeft: padX,
+            paddingRight: padX,
+            display: "flex",
+            alignItems: "center",
+            gap: 24 * scale,
+            borderBottom: `${1 * scale}px solid ${G_BORDER}`,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              fontWeight: 600,
+              color: G_RED,
+              borderBottom: `${3 * scale}px solid ${G_RED}`,
+              paddingTop: 14 * scale,
+              paddingBottom: 14 * scale,
+            }}
+          >
+            Primary
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              color: G_LIGHT,
+            }}
+          >
+            Promotions
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              color: G_LIGHT,
+            }}
+          >
+            Social
+          </div>
+        </div>
+        {/* Email list */}
+        {emails.map((e, i) => (
+          <div
+            key={i}
+            style={{
+              height: emailItemH,
+              paddingLeft: padX,
+              paddingRight: padX,
+              paddingTop: 18 * scale,
+              paddingBottom: 18 * scale,
+              borderBottom: `${1 * scale}px solid ${G_BORDER}`,
+              display: "flex",
+              gap: 18 * scale,
+              alignItems: "flex-start",
+              background: e.unread ? G_BG : "#FAFAFA",
+              fontFamily: FONT_STACK,
+            }}
+          >
+            <div
+              style={{
+                width: 56 * scale,
+                height: 56 * scale,
+                borderRadius: "50%",
+                background: e.color,
+                color: "#fff",
+                fontSize: 28 * scale,
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              {e.initial}
+            </div>
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                gap: 4 * scale,
+                minWidth: 0,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 22 * scale,
+                    fontWeight: e.unread ? 700 : 500,
+                    color: G_TEXT,
+                  }}
+                >
+                  {e.name}
+                </div>
+                <div style={{ fontSize: 16 * scale, color: G_LIGHT }}>
+                  {e.time}
+                </div>
+              </div>
+              <div
+                style={{
+                  fontSize: 20 * scale,
+                  fontWeight: e.unread ? 600 : 400,
+                  color: G_TEXT,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {e.subject}
+              </div>
+              <div
+                style={{
+                  fontSize: 18 * scale,
+                  color: G_LIGHT,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {e.snippet}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Compose FAB (only visible when detail isn't covering yet) */}
+      {detailSlideProgress < 0.7 && (
+        <div
+          style={{
+            position: "absolute",
+            right: 30 * scale,
+            bottom: 80 * scale,
+            width: 90 * scale,
+            height: 90 * scale,
+            borderRadius: "50%",
+            background: G_RED,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 40 * scale,
+            color: "#fff",
+            boxShadow: `0 ${6 * scale}px ${20 * scale}px rgba(234, 67, 53, 0.4)`,
+            opacity: 1 - detailSlideProgress / 0.7,
+          }}
+        >
+          ✏
+        </div>
+      )}
+
+      {/* Email detail card — slides up from below to cover the inbox */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width,
+          height,
+          background: G_BG,
+          transform: `translateY(${detailY}px)`,
+          boxShadow: `0 ${-10 * scale}px ${30 * scale}px rgba(0,0,0,0.15)`,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Detail nav: back, archive, delete */}
+        <div
+          style={{
+            height: navH * 1.2,
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: navH * 0.5,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontFamily: FONT_STACK,
+            color: G_TEXT,
+            borderBottom: `${1 * scale}px solid ${G_BORDER}`,
+          }}
+        >
+          <div style={{ fontSize: 36 * scale, fontWeight: 300 }}>←</div>
+          <div style={{ display: "flex", gap: 28 * scale, fontSize: 26 * scale, color: G_LIGHT }}>
+            <span>📁</span>
+            <span>🗑</span>
+            <span>⋯</span>
+          </div>
+        </div>
+        {/* Subject */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 24 * scale,
+            paddingBottom: 16 * scale,
+            fontFamily: FONT_STACK,
+            fontSize: 32 * scale,
+            fontWeight: 600,
+            color: G_TEXT,
+            lineHeight: 1.25,
+          }}
+        >
+          Q4 review deck — needs your input
+        </div>
+        {/* Sender row */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            display: "flex",
+            alignItems: "center",
+            gap: 16 * scale,
+            paddingBottom: 16 * scale,
+          }}
+        >
+          <div
+            style={{
+              width: 56 * scale,
+              height: 56 * scale,
+              borderRadius: "50%",
+              background: "#5F6368",
+              color: "#fff",
+              fontSize: 28 * scale,
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            B
+          </div>
+          <div
+            style={{
+              flex: 1,
+              fontFamily: FONT_STACK,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4 * scale,
+            }}
+          >
+            <div style={{ fontSize: 22 * scale, fontWeight: 600, color: G_TEXT }}>
+              Boss
+            </div>
+            <div style={{ fontSize: 18 * scale, color: G_LIGHT }}>
+              to me · 9:42 AM
+            </div>
+          </div>
+        </div>
+        {/* Body preview */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 12 * scale,
+            paddingBottom: 24 * scale,
+            fontFamily: FONT_STACK,
+            fontSize: 22 * scale,
+            color: G_TEXT,
+            lineHeight: 1.5,
+            flex: 1,
+          }}
+        >
+          <div style={{ marginBottom: 16 * scale }}>
+            Hey, can you take a look at the deck before tomorrow? I need
+            you to update slides 4-7 with the latest revenue numbers and
+            add a section on Q1 outlook.
+          </div>
+          <div style={{ marginBottom: 16 * scale }}>
+            Also let me know if you have time to jump on a quick call
+            this afternoon to align on the messaging.
+          </div>
+          <div style={{ color: G_LIGHT }}>Thanks,</div>
+        </div>
+        {/* Reply chips */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 18 * scale,
+            paddingBottom: 18 * scale,
+            display: "flex",
+            gap: 12 * scale,
+            borderTop: `${1 * scale}px solid ${G_BORDER}`,
+            background: G_BG_GREY,
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              height: 70 * scale,
+              borderRadius: 999,
+              border: `${1.5 * scale}px solid ${G_BORDER}`,
+              background: G_BG,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              color: G_TEXT,
+            }}
+          >
+            ↩ Reply
+          </div>
+          <div
+            style={{
+              flex: 1,
+              height: 70 * scale,
+              borderRadius: 999,
+              background: G_BLUE,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              fontWeight: 600,
+              color: "#fff",
+              transform: `scale(${replyAllScale})`,
+              transformOrigin: "center",
+            }}
+          >
+            ↩↩ Reply all
+          </div>
+          <div
+            style={{
+              flex: 1,
+              height: 70 * scale,
+              borderRadius: 999,
+              border: `${1.5 * scale}px solid ${G_BORDER}`,
+              background: G_BG,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              color: G_TEXT,
+            }}
+          >
+            ↳ Forward
+          </div>
+        </div>
+      </div>
+
+      {/* Replied confirmation card */}
+      {replySentOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: replySentOpacity,
+            pointerEvents: "none",
+            background: "rgba(0,0,0,0.35)",
+          }}
+        >
+          <div
+            style={{
+              width: width * 0.84,
+              padding: `${48 * scale}px ${36 * scale}px`,
+              borderRadius: 24 * scale,
+              background: "#FFFFFF",
+              fontFamily: FONT_STACK,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 18 * scale,
+              boxShadow: `0 ${20 * scale}px ${60 * scale}px rgba(0,0,0,0.35)`,
+            }}
+          >
+            <div
+              style={{
+                width: 130 * scale,
+                height: 130 * scale,
+                borderRadius: "50%",
+                background: G_GREEN,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 80 * scale,
+                color: "#FFFFFF",
+                fontWeight: 700,
+                boxShadow: `0 ${6 * scale}px ${20 * scale}px rgba(52, 168, 83, 0.35)`,
+              }}
+            >
+              ✓
+            </div>
+            <div
+              style={{
+                fontSize: 44 * scale,
+                fontWeight: 700,
+                color: G_TEXT,
+                letterSpacing: -0.5 * scale,
+                marginTop: 8 * scale,
+                textAlign: "center",
+              }}
+            >
+              Replied to 47 emails
+            </div>
+            <div
+              style={{
+                fontSize: 22 * scale,
+                color: G_LIGHT,
+                textAlign: "center",
+              }}
+            >
+              Drafts auto-sent · 0 errors
+            </div>
+            <div
+              style={{
+                width: "100%",
+                height: 1 * scale,
+                background: G_BORDER,
+                marginTop: 4 * scale,
+                marginBottom: 4 * scale,
+              }}
+            />
+            {[
+              { label: "Personal", value: "12 replies" },
+              { label: "Work", value: "28 replies" },
+              { label: "Promotional", value: "7 archived" },
+            ].map((r) => (
+              <div
+                key={r.label}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontFamily: FONT_STACK,
+                }}
+              >
+                <div style={{ fontSize: 22 * scale, color: G_LIGHT }}>
+                  {r.label}
+                </div>
+                <div style={{ fontSize: 22 * scale, color: G_TEXT, fontWeight: 600 }}>
+                  {r.value}
+                </div>
+              </div>
+            ))}
+            <div
+              style={{
+                width: "100%",
+                marginTop: 12 * scale,
+                padding: `${18 * scale}px ${22 * scale}px`,
+                borderRadius: 14 * scale,
+                background: "#E6F4EA",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ fontSize: 22 * scale, color: G_LIGHT }}>
+                Inbox
+              </div>
+              <div style={{ fontSize: 32 * scale, fontWeight: 700, color: G_GREEN }}>
+                Empty ✓
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Scene 1 — 0s–2s: "In your messages"
 // Folk logo spins, then continuously morphs (size + color + glyph) into the
 // iMessage send button. Single shared circular container so the transition
@@ -4307,6 +4997,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const sent3PhraseInitial = "bet, order some protection";
   const sent3PhraseEdited = "book my flight and hotel";
   const sent3PhraseEdited2 = "pay off my credit card";
+  const sent3PhraseEdited3 = "respond to all my emails";
   const sent3FontSize = bubbleFontSize;
   const sent3PadX = bubblePadX;
   const sent3Height = bubbleHeight;
@@ -4367,13 +5058,16 @@ const Scene3: React.FC<Scene3Props> = ({
       toPhrase: sent3PhraseEdited,
     },
     {
-      // Edit 2 — happens during Apple Wallet's open. Backspace
-      // begins ~0.4s after Wallet's iOS open-app starts so the
-      // viewer reads the previous phrase against the new background
-      // for a beat before it morphs.
+      // Edit 2 — happens during Apple Wallet's open.
       backspaceStart: sec(19.4, fps),
       fromPhrase: sent3PhraseEdited,
       toPhrase: sent3PhraseEdited2,
+    },
+    {
+      // Edit 3 — happens during Gmail's open.
+      backspaceStart: sec(24.3, fps),
+      fromPhrase: sent3PhraseEdited2,
+      toPhrase: sent3PhraseEdited3,
     },
   ];
 
@@ -4787,6 +5481,110 @@ const Scene3: React.FC<Scene3Props> = ({
   );
   const walletOpacity = walletFadeIn * walletExitFadeMul;
 
+  // ── Gmail (edit 4: "respond to all my emails") ─────────────────
+  // Opens after Apple Wallet exits, with the iOS app-open zoom
+  // anchored to the UPPER-LEFT (companion to Wallet's upper-right).
+  const gmailFadeStart = walletExitEnd + sec(0.05, fps);
+  const gmailOpenSpring = spring({
+    frame: local - gmailFadeStart,
+    fps,
+    config: { damping: 16, stiffness: 110, mass: 0.65 },
+  });
+  const gmailOpenScale = interpolate(gmailOpenSpring, [0, 1], [0.15, 1]);
+  const gmailOpenRadius = interpolate(
+    gmailOpenSpring,
+    [0, 1],
+    [80 * scale, 0],
+  );
+  const gmailFadeIn = interpolate(
+    local,
+    [gmailFadeStart, gmailFadeStart + sec(0.18, fps)],
+    [0, 0.45],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+
+  // Reply All chip tap.
+  const replyAllTapStart = sec(26.4, fps);
+  const replyAllTapEnd = sec(26.6, fps);
+  const replyAllTapHalf = (replyAllTapEnd - replyAllTapStart) / 2;
+  const replyAllTapDown = interpolate(
+    local,
+    [replyAllTapStart, replyAllTapStart + replyAllTapHalf],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  const replyAllTapUp = interpolate(
+    local,
+    [replyAllTapStart + replyAllTapHalf, replyAllTapEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  const replyAllScale = 1 - replyAllTapDown * 0.06 + replyAllTapUp * 0.06;
+
+  // "Replied to 47 emails" confirmation toast.
+  const replyToastInStart = replyAllTapEnd;
+  const replyToastInEnd = replyToastInStart + sec(0.25, fps);
+  const replyToastOutStart = replyToastInStart + sec(1.3, fps);
+  const replyToastOutEnd = replyToastOutStart + sec(0.35, fps);
+  const replyToastIn = interpolate(
+    local,
+    [replyToastInStart, replyToastInEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  const replyToastOut = interpolate(
+    local,
+    [replyToastOutStart, replyToastOutEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const replySentOpacity = replyToastIn * replyToastOut;
+
+  // Gmail page exit.
+  const gmailExitStart = replyToastOutEnd;
+  const gmailExitEnd = gmailExitStart + sec(0.5, fps);
+  const gmailExitFadeMul = interpolate(
+    local,
+    [gmailExitStart, gmailExitEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const gmailExitDriftY = interpolate(
+    local,
+    [gmailExitStart, gmailExitEnd],
+    [0, -50 * scale],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const gmailOpacity = gmailFadeIn * gmailExitFadeMul;
+
   // ── Received bubbles #2 and #3 ──────────────────────────────────
   // Real conversations come in as multiple short messages, not one
   // long wrapped one. Split the reply into two consecutive gray
@@ -5173,6 +5971,38 @@ const Scene3: React.FC<Scene3Props> = ({
             opacity={walletOpacity}
             payButtonScale={payButtonTapScale}
             paymentConfirmOpacity={paymentConfirmOpacity}
+          />
+        </div>
+      )}
+
+      {/* Gmail — opens after Apple Wallet exits, with the iOS app-
+          open zoom anchored to the UPPER-LEFT (companion to Wallet's
+          upper-right). Tap-pulse on the Reply All chip + "Replied to
+          47 emails" confirmation. */}
+      {gmailOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            transformOrigin: `${width * 0.22}px ${height * 0.18}px`,
+            transform: `translateY(${gmailExitDriftY}px) scale(${gmailOpenScale})`,
+            borderRadius: gmailOpenRadius,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <GmailInbox
+            driveFrame={local - gmailFadeStart}
+            fps={fps}
+            width={width}
+            height={height}
+            scale={scale}
+            opacity={gmailOpacity}
+            replyAllScale={replyAllScale}
+            replySentOpacity={replySentOpacity}
           />
         </div>
       )}
@@ -5821,7 +6651,7 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           closing-punchline edit animation + the flight search
           background, tap on a flight, "Booking confirmed" toast,
           and the page exit. */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(24, fps)}>
+      <Sequence from={sec(5, fps)} durationInFrames={sec(29, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
@@ -5835,7 +6665,7 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           sent #3 sits alone on screen as the focal point. */}
       <Sequence
         from={sec(5 - xfade, fps)}
-        durationInFrames={sec(24 + xfade, fps)}
+        durationInFrames={sec(29 + xfade, fps)}
       >
         <Caption
           text="schedule a date with my crush"
