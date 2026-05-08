@@ -3644,27 +3644,23 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
       reply: "Tuesday at 2pm works — sending invite now. Agree on both points.",
     },
   ];
-  // Montage timing in driveSec.
+  // Montage timing in driveSec. The montage starts at 1.4s and runs
+  // INDEFINITELY through the rest of the Gmail lifetime — including
+  // through the page's exit fade — so the rapid email-switching and
+  // reply-typing stays visually alive instead of freezing on a
+  // single email mid-fade.
   const montageStart = 1.4;
-  const montageEnd = 2.4;
   const cyclesPerSec = 6.5;
   const cycleDur = 1 / cyclesPerSec;
-  // Active speedup-email index. Before montageStart, hold on email 0.
-  // After montageEnd, settle on email 0 again so the Reply All tap
-  // lands on the same context the inbox showed.
   const activeSpeedupIndex = (() => {
     if (driveSec < montageStart) return 0;
-    if (driveSec > montageEnd) return 0;
     const cycle = Math.floor((driveSec - montageStart) / cycleDur);
     return cycle % speedupEmails.length;
   })();
   const activeEmail = speedupEmails[activeSpeedupIndex];
   // Typewriter progress for the reply text within the current cycle.
-  // Reply types fully across the cycle window so each cycle ends
-  // with the full reply visible right before snapping to the next.
   const cycleProgress = (() => {
     if (driveSec < montageStart) return 0;
-    if (driveSec > montageEnd) return 1;
     const inCycle = ((driveSec - montageStart) % cycleDur) / cycleDur;
     return inCycle;
   })();
