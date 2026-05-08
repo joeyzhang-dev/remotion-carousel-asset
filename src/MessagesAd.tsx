@@ -2460,144 +2460,321 @@ const FlightSearch: React.FC<FlightSearchProps> = ({
             justifyContent: "center",
             opacity: bookingConfirmOpacity,
             pointerEvents: "none",
-            // Slight dim of the page behind the confirmation card.
             background: "rgba(0,0,0,0.35)",
           }}
         >
           <div
             style={{
               width: width * 0.84,
-              padding: `${48 * scale}px ${36 * scale}px`,
-              borderRadius: 24 * scale,
+              borderRadius: 18 * scale,
               background: "#FFFFFF",
               fontFamily: FONT_STACK,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 18 * scale,
               boxShadow: `0 ${20 * scale}px ${60 * scale}px rgba(0,0,0,0.35)`,
+              overflow: "hidden",
+              position: "relative",
             }}
           >
-            {/* Big green check circle */}
+            {/* Alaska header strip */}
             <div
               style={{
-                width: 130 * scale,
-                height: 130 * scale,
-                borderRadius: "50%",
-                background: G_GREEN,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 80 * scale,
+                background:
+                  "linear-gradient(135deg, #0060AB 0%, #003E73 100%)",
+                padding: `${22 * scale}px ${28 * scale}px`,
                 color: "#FFFFFF",
-                fontWeight: 700,
-                boxShadow: `0 ${6 * scale}px ${20 * scale}px rgba(24, 128, 56, 0.35)`,
-              }}
-            >
-              ✓
-            </div>
-            {/* Title */}
-            <div
-              style={{
-                fontSize: 44 * scale,
-                fontWeight: 700,
-                color: G_TEXT,
-                letterSpacing: -0.5 * scale,
-                marginTop: 8 * scale,
-              }}
-            >
-              Flight Booked
-            </div>
-            <div
-              style={{
-                fontSize: 22 * scale,
-                color: G_LIGHT,
-                textAlign: "center",
-                lineHeight: 1.35,
-              }}
-            >
-              Confirmation #{" "}
-              <span style={{ color: G_TEXT, fontWeight: 600 }}>
-                AX9F4Q-7K
-              </span>
-            </div>
-            {/* Divider */}
-            <div
-              style={{
-                width: "100%",
-                height: 1 * scale,
-                background: G_BORDER,
-                marginTop: 4 * scale,
-                marginBottom: 4 * scale,
-              }}
-            />
-            {/* Flight summary */}
-            <div
-              style={{
-                width: "100%",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: 12 * scale,
               }}
             >
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 * scale }}>
-                <div style={{ fontSize: 32 * scale, fontWeight: 700, color: G_TEXT }}>
-                  SFO
-                </div>
-                <div style={{ fontSize: 18 * scale, color: G_LIGHT }}>
-                  Fri · 11:11 PM
-                </div>
-              </div>
               <div
                 style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8 * scale,
-                  paddingLeft: 12 * scale,
-                  paddingRight: 12 * scale,
+                  fontSize: 28 * scale,
+                  fontWeight: 700,
+                  letterSpacing: 0.5 * scale,
                 }}
               >
-                <div style={{ flex: 1, height: 2 * scale, background: G_BORDER }} />
-                <span style={{ fontSize: 22 * scale, color: G_LIGHT }}>✈</span>
-                <div style={{ flex: 1, height: 2 * scale, background: G_BORDER }} />
+                Alaska
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 * scale, alignItems: "flex-end" }}>
-                <div style={{ fontSize: 32 * scale, fontWeight: 700, color: G_TEXT }}>
-                  JFK
-                </div>
-                <div style={{ fontSize: 18 * scale, color: G_LIGHT }}>
-                  Sat · 7:59 AM
-                </div>
+              <div style={{ fontSize: 22 * scale, fontWeight: 500, opacity: 0.9 }}>
+                AS 1281 · Boarding pass
               </div>
             </div>
+            {/* Itinerary block */}
             <div
               style={{
-                fontSize: 20 * scale,
-                color: G_LIGHT,
-                marginTop: 4 * scale,
+                padding: `${28 * scale}px`,
+                paddingTop: 32 * scale,
+                paddingBottom: 24 * scale,
               }}
             >
-              Alaska · 5h 48m · Nonstop · 2 passengers
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8 * scale,
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                  <div
+                    style={{
+                      fontSize: 56 * scale,
+                      fontWeight: 700,
+                      color: "#202124",
+                      letterSpacing: -1 * scale,
+                      lineHeight: 1,
+                    }}
+                  >
+                    SFO
+                  </div>
+                  <div style={{ fontSize: 20 * scale, color: "#5F6368", marginTop: 6 * scale }}>
+                    Fri · 11:11 PM
+                  </div>
+                </div>
+                {/* Flight path with plane */}
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    paddingLeft: 12 * scale,
+                    paddingRight: 12 * scale,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8 * scale,
+                    }}
+                  >
+                    <div
+                      style={{
+                        flex: 1,
+                        height: 0,
+                        borderTop: `${2 * scale}px dashed #DADCE0`,
+                      }}
+                    />
+                    <svg width={28 * scale} height={28 * scale} viewBox="0 0 24 24" fill="none">
+                      <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill="#1A73E8" />
+                    </svg>
+                    <div
+                      style={{
+                        flex: 1,
+                        height: 0,
+                        borderTop: `${2 * scale}px dashed #DADCE0`,
+                      }}
+                    />
+                  </div>
+                  <div style={{ fontSize: 16 * scale, color: "#5F6368", marginTop: 6 * scale }}>
+                    5h 48m · Nonstop
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                  <div
+                    style={{
+                      fontSize: 56 * scale,
+                      fontWeight: 700,
+                      color: "#202124",
+                      letterSpacing: -1 * scale,
+                      lineHeight: 1,
+                    }}
+                  >
+                    JFK
+                  </div>
+                  <div style={{ fontSize: 20 * scale, color: "#5F6368", marginTop: 6 * scale }}>
+                    Sat · 7:59 AM
+                  </div>
+                </div>
+              </div>
+              {/* Passenger / Gate / Seat / Group strip */}
+              <div
+                style={{
+                  marginTop: 22 * scale,
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                  gap: 12 * scale,
+                  paddingTop: 18 * scale,
+                  borderTop: `${1 * scale}px solid #E8EAED`,
+                }}
+              >
+                {[
+                  { label: "PASSENGER", value: "Alex R." },
+                  { label: "GATE", value: "B14" },
+                  { label: "SEAT", value: "7A" },
+                  { label: "GROUP", value: "2" },
+                ].map((cell) => (
+                  <div key={cell.label} style={{ display: "flex", flexDirection: "column", gap: 4 * scale }}>
+                    <div
+                      style={{
+                        fontSize: 13 * scale,
+                        color: "#5F6368",
+                        letterSpacing: 0.5 * scale,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {cell.label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 24 * scale,
+                        fontWeight: 700,
+                        color: "#202124",
+                      }}
+                    >
+                      {cell.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            {/* Total paid */}
+            {/* Perforation row */}
             <div
               style={{
-                width: "100%",
-                marginTop: 12 * scale,
-                padding: `${18 * scale}px ${22 * scale}px`,
-                borderRadius: 14 * scale,
-                background: "#F1F8F4",
+                position: "relative",
+                height: 24 * scale,
+              }}
+            >
+              {/* Left notch */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: -12 * scale,
+                  top: 0,
+                  width: 24 * scale,
+                  height: 24 * scale,
+                  borderRadius: "50%",
+                  background: "rgba(0,0,0,0.35)",
+                }}
+              />
+              {/* Right notch */}
+              <div
+                style={{
+                  position: "absolute",
+                  right: -12 * scale,
+                  top: 0,
+                  width: 24 * scale,
+                  height: 24 * scale,
+                  borderRadius: "50%",
+                  background: "rgba(0,0,0,0.35)",
+                }}
+              />
+              {/* Dashed line */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: 24 * scale,
+                  right: 24 * scale,
+                  top: 12 * scale,
+                  height: 0,
+                  borderTop: `${2 * scale}px dashed #DADCE0`,
+                }}
+              />
+            </div>
+            {/* Bottom half — QR + barcode */}
+            <div
+              style={{
+                padding: `${24 * scale}px ${28 * scale}px`,
+                display: "flex",
+                alignItems: "center",
+                gap: 22 * scale,
+              }}
+            >
+              {/* QR code (8x8 grid) */}
+              <div
+                style={{
+                  width: 130 * scale,
+                  height: 130 * scale,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(8, 1fr)",
+                  gridTemplateRows: "repeat(8, 1fr)",
+                  background: "#FFFFFF",
+                  border: `${2 * scale}px solid #202124`,
+                  padding: 4 * scale,
+                  flexShrink: 0,
+                }}
+              >
+                {[
+                  1,1,1,0,1,1,1,0,
+                  1,0,1,1,0,1,0,1,
+                  1,0,1,0,1,0,1,1,
+                  1,1,0,1,1,1,0,0,
+                  0,1,1,0,1,0,1,1,
+                  1,0,1,1,0,1,1,0,
+                  0,1,0,1,1,0,0,1,
+                  1,1,0,0,1,1,1,1,
+                ].map((cell, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      background: cell ? "#202124" : "#FFFFFF",
+                    }}
+                  />
+                ))}
+              </div>
+              {/* Barcode + scan label */}
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "stretch",
+                    height: 80 * scale,
+                    gap: 2 * scale,
+                  }}
+                >
+                  {[3, 1, 2, 1, 3, 2, 1, 4, 1, 2, 3, 1, 2, 1, 3, 1, 2, 4, 1, 1, 3, 2, 1, 2, 1, 3, 1].map((w, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        width: w * scale,
+                        background: "#202124",
+                      }}
+                    />
+                  ))}
+                </div>
+                <div style={{ fontSize: 16 * scale, color: "#5F6368", marginTop: 8 * scale }}>
+                  Scan at security · AX9F4Q-7K
+                </div>
+                <div
+                  style={{
+                    marginTop: 14 * scale,
+                    padding: `${8 * scale}px ${14 * scale}px`,
+                    borderRadius: 999,
+                    background: "#E6F4EA",
+                    color: "#188038",
+                    fontSize: 16 * scale,
+                    fontWeight: 600,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6 * scale,
+                  }}
+                >
+                  <span style={{ fontSize: 14 * scale }}>🌱</span>
+                  Carbon offset included · 412 kg
+                </div>
+              </div>
+            </div>
+            {/* Total paid footer */}
+            <div
+              style={{
+                background: "#E8F0FE",
+                padding: `${20 * scale}px ${28 * scale}px`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
               }}
             >
-              <div style={{ fontSize: 22 * scale, color: G_LIGHT }}>
-                Total paid
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 * scale }}>
+                <div style={{ fontSize: 16 * scale, color: "#5F6368" }}>
+                  Charged to ····4829
+                </div>
+                <div style={{ fontSize: 14 * scale, color: "#5F6368" }}>
+                  via Google Pay
+                </div>
               </div>
-              <div style={{ fontSize: 36 * scale, fontWeight: 700, color: G_GREEN }}>
+              <div style={{ fontSize: 36 * scale, fontWeight: 700, color: "#1A73E8", letterSpacing: -0.3 * scale }}>
                 $1,186.00
               </div>
             </div>
