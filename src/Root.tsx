@@ -24,11 +24,11 @@ export const RemotionRoot: React.FC = () => {
         height={1920}
       />
 
-      {/* Vertical 9:16 — mobile-native. 16.75s total. */}
+      {/* Vertical 9:16 — mobile-native. 18.5s total. */}
       <Composition
         id="preview"
         component={MessagesAd}
-        durationInFrames={503}
+        durationInFrames={555}
         fps={30}
         width={1080}
         height={1920}
@@ -36,7 +36,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="master-4k"
         component={MessagesAd}
-        durationInFrames={1005}
+        durationInFrames={1110}
         fps={60}
         width={2160}
         height={3840}
@@ -48,7 +48,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="preview-16x9"
         component={MessagesAdHorizontal}
-        durationInFrames={503}
+        durationInFrames={555}
         fps={30}
         width={1920}
         height={1080}
@@ -56,7 +56,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="master-16x9-4k"
         component={MessagesAdHorizontal}
-        durationInFrames={1005}
+        durationInFrames={1110}
         fps={60}
         width={3840}
         height={2160}

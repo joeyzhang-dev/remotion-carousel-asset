@@ -674,6 +674,17 @@ type InstagramProfileProps = {
   scale: number;
   /** Master opacity for the whole background (0..1). */
   opacity: number;
+  /** Optional index of a grid cell that should receive a tap-pulse
+   * (small scale-down then back). Used during the dwell phase to
+   * simulate the user tapping a post. */
+  tappedCellIndex?: number;
+  /** Tap-pulse scale to apply to `tappedCellIndex` (1 = no scale,
+   * 0.94 = scaled down ~6%). Defaults to 1. */
+  tappedCellScale?: number;
+  /** Optional opacity multiplier for `tappedCellIndex` (so the cell
+   * can be hidden once a flight clone takes over outside this
+   * component). 1 = visible, 0 = hidden. Defaults to 1. */
+  tappedCellOpacity?: number;
 };
 
 // Placeholder colors for each grid cell. The user will swap these for
@@ -689,6 +700,68 @@ const PROFILE_GRID_COLORS = [
   "#C8D0B8", "#D4B5C0", "#B8D0C4",
 ];
 
+/**
+ * Shared layout geometry for the Instagram profile background. Same
+ * values used inside `InstagramProfile` for rendering AND inside
+ * Scene 3 for computing the dwelled-cell screen position (so the
+ * flight animation lifts off from the cell's actual on-screen spot).
+ */
+const computeProfileLayout = (width: number, scale: number) => {
+  const headerPadX = 24 * scale;
+  const navHeight = 88 * scale;
+  const avatarSize = 180 * scale;
+  const profileSectionH = 280 * scale;
+  const bioH = 110 * scale;
+  const buttonsH = 90 * scale;
+  const tabBarH = 70 * scale;
+  const headerTotalH =
+    navHeight + profileSectionH + bioH + buttonsH + tabBarH;
+  const gridGap = 4 * scale;
+  const cellSize = (width - gridGap * 2) / 3;
+  const gridRows = 8;
+  const gridCols = 3;
+  const gridHeight = cellSize * gridRows + gridGap * (gridRows - 1);
+  const totalContentH = headerTotalH + gridHeight;
+  return {
+    headerPadX,
+    navHeight,
+    avatarSize,
+    profileSectionH,
+    bioH,
+    buttonsH,
+    tabBarH,
+    headerTotalH,
+    gridGap,
+    cellSize,
+    gridRows,
+    gridCols,
+    gridHeight,
+    totalContentH,
+  };
+};
+
+/** Layout-Y center of grid cell at index `idx` (row-major, 3 cols). */
+const cellLayoutY = (
+  idx: number,
+  layout: ReturnType<typeof computeProfileLayout>,
+): number => {
+  const row = Math.floor(idx / layout.gridCols);
+  return (
+    layout.headerTotalH +
+    row * (layout.cellSize + layout.gridGap) +
+    layout.cellSize / 2
+  );
+};
+
+/** Layout-X center of grid cell at index `idx` (row-major, 3 cols). */
+const cellLayoutX = (
+  idx: number,
+  layout: ReturnType<typeof computeProfileLayout>,
+): number => {
+  const col = idx % layout.gridCols;
+  return col * (layout.cellSize + layout.gridGap) + layout.cellSize / 2;
+};
+
 const InstagramProfile: React.FC<InstagramProfileProps> = ({
   driveFrame,
   fps,
@@ -696,27 +769,27 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
   height,
   scale,
   opacity,
+  tappedCellIndex,
+  tappedCellScale = 1,
+  tappedCellOpacity = 1,
 }) => {
-  // ── Profile-header dimensions ──────────────────────────────────
-  const headerPadX = 24 * scale;
-  const navHeight = 88 * scale;
-  const avatarSize = 180 * scale;
-  const profileSectionH = 280 * scale; // avatar + stats row
-  const bioH = 110 * scale;
-  const buttonsH = 90 * scale;
-  const tabBarH = 70 * scale;
-  const headerTotalH =
-    navHeight + profileSectionH + bioH + buttonsH + tabBarH;
-
-  // ── Grid dimensions ────────────────────────────────────────────
-  // 3 columns, 1px gap between cells (real IG uses very thin gaps).
-  const gridGap = 4 * scale;
-  const cellSize = (width - gridGap * 2) / 3;
-  // Render enough rows that the profile + ~6 rows of grid is taller
-  // than the canvas, so we have content to scroll through.
-  const gridRows = 8;
-  const gridHeight = cellSize * gridRows + gridGap * (gridRows - 1);
-  const totalContentH = headerTotalH + gridHeight;
+  // Geometry derived from the shared helper so the parent can compute
+  // matching screen positions for the dwell-cell flight animation.
+  const layout = computeProfileLayout(width, scale);
+  const {
+    headerPadX,
+    navHeight,
+    avatarSize,
+    profileSectionH,
+    bioH,
+    buttonsH,
+    tabBarH,
+    headerTotalH,
+    gridGap,
+    cellSize,
+    gridRows,
+    totalContentH,
+  } = layout;
 
   // ── Scroll behavior ───────────────────────────────────────────
   // Real users don't scroll at a constant velocity AND they don't
@@ -1125,17 +1198,26 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
             gap: gridGap,
           }}
         >
-          {Array.from({ length: gridRows * 3 }).map((_, idx) => (
-            <div
-              key={idx}
-              style={{
-                width: cellSize,
-                height: cellSize,
-                background:
-                  PROFILE_GRID_COLORS[idx % PROFILE_GRID_COLORS.length],
-              }}
-            />
-          ))}
+          {Array.from({ length: gridRows * 3 }).map((_, idx) => {
+            const isTapped = idx === tappedCellIndex;
+            return (
+              <div
+                key={idx}
+                style={{
+                  width: cellSize,
+                  height: cellSize,
+                  background:
+                    PROFILE_GRID_COLORS[idx % PROFILE_GRID_COLORS.length],
+                  // Tap-pulse: only applied to the tapped cell. Others
+                  // render unchanged.
+                  transform: isTapped
+                    ? `scale(${tappedCellScale})`
+                    : undefined,
+                  opacity: isTapped ? tappedCellOpacity : 1,
+                }}
+              />
+            );
+          })}
         </div>
       </div>
     </div>
@@ -1868,22 +1950,113 @@ const Scene3: React.FC<Scene3Props> = ({
   const sent2ReadInStart = sec(7.57, fps);
   const sent2ReadInEnd = sec(7.73, fps);
 
-  // ── Second received bubble: typing-indicator only (the actual
-  //    message text will be added in a follow-up) ─────────────────
-  //   7.90s  sent2 "Read" begins fading OUT (so it doesn't stack with
-  //          the new typing indicator's row position)
+  // ── Second received flow: typing → IG-tap-and-share → text replies
+  //   7.90s  sent2 "Read" begins fading OUT
   //   8.10s  typing #2 pops in
   //   8.30s  typing #2 fully popped in; dots begin pulsing
-  //   8.30–10.25s  dots pulse continuously
-  //   10.25s typing #2 begins morphing into the final message bubble
-  //   10.65s morph completes; first gray bubble settled
-  //   10.75s second gray bubble pops in
+  //   8.45s  IG profile begins fading in (app-open zoom)
+  //   8.45s+ IG drive starts (relative to this anchor inside the
+  //          InstagramProfile component): hold → scan → flick →
+  //          dwell → cruise. The DWELL stage spans driveSec
+  //          2.4–3.0, which in absolute terms is 10.85–11.45s.
+  //   11.10s tap feedback fires on the dwelled center cell (mid-
+  //          dwell so it lands while the post is centered)
+  //   11.30s flight animation: cell brightens, scales/translates
+  //          from its IG grid position to the chat's image-bubble
+  //          target position. Lands as a gray (received) image
+  //          attachment.
+  //   11.90s image bubble fully settled in chat
+  //   12.10s typing #2 begins morphing into the first text reply
+  //   12.50s morph completes; "she posted italian food before"
+  //          settled
+  //   12.60s "reserving table for you two @ 7pm on friday" pops in
+  //   12.95s settled
   const sent2ReadOutStart = sec(7.9, fps);
   const sent2ReadOutEnd = sec(8.1, fps);
   const typing2Start = sec(8.1, fps);
   const typing2PopEnd = sec(8.3, fps);
-  const typing2MorphStart = sec(10.25, fps);
-  const typing2MorphEnd = sec(10.65, fps);
+  // Tap + flight (the IG cell becomes a gray image bubble in chat).
+  const igTapStart = sec(11.1, fps);
+  const igTapEnd = sec(11.3, fps); // tap-down/up complete; flight begins
+  const igFlightStart = igTapEnd;
+  const igFlightEnd = sec(11.9, fps);
+  // typing #2 morph (after the image attachment has settled).
+  const typing2MorphStart = sec(12.1, fps);
+  const typing2MorphEnd = sec(12.5, fps);
+
+  // ── Image-attachment bubble: tap progress drivers ───────────────
+  // Cell tap feedback: scale-down then back to 1.0 over the
+  // igTapStart..igTapEnd window, plus a brightness ramp that takes
+  // the dwelled cell from the IG background's dimmed state to full
+  // saturation as the tap completes.
+  const tapHalfDur = (igTapEnd - igTapStart) / 2;
+  const tapDownProgress = interpolate(
+    local,
+    [igTapStart, igTapStart + tapHalfDur],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  const tapUpProgress = interpolate(
+    local,
+    [igTapStart + tapHalfDur, igTapEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  // Cell scale: 1 → 0.94 (tap-down) → 1 (release).
+  const dwelledCellTapScale =
+    1 - tapDownProgress * 0.06 + tapUpProgress * 0.06;
+  // Brightening: the cell sits inside the IG layer at 0.55 opacity.
+  // We render a separate clone of the cell that ramps OPACITY 0→1
+  // during the tap window, so by the time flight begins the clone is
+  // at full color and the original (still inside the dimmed layer)
+  // can fade out cleanly.
+  const dwelledCellHighlightOpacity = interpolate(
+    local,
+    [igTapStart, igTapEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+
+  // ── Flight progress (cell → chat image bubble) ──────────────────
+  // 0 = cell is at its IG-grid position (full size, square). 1 = it
+  // has landed at the image bubble's chat position (smaller, with
+  // bubble corner-radius). Interpolated with a spring-style cubic
+  // ease-in-out so the motion feels physical.
+  const flightProgress = interpolate(
+    local,
+    [igFlightStart, igFlightEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  // The original cell inside the IG layer fades out during the
+  // flight so we don't see two copies (the flying clone and the
+  // grid-anchored copy) stacked.
+  const dwelledCellSourceOpacity = interpolate(
+    local,
+    [igFlightStart, igFlightStart + (igFlightEnd - igFlightStart) * 0.3],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
 
   // First conversation shift (when gray bubble appears): sent drifts up
   // by half a bubble height + half a gap so sent + gray are centered
@@ -1926,21 +2099,29 @@ const Scene3: React.FC<Scene3Props> = ({
       easing: Easing.out(Easing.cubic),
     },
   );
-  // Fourth conversation shift (when received #3 appears): the burst
-  // adds a second consecutive gray bubble, so the stack drifts up by
-  // half a bubble + half a same-sender-gap to keep things balanced.
-  // We compute timing later (received3Start lives further down), so
-  // we forward-declare the shift values with placeholders updated
-  // once those constants exist.
-  const conversationShift4Delta = -(bubbleHeight / 2 + 8 * scale / 2);
-  // Placeholder until received3Start is defined; we recompute below
-  // (right after received3Start).
-  const conversationShift4Start = sec(10.75, fps);
-  const conversationShift4End = sec(11.1, fps);
+  // Fourth conversation shift (when the image attachment arrives):
+  // the image bubble is much taller than a normal bubble (~4.2× the
+  // single-line height), so the stack needs a bigger upward drift to
+  // keep things balanced around the screen midline. Timed to fire as
+  // the image flies into place.
+  const conversationShift4Delta = -(bubbleHeight * 1.8); // tuned empirically
   const conversationShift4 = interpolate(
     local,
-    [conversationShift4Start, conversationShift4End],
+    [igFlightStart, igFlightEnd],
     [0, conversationShift4Delta],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  // Fifth conversation shift (when received #3 appears, the second
+  // text reply): one more small drift up to balance the new bubble.
+  const conversationShift5Delta = -(bubbleHeight / 2 + 8 * scale / 2);
+  const conversationShift5 = interpolate(
+    local,
+    [sec(12.6, fps), sec(12.95, fps)],
+    [0, conversationShift5Delta],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -1951,7 +2132,8 @@ const Scene3: React.FC<Scene3Props> = ({
     conversationShift1 +
     conversationShift2 +
     conversationShift3 +
-    conversationShift4;
+    conversationShift4 +
+    conversationShift5;
 
   // The typing-indicator-then-message bubble pops in at `typingStart`
   // (as a small pill with three pulsing dots) and STAYS visible
@@ -2104,7 +2286,7 @@ const Scene3: React.FC<Scene3Props> = ({
     config: { damping: 14, stiffness: 180, mass: 0.55 },
   });
   const typing2Scale = interpolate(typing2Spring, [0, 1], [0.85, 1]);
-  const typing2Opacity = interpolate(
+  const typing2OpacityIn = interpolate(
     local,
     [typing2Start, typing2Start + sec(0.18, fps)],
     [0, 1],
@@ -2113,6 +2295,19 @@ const Scene3: React.FC<Scene3Props> = ({
       extrapolateRight: "clamp",
     },
   );
+  // Typing #2 fades OUT as the image attachment flies in to take its
+  // place — the image arriving "replaces" the typing indicator.
+  const typing2OpacityOut = interpolate(
+    local,
+    [igFlightStart, igFlightStart + (igFlightEnd - igFlightStart) * 0.5],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const typing2Opacity = typing2OpacityIn * typing2OpacityOut;
   // Width-and-height morph progress for typing #2. 0 = typing pill
   // (small width, single-line height, dots visible). 1 = settled
   // multi-line message bubble (wrapped width, multi-line height,
@@ -2182,6 +2377,40 @@ const Scene3: React.FC<Scene3Props> = ({
       easing: Easing.out(Easing.cubic),
     },
   );
+
+  // ── Dwelled cell identification ────────────────────────────────
+  // Replicates the InstagramProfile geometry so we can compute which
+  // grid cell will be visually centered on screen during the dwell
+  // phase, and where it sits in screen coordinates. This anchors the
+  // tap/flight animations to the right cell.
+  const igLayout = computeProfileLayout(width, scale);
+  const igMaxScroll = Math.max(0, igLayout.totalContentH - height);
+  const igDwellTarget = Math.min(igMaxScroll, igMaxScroll * 0.6);
+  // The cell whose vertical center is closest to the screen midline
+  // during the dwell (when pageY = -igDwellTarget). Solve for the
+  // row whose layoutY ≈ height/2 + igDwellTarget. Always pick column
+  // 1 (middle of 3) so the cell is also centered horizontally.
+  const dwelledRow = Math.max(
+    0,
+    Math.min(
+      igLayout.gridRows - 1,
+      Math.round(
+        (height / 2 + igDwellTarget - igLayout.headerTotalH - igLayout.cellSize / 2) /
+          (igLayout.cellSize + igLayout.gridGap),
+      ),
+    ),
+  );
+  const dwelledCellIndex = dwelledRow * igLayout.gridCols + 1; // middle column
+  const dwelledCellColor =
+    PROFILE_GRID_COLORS[dwelledCellIndex % PROFILE_GRID_COLORS.length];
+  // Cell screen position during dwell. Layout coords minus the
+  // current page-Y (which is -igDwellTarget during the dwell stage).
+  const dwelledCellLayoutX = cellLayoutX(dwelledCellIndex, igLayout);
+  const dwelledCellLayoutY = cellLayoutY(dwelledCellIndex, igLayout);
+  // Screen-space center of the cell during the dwell — used as the
+  // flight start point.
+  const dwelledCellScreenX = dwelledCellLayoutX;
+  const dwelledCellScreenY = dwelledCellLayoutY - igDwellTarget;
   // Dots animate via the same sine-driven pulse as typing #1, but
   // anchored to typing2PopEnd so the wave starts fresh for this
   // bubble.
@@ -2276,9 +2505,30 @@ const Scene3: React.FC<Scene3Props> = ({
   const received3TailExt = received3CornerRadius * 0.5;
   const received3TailHook = received3CornerRadius * 0.2;
 
-  // Received #3 timing: pops in shortly after typing #2 has fully
-  // morphed into received #2.
-  const received3Start = sec(10.75, fps);
+  // ── Received #2 standalone pop-in timing ────────────────────────
+  // Pops in below the image attachment after the image has settled.
+  // (Previously this came from the typing #2 morph, but with the
+  // image taking the typing pill's row, received #2 is now its own
+  // separate bubble.)
+  const received2Start = sec(12.1, fps);
+  const received2Spring = spring({
+    frame: local - received2Start,
+    fps,
+    config: { damping: 14, stiffness: 180, mass: 0.55 },
+  });
+  const received2Scale = interpolate(received2Spring, [0, 1], [0.85, 1]);
+  const received2Opacity = interpolate(
+    local,
+    [received2Start, received2Start + sec(0.18, fps)],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    },
+  );
+
+  // Received #3 timing: pops in shortly after received #2.
+  const received3Start = sec(12.6, fps);
   const received3Spring = spring({
     frame: local - received3Start,
     fps,
@@ -2305,23 +2555,43 @@ const Scene3: React.FC<Scene3Props> = ({
   );
   const typing2AnimatedH = bubbleHeight;
 
+  // ── Image-attachment bubble dimensions ──────────────────────────
+  // A square-ish gray bubble that contains the IG post image. Sized
+  // similar to a real iMessage image attachment — wide enough to read
+  // but not full-bleed, with bubble-style rounded corners.
+  const imageBubbleSize = bubbleHeight * 4.2; // roughly 315 @ 1080 canvas
+  const imageBubbleCornerRadius = bubbleHeight * 0.42;
+
   // Distance between bubble CENTERS (used in absolute positioning).
   // Add half of each bubble's height plus the gap.
   const receivedYOffset = bubbleHeight / 2 + receivedGap + receivedHeight / 2;
   // Sent2 sits another full row below the gray bubble.
   const sent2YOffset =
     receivedYOffset + receivedHeight / 2 + receivedGap + sent2Height / 2;
-  // Typing #2 sits one row below sent2.
-  const typing2TopAnchorY =
+  // Image attachment row (was typing #2's row). The image takes the
+  // place of the typing pill via the flight animation.
+  const imageBubbleTopAnchorY =
     sent2YOffset + sent2Height / 2 + receivedGap;
+  const imageBubbleYOffset = imageBubbleTopAnchorY + imageBubbleSize / 2;
+  // Typing #2 still pulses at this same row position before the image
+  // arrives — its YOffset uses the typing pill's height (single-line)
+  // so the pill is centered vertically in the would-be image slot.
+  const typing2TopAnchorY = imageBubbleTopAnchorY;
   const typing2YOffset = typing2TopAnchorY + typing2AnimatedH / 2;
-  // Received #3 sits below typing #2 (which becomes received #2). The
-  // gap here is TIGHTER than `receivedGap` because real iMessage
-  // groups consecutive same-sender bubbles closer together (no
-  // sender change between them).
+  // Same-sender gap between consecutive gray bubbles (image → text replies).
   const sameSenderGap = 8 * scale;
+  // Received #2 sits below the image attachment with a same-sender
+  // gap (consecutive gray bubbles).
+  const received2YOffset =
+    imageBubbleTopAnchorY +
+    imageBubbleSize +
+    sameSenderGap +
+    received2Height / 2;
+  // Received #3 sits below received #2 with another same-sender gap.
   const received3YOffset =
-    typing2TopAnchorY +
+    imageBubbleTopAnchorY +
+    imageBubbleSize +
+    sameSenderGap +
     received2Height +
     sameSenderGap +
     received3Height / 2;
@@ -2406,6 +2676,13 @@ const Scene3: React.FC<Scene3Props> = ({
             height={height}
             scale={scale}
             opacity={igFeedOpacity}
+            tappedCellIndex={dwelledCellIndex}
+            tappedCellScale={dwelledCellTapScale}
+            // Hide the original cell during flight — a brighter
+            // clone (rendered separately, above the IG layer) takes
+            // over. dwelledCellSourceOpacity ramps 1→0 during the
+            // flight, so the cell fades out as the clone flies away.
+            tappedCellOpacity={dwelledCellSourceOpacity}
           />
         </div>
       )}
@@ -2816,10 +3093,48 @@ const Scene3: React.FC<Scene3Props> = ({
         </div>
       )}
 
-      {/* Received bubble #3 — second message in the same-sender burst.
-          Pops in below received #2 with the tail (signaling end of the
-          burst). Uses a tighter same-sender gap (8px) instead of the
-          full inter-sender gap. */}
+      {/* Received bubble #2 — first text reply in the gray burst,
+          appearing AFTER the image attachment has settled. Pops in
+          below the image with a same-sender gap. (Previously this
+          was the morphed output of typing #2 — now it's a standalone
+          pop-in since the typing pill was replaced by the image
+          attachment.) */}
+      {received2Opacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: chatEdgeMargin + received2Width / 2,
+            top: sentBubbleY + received2YOffset,
+            transform: `translate(-50%, -50%) scale(${received2Scale})`,
+            opacity: received2Opacity,
+          }}
+        >
+          <MessageBubble
+            width={received2Width}
+            height={received2Height}
+            cornerRadius={received2CornerRadius}
+            tailExt={received2TailExt}
+            tailHook={received2TailHook}
+            tailScaleX={1}
+            tailSide="left"
+            bubbleColor={RECEIVED_GRAY}
+            textColor={RECEIVED_TEXT}
+            fontSize={received2FontSize}
+            paddingX={received2PadX}
+            letterSpacing={-0.3 * scale}
+            text={received2Phrase}
+            shadowOpacity={0.08}
+            shadowBlur={16 * scale}
+            shadowOffsetY={3 * scale}
+            filterId="bubbleShadow-received2"
+          />
+        </div>
+      )}
+
+      {/* Received bubble #3 — second text reply in the same-sender
+          burst. Pops in below received #2 with the tail (signaling
+          end of the burst). Uses a tighter same-sender gap (8px)
+          instead of the full inter-sender gap. */}
       {received3Opacity > 0 && (
         <div
           style={{
@@ -2850,6 +3165,80 @@ const Scene3: React.FC<Scene3Props> = ({
             filterId="bubbleShadow-received3"
           />
         </div>
+      )}
+
+      {/* Image attachment "flight clone" — a single element that
+          covers three phases:
+            1. Before tap (igTapStart): invisible.
+            2. Tap window (igTapStart..igTapEnd): renders ON TOP of
+               the dwelled IG cell, brightening from 0 to full
+               opacity. Implements the "this is the post you're
+               focused on" highlight.
+            3. Flight (igFlightStart..igFlightEnd): the clone
+               translates + scales from the cell's screen position
+               and size to the image bubble's destination position
+               and size, while morphing its corner radius from 0
+               (square cell) to the bubble's corner radius.
+            4. After flight (>= igFlightEnd): clone holds at the
+               image bubble destination indefinitely, becoming the
+               settled image attachment in the chat.
+
+          Interpolated values:
+            x:        dwelledCellScreenX → imageBubbleX
+            y:        dwelledCellScreenY → imageBubbleY (sentBubbleY
+                       has already shifted up via conversationShift4)
+            size:     cellSize → imageBubbleSize
+            radius:   0 → imageBubbleCornerRadius
+            opacity:  0 → 1 during tap, holds at 1 after
+       */}
+      {dwelledCellHighlightOpacity > 0 && (
+        (() => {
+          const imageBubbleX =
+            chatEdgeMargin + imageBubbleSize / 2;
+          const imageBubbleY = sentBubbleY + imageBubbleYOffset;
+          const cloneX = interpolate(
+            flightProgress,
+            [0, 1],
+            [dwelledCellScreenX, imageBubbleX],
+          );
+          const cloneY = interpolate(
+            flightProgress,
+            [0, 1],
+            [dwelledCellScreenY, imageBubbleY],
+          );
+          const cloneSize = interpolate(
+            flightProgress,
+            [0, 1],
+            [igLayout.cellSize, imageBubbleSize],
+          );
+          const cloneRadius = interpolate(
+            flightProgress,
+            [0, 1],
+            [0, imageBubbleCornerRadius],
+          );
+          // During tap, mirror the cell's tap-pulse scale.
+          const tapScale = local < igFlightStart ? dwelledCellTapScale : 1;
+          return (
+            <div
+              style={{
+                position: "absolute",
+                left: cloneX,
+                top: cloneY,
+                width: cloneSize,
+                height: cloneSize,
+                borderRadius: cloneRadius,
+                background: dwelledCellColor,
+                transform: `translate(-50%, -50%) scale(${tapScale})`,
+                opacity: dwelledCellHighlightOpacity,
+                boxShadow:
+                  flightProgress > 0.5
+                    ? `0 ${3 * scale}px ${16 * scale}px rgba(0,0,0,0.08)`
+                    : "none",
+                pointerEvents: "none",
+              }}
+            />
+          );
+        })()
       )}
     </AbsoluteFill>
   );
@@ -2925,11 +3314,10 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
         />
       </Sequence>
 
-      {/* Scene 3 — starts at 5s (after Scene 2's button has fully faded out)
-          for the same reason as Scene 2: avoid stacked send buttons.
-          Extended to 11.75s for the unified delivered/read timing
-          across both sent bubbles + the two-bubble received reply. */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(11.75, fps)}>
+      {/* Scene 3 — starts at 5s. Extended to 13.5s to fit the IG
+          tap-and-share flight animation + the two text replies that
+          land after the image attachment. */}
+      <Sequence from={sec(5, fps)} durationInFrames={sec(13.5, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
@@ -2941,7 +3329,7 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           Holds for Scene 3's full duration. */}
       <Sequence
         from={sec(5 - xfade, fps)}
-        durationInFrames={sec(11.75 + xfade, fps)}
+        durationInFrames={sec(13.5 + xfade, fps)}
       >
         <Caption
           text="schedule a date with my crush"
