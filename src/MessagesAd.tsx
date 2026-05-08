@@ -719,17 +719,122 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
   const totalContentH = headerTotalH + gridHeight;
 
   // ── Scroll behavior ───────────────────────────────────────────
-  // Hold the profile fully visible for ~0.4s, then scroll down at a
-  // comfortable browsing pace. "Scroll down" = page content
-  // translates UPWARD (negative Y), so more grid comes into view.
-  const holdSec = 0.4;
-  const holdFrames = sec(holdSec, fps);
-  const pxPerSec = 200 * scale;
-  const postHoldFrames = Math.max(0, driveFrame - holdFrames);
-  // Maximum scroll: enough to bring the bottom of the content into
-  // view, but never so far that the canvas goes blank.
+  // Real users don't scroll at a constant velocity AND they don't
+  // scroll at a uniform pace through every part of a page — they
+  // dwell on interesting things (profile bio, a cute photo) and
+  // flick past filler. We model that with content-aware variable
+  // speed: each stage maps to a *region* of the page (header vs.
+  // early grid vs. dwell row vs. cruise) and uses its own easing.
+  //
+  // Stages (driveFrame in seconds):
+  //   0.00–0.80s  HOLD: profile fully visible, no scroll yet.
+  //                (Initial landing — viewer registers the profile.)
+  //   0.80–1.80s  SCAN HEADER: slow scroll through the profile
+  //                section (avatar, stats, bio, action buttons).
+  //                Reads as "user reading the bio." Cubic ease-out.
+  //                Covers ~headerTotalH worth of scroll.
+  //   1.80–2.40s  FLICK GRID: faster scroll through the first few
+  //                grid rows. Linear-ish (slight ease-in-out).
+  //   2.40–3.00s  DWELL: scroll holds on a "good post" row for
+  //                ~0.6s — viewer pauses to look at a particular
+  //                photo. (Picks the row centered ~60% through the
+  //                content — a notional eye-catcher.)
+  //   3.00s+     CRUISE: slow continuous scroll covering the
+  //                remaining distance, gently easing as it
+  //                approaches maxScroll. Cubic ease-in-out.
+  //
+  // Throughout the post-hold phase a small sinusoidal wobble (~4px,
+  // 2.5Hz) is layered on the Y so the motion doesn't feel
+  // mathematically smooth — simulates the finger's micro-jitter.
+  const driveSec = driveFrame / fps;
   const maxScroll = Math.max(0, totalContentH - height);
-  const scrollPx = Math.min(maxScroll, (postHoldFrames / fps) * pxPerSec);
+  // Region targets — use page geometry to decide where each stage
+  // lands. Clamped to maxScroll so short pages still scroll
+  // sensibly even if these regions exceed the available distance.
+  const headerScrollTarget = Math.min(maxScroll, headerTotalH * 0.85);
+  const flickGridTarget = Math.min(
+    maxScroll,
+    headerScrollTarget + (cellSize + gridGap) * 2.5,
+  );
+  // Dwell point: ~60% through the total scroll (a posts row near
+  // the middle of the grid).
+  const dwellTarget = Math.min(maxScroll, maxScroll * 0.6);
+  // Stage timings.
+  const t = {
+    holdEnd: 0.8,
+    scanEnd: 1.8,
+    flickEnd: 2.4,
+    dwellEnd: 3.0,
+    cruiseEnd: 5.5,
+  };
+  let baseScroll: number;
+  if (driveSec < t.holdEnd) {
+    // Hold — no scroll yet.
+    baseScroll = 0;
+  } else if (driveSec < t.scanEnd) {
+    // Scan header — slow, deliberate.
+    baseScroll = interpolate(
+      driveSec,
+      [t.holdEnd, t.scanEnd],
+      [0, headerScrollTarget],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.out(Easing.cubic),
+      },
+    );
+  } else if (driveSec < t.flickEnd) {
+    // Flick through early grid — faster, near-linear.
+    baseScroll = interpolate(
+      driveSec,
+      [t.scanEnd, t.flickEnd],
+      [headerScrollTarget, flickGridTarget],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.inOut(Easing.cubic),
+      },
+    );
+  } else if (driveSec < t.dwellEnd) {
+    // Dwell — ease into the dwell target and hold there. Use a
+    // cubic ease-out so the viewer feels the user "settling" on
+    // the post rather than abruptly stopping.
+    baseScroll = interpolate(
+      driveSec,
+      [t.flickEnd, t.dwellEnd],
+      [flickGridTarget, dwellTarget],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.out(Easing.cubic),
+      },
+    );
+  } else {
+    // Cruise — slow continuous scroll covering the remainder. After
+    // cruiseEnd we clamp at maxScroll.
+    baseScroll = interpolate(
+      driveSec,
+      [t.dwellEnd, t.cruiseEnd],
+      [dwellTarget, maxScroll],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.inOut(Easing.cubic),
+      },
+    );
+  }
+
+  // Micro-wobble: small sinusoidal jitter on Y, fading in only after
+  // the hold so the initial profile-landing reads as still.
+  const wobbleAmp = 4 * scale;
+  const wobbleHz = 2.5; // cycles per second
+  const wobbleEnabled = driveSec > t.holdEnd ? 1 : 0;
+  const wobble =
+    wobbleEnabled *
+    wobbleAmp *
+    Math.sin(2 * Math.PI * wobbleHz * (driveSec - t.holdEnd));
+
+  const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll + wobble));
   const pageY = -scrollPx;
 
   // Stat block (followers / following / posts).
@@ -1630,10 +1735,14 @@ const Scene3: React.FC<Scene3Props> = ({
   // than a knife-thin sliver sliding out.
   const tailScaleY =
     interpolate(tailRevealRaw, [0, 1], [0.35, 1]) * tailPop;
-  // "Delivered" indicator fades in slightly after the bubble settles.
+  // "Delivered" indicator fades in after the bubble settles. Delay
+  // and fade-window match the second sent bubble's pattern (0.30s
+  // pause after settle, then a 0.30s fade-in) — that timing reads as
+  // "delivered receipt confidently lands" rather than rushing in
+  // right behind the bubble pop.
   const deliveredOpacity = interpolate(
     local,
-    [holdStart + sec(0.1, fps), holdStart + sec(0.35, fps)],
+    [holdStart + sec(0.3, fps), holdStart + sec(0.6, fps)],
     [0, 1],
     {
       extrapolateLeft: "clamp",
@@ -1667,35 +1776,35 @@ const Scene3: React.FC<Scene3Props> = ({
   // "Delivered" → "Read", then a second bubble pops in from below as
   // an incoming reply. The whole stack shifts up to make room.
   //
-  // Timeline (local seconds inside Scene3):
-  //   2.7s   morph completes (sent bubble settled)
-  //   2.8s   "Delivered" begins fading in
-  //   3.05s  "Delivered" fully visible
-  //   3.40s  "Delivered" begins fading OUT
-  //   3.55s  "Delivered" fully gone (~6 frames @ 30fps, ~9 @ 60fps)
-  //   3.62s  "Read" begins fading IN — sequential, not crossfaded.
-  //          A small (~70ms) gap between out-end and in-start avoids
-  //          the two labels overlapping mid-opacity, which renders as
-  //          a smudgy double-text artifact (visible especially at 60fps).
-  //   3.78s  "Read" fully visible
-  //   3.95s  sent bubble starts shifting up; received bubble begins
-  //          popping in
-  //   4.45s  received bubble settled
-  const deliveredOutStart = sec(3.4, fps);
-  const deliveredOutEnd = sec(3.55, fps);
-  const readInStart = sec(3.62, fps);
-  const readInEnd = sec(3.78, fps);
+  // Timeline (local seconds inside Scene3). The delivered/read pacing
+  // mirrors the second sent bubble's: 0.30s pause after settle, 0.30s
+  // fade-in, 0.35s hold, 0.15s fade-out, 0.07s gap, 0.16s Read fade-in.
+  //   2.70s  morph completes (sent bubble settled)
+  //   3.00s  "Delivered" begins fading in
+  //   3.30s  "Delivered" fully visible
+  //   3.65s  "Delivered" begins fading OUT
+  //   3.80s  "Delivered" fully gone
+  //   3.87s  "Read" begins fading IN (sequential, not crossfaded)
+  //   4.03s  "Read" fully visible
+  //   4.20s  typing #1 pops in
+  //   4.40s  typing #1 fully popped in
+  //   5.20s  morph start (typing → gray reply)
+  //   5.45s  morph end (gray bubble settled)
+  const deliveredOutStart = sec(3.65, fps);
+  const deliveredOutEnd = sec(3.8, fps);
+  const readInStart = sec(3.87, fps);
+  const readInEnd = sec(4.03, fps);
   // Typing indicator: a small gray pill with three pulsing dots that
   // appears before the actual reply. Models real iMessage's typing UX
   // — the recipient is "composing." After ~1s of typing, the bubble
   // morphs (width-wise) into the full reply bubble: dots fade out,
   // text fades in, and the bubble's width animates from a short pill
   // to the full message width.
-  const typingStart = sec(3.95, fps);
-  const typingPopEnd = sec(4.15, fps); // typing bubble fully popped in
-  const typingMorphStart = sec(4.95, fps); // begin width morph + content swap
+  const typingStart = sec(4.2, fps);
+  const typingPopEnd = sec(4.4, fps); // typing bubble fully popped in
+  const typingMorphStart = sec(5.2, fps); // begin width morph + content swap
   const receivedStart = typingMorphStart;
-  const receivedEnd = sec(5.2, fps); // morph ends, gray bubble fully formed
+  const receivedEnd = sec(5.45, fps); // morph ends, gray bubble fully formed
 
   // "Delivered" fade-out — sequential, completes before "Read" starts.
   const deliveredOut = interpolate(
@@ -1719,8 +1828,8 @@ const Scene3: React.FC<Scene3Props> = ({
   // First "Read" fades OUT just before the second blue bubble enters,
   // so older receipt indicators don't stack with the new one. iMessage
   // only shows a receipt under the latest message.
-  const readFirstOutStart = sec(5.4, fps);
-  const readFirstOutEnd = sec(5.55, fps);
+  const readFirstOutStart = sec(5.65, fps);
+  const readFirstOutEnd = sec(5.8, fps);
   const readOut = interpolate(
     local,
     [readFirstOutStart, readFirstOutEnd],
@@ -1743,38 +1852,38 @@ const Scene3: React.FC<Scene3Props> = ({
   // ── Sent bubble #2 timing (the second blue bubble, after the gray
   //    reply) ──────────────────────────────────────────────────────
   //   5.65s  conversation shifts up again; sent2 begins popping in
-  //   6.15s  sent2 settled
-  //   6.45s  sent2 "Delivered" begins fading in
-  //   6.75s  sent2 "Delivered" fully visible
-  //   7.10s  sent2 "Delivered" begins fading OUT
-  //   7.25s  fully gone
-  //   7.32s  sent2 "Read" begins fading IN
-  //   7.48s  sent2 "Read" fully visible (held until end of scene)
-  const sent2Start = sec(5.65, fps);
-  const sent2End = sec(6.15, fps);
-  const sent2DeliveredInStart = sec(6.45, fps);
-  const sent2DeliveredInEnd = sec(6.75, fps);
-  const sent2DeliveredOutStart = sec(7.1, fps);
-  const sent2DeliveredOutEnd = sec(7.25, fps);
-  const sent2ReadInStart = sec(7.32, fps);
-  const sent2ReadInEnd = sec(7.48, fps);
+  //   6.40s  sent2 settled
+  //   6.70s  sent2 "Delivered" begins fading in
+  //   7.00s  sent2 "Delivered" fully visible
+  //   7.35s  sent2 "Delivered" begins fading OUT
+  //   7.50s  fully gone
+  //   7.57s  sent2 "Read" begins fading IN
+  //   7.73s  sent2 "Read" fully visible (held until end of scene)
+  const sent2Start = sec(5.9, fps);
+  const sent2End = sec(6.4, fps);
+  const sent2DeliveredInStart = sec(6.7, fps);
+  const sent2DeliveredInEnd = sec(7.0, fps);
+  const sent2DeliveredOutStart = sec(7.35, fps);
+  const sent2DeliveredOutEnd = sec(7.5, fps);
+  const sent2ReadInStart = sec(7.57, fps);
+  const sent2ReadInEnd = sec(7.73, fps);
 
   // ── Second received bubble: typing-indicator only (the actual
   //    message text will be added in a follow-up) ─────────────────
-  //   7.65s  sent2 "Read" begins fading OUT (so it doesn't stack with
+  //   7.90s  sent2 "Read" begins fading OUT (so it doesn't stack with
   //          the new typing indicator's row position)
-  //   7.85s  typing #2 pops in
-  //   8.05s  typing #2 fully popped in; dots begin pulsing
-  //   8.05–10.0s  dots pulse continuously (longer than the first
-  //               typing indicator since the upcoming message is long)
-  //   10.0s  typing #2 begins morphing into the final message bubble
-  //   10.4s  morph completes; gray bubble fully formed with text
-  const sent2ReadOutStart = sec(7.65, fps);
-  const sent2ReadOutEnd = sec(7.85, fps);
-  const typing2Start = sec(7.85, fps);
-  const typing2PopEnd = sec(8.05, fps);
-  const typing2MorphStart = sec(10.0, fps);
-  const typing2MorphEnd = sec(10.4, fps);
+  //   8.10s  typing #2 pops in
+  //   8.30s  typing #2 fully popped in; dots begin pulsing
+  //   8.30–10.25s  dots pulse continuously
+  //   10.25s typing #2 begins morphing into the final message bubble
+  //   10.65s morph completes; first gray bubble settled
+  //   10.75s second gray bubble pops in
+  const sent2ReadOutStart = sec(7.9, fps);
+  const sent2ReadOutEnd = sec(8.1, fps);
+  const typing2Start = sec(8.1, fps);
+  const typing2PopEnd = sec(8.3, fps);
+  const typing2MorphStart = sec(10.25, fps);
+  const typing2MorphEnd = sec(10.65, fps);
 
   // First conversation shift (when gray bubble appears): sent drifts up
   // by half a bubble height + half a gap so sent + gray are centered
@@ -1826,8 +1935,8 @@ const Scene3: React.FC<Scene3Props> = ({
   const conversationShift4Delta = -(bubbleHeight / 2 + 8 * scale / 2);
   // Placeholder until received3Start is defined; we recompute below
   // (right after received3Start).
-  const conversationShift4Start = sec(10.5, fps);
-  const conversationShift4End = sec(10.85, fps);
+  const conversationShift4Start = sec(10.75, fps);
+  const conversationShift4End = sec(11.1, fps);
   const conversationShift4 = interpolate(
     local,
     [conversationShift4Start, conversationShift4End],
@@ -2169,7 +2278,7 @@ const Scene3: React.FC<Scene3Props> = ({
 
   // Received #3 timing: pops in shortly after typing #2 has fully
   // morphed into received #2.
-  const received3Start = sec(10.5, fps);
+  const received3Start = sec(10.75, fps);
   const received3Spring = spring({
     frame: local - received3Start,
     fps,
@@ -2818,10 +2927,9 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
 
       {/* Scene 3 — starts at 5s (after Scene 2's button has fully faded out)
           for the same reason as Scene 2: avoid stacked send buttons.
-          Extended to 11.5s so typing indicator #2 has a longer beat
-          of pulsing before the scene ends (the actual reply text
-          will be added in a follow-up). */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(11.5, fps)}>
+          Extended to 11.75s for the unified delivered/read timing
+          across both sent bubbles + the two-bubble received reply. */}
+      <Sequence from={sec(5, fps)} durationInFrames={sec(11.75, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
@@ -2833,7 +2941,7 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           Holds for Scene 3's full duration. */}
       <Sequence
         from={sec(5 - xfade, fps)}
-        durationInFrames={sec(11.5 + xfade, fps)}
+        durationInFrames={sec(11.75 + xfade, fps)}
       >
         <Caption
           text="schedule a date with my crush"
