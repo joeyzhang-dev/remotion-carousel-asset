@@ -2128,12 +2128,27 @@ const Scene3: React.FC<Scene3Props> = ({
       easing: Easing.out(Easing.cubic),
     },
   );
+  // Sixth conversation shift (when sent #3 appears below received #3):
+  // sender changes from gray to blue, so we use the full inter-sender
+  // gap when balancing for the new row.
+  const conversationShift6Delta = -(bubbleHeight / 2 + receivedGap / 2);
+  const conversationShift6 = interpolate(
+    local,
+    [sec(13.4, fps), sec(13.85, fps)],
+    [0, conversationShift6Delta],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
   const conversationShift =
     conversationShift1 +
     conversationShift2 +
     conversationShift3 +
     conversationShift4 +
-    conversationShift5;
+    conversationShift5 +
+    conversationShift6;
 
   // The typing-indicator-then-message bubble pops in at `typingStart`
   // (as a small pill with three pulsing dots) and STAYS visible
@@ -2495,6 +2510,34 @@ const Scene3: React.FC<Scene3Props> = ({
   const sent2TailExt = sent2CornerRadius * 0.5;
   const sent2TailHook = sent2CornerRadius * 0.2;
 
+  // Sent3 (third blue bubble) — pops in after received #3, no
+  // delivered/read receipts (we're closing the conversation here).
+  const sent3Phrase = "bet, order some protection";
+  const sent3FontSize = bubbleFontSize;
+  const sent3TextWidth = measureTextEm(sent3Phrase) * sent3FontSize;
+  const sent3PadX = bubblePadX;
+  const sent3Width = sent3TextWidth + sent3PadX * 2;
+  const sent3Height = bubbleHeight;
+  const sent3CornerRadius = sent3Height * 0.42;
+  const sent3TailExt = sent3CornerRadius * 0.5;
+  const sent3TailHook = sent3CornerRadius * 0.2;
+  const sent3Start = sec(13.4, fps);
+  const sent3Spring = spring({
+    frame: local - sent3Start,
+    fps,
+    config: { damping: 14, stiffness: 180, mass: 0.55 },
+  });
+  const sent3Scale = interpolate(sent3Spring, [0, 1], [0.85, 1]);
+  const sent3Opacity = interpolate(
+    local,
+    [sent3Start, sent3Start + sec(0.18, fps)],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    },
+  );
+
   // ── Received bubbles #2 and #3 ──────────────────────────────────
   // Real conversations come in as multiple short messages, not one
   // long wrapped one. Split the reply into two consecutive gray
@@ -2596,8 +2639,14 @@ const Scene3: React.FC<Scene3Props> = ({
   // Received #3 sits below typing #2 (which morphs into received #2)
   // with another same-sender gap. Anchored to typing #2's settled
   // (post-slide) row so it doesn't move when the slide happens.
-  const received3YOffset =
-    typing2TopAnchorAfter + received2Height + sameSenderGap + received3Height / 2;
+  const received3TopAnchorY =
+    typing2TopAnchorAfter + received2Height + sameSenderGap;
+  const received3YOffset = received3TopAnchorY + received3Height / 2;
+  // Sent #3 sits below received #3 with the FULL inter-sender gap
+  // (sender changes from gray to blue). The bubble is right-aligned
+  // like the other blue bubbles.
+  const sent3YOffset =
+    received3TopAnchorY + received3Height + receivedGap + sent3Height / 2;
 
   // Anchor for the entire conversation, so receipt indicators and the
   // received bubble all move with the sent bubble when it scrolls up.
@@ -3132,6 +3181,41 @@ const Scene3: React.FC<Scene3Props> = ({
         </div>
       )}
 
+      {/* Sent bubble #3 — pops in after received #3. Right-aligned
+          like the other blue bubbles, with the same right-edge inset.
+          No delivered/read receipts (this closes the conversation). */}
+      {sent3Opacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: width - chatEdgeMargin - sent3Width / 2,
+            top: sentBubbleY + sent3YOffset,
+            transform: `translate(-50%, -50%) scale(${sent3Scale})`,
+            opacity: sent3Opacity,
+          }}
+        >
+          <MessageBubble
+            width={sent3Width}
+            height={sent3Height}
+            cornerRadius={sent3CornerRadius}
+            tailExt={sent3TailExt}
+            tailHook={sent3TailHook}
+            tailScaleX={1}
+            tailSide="right"
+            bubbleColor={IMESSAGE_BLUE}
+            textColor="#FFFFFF"
+            fontSize={sent3FontSize}
+            paddingX={sent3PadX}
+            letterSpacing={-0.3 * scale}
+            text={sent3Phrase}
+            shadowOpacity={0.18}
+            shadowBlur={20 * scale}
+            shadowOffsetY={4 * scale}
+            filterId="bubbleShadow-sent3"
+          />
+        </div>
+      )}
+
       {/* Image attachment "flight clone" — a single element that
           covers three phases:
             1. Before tap (igTapStart): invisible.
@@ -3279,10 +3363,10 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
         />
       </Sequence>
 
-      {/* Scene 3 — starts at 5s. Extended to 13.5s to fit the IG
-          tap-and-share flight animation + the two text replies that
-          land after the image attachment. */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(13.5, fps)}>
+      {/* Scene 3 — starts at 5s. Extended to 14.2s to fit a closing
+          blue bubble ("bet, order some protection") after the gray
+          replies. */}
+      <Sequence from={sec(5, fps)} durationInFrames={sec(14.2, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
@@ -3294,7 +3378,7 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           Holds for Scene 3's full duration. */}
       <Sequence
         from={sec(5 - xfade, fps)}
-        durationInFrames={sec(13.5 + xfade, fps)}
+        durationInFrames={sec(14.2 + xfade, fps)}
       >
         <Caption
           text="schedule a date with my crush"
