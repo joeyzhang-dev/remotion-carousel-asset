@@ -6998,20 +6998,21 @@ const Scene3: React.FC<Scene3Props> = ({
       toPhrase: sent3PhraseEdited,
     },
     {
-      // Edit 2 — happens during Apple Wallet's open.
-      backspaceStart: sec(19.4, fps),
+      // Edit 2 — backspace begins ~0.95s before Wallet fades in,
+      // matching the cadence of edit 1 → flight transition.
+      backspaceStart: sec(18.05, fps),
       fromPhrase: sent3PhraseEdited,
       toPhrase: sent3PhraseEdited2,
     },
     {
-      // Edit 3 — happens during Gmail's open.
-      backspaceStart: sec(24.3, fps),
+      // Edit 3 — backspace begins ~0.95s before Gmail fades in.
+      backspaceStart: sec(22.95, fps),
       fromPhrase: sent3PhraseEdited2,
       toPhrase: sent3PhraseEdited3,
     },
     {
-      // Edit 4 — happens during Google Docs' open.
-      backspaceStart: sec(29.2, fps),
+      // Edit 4 — backspace begins ~0.95s before Docs fades in.
+      backspaceStart: sec(27.85, fps),
       fromPhrase: sent3PhraseEdited3,
       toPhrase: sent3PhraseEdited4,
     },
