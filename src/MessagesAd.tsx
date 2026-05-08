@@ -2286,7 +2286,11 @@ const Scene3: React.FC<Scene3Props> = ({
     config: { damping: 14, stiffness: 180, mass: 0.55 },
   });
   const typing2Scale = interpolate(typing2Spring, [0, 1], [0.85, 1]);
-  const typing2OpacityIn = interpolate(
+  // Typing #2 stays visible throughout — it slides DOWN to make
+  // room for the image attachment instead of fading out, then later
+  // morphs into the first text reply ("she posted italian food
+  // before"). So the only opacity driver is the entry fade-in.
+  const typing2Opacity = interpolate(
     local,
     [typing2Start, typing2Start + sec(0.18, fps)],
     [0, 1],
@@ -2295,19 +2299,6 @@ const Scene3: React.FC<Scene3Props> = ({
       extrapolateRight: "clamp",
     },
   );
-  // Typing #2 fades OUT as the image attachment flies in to take its
-  // place — the image arriving "replaces" the typing indicator.
-  const typing2OpacityOut = interpolate(
-    local,
-    [igFlightStart, igFlightStart + (igFlightEnd - igFlightStart) * 0.5],
-    [1, 0],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.in(Easing.cubic),
-    },
-  );
-  const typing2Opacity = typing2OpacityIn * typing2OpacityOut;
   // Width-and-height morph progress for typing #2. 0 = typing pill
   // (small width, single-line height, dots visible). 1 = settled
   // multi-line message bubble (wrapped width, multi-line height,
@@ -2536,29 +2527,8 @@ const Scene3: React.FC<Scene3Props> = ({
   const received3TailExt = received3CornerRadius * 0.5;
   const received3TailHook = received3CornerRadius * 0.2;
 
-  // ── Received #2 standalone pop-in timing ────────────────────────
-  // Pops in below the image attachment after the image has settled.
-  // (Previously this came from the typing #2 morph, but with the
-  // image taking the typing pill's row, received #2 is now its own
-  // separate bubble.)
-  const received2Start = sec(12.1, fps);
-  const received2Spring = spring({
-    frame: local - received2Start,
-    fps,
-    config: { damping: 14, stiffness: 180, mass: 0.55 },
-  });
-  const received2Scale = interpolate(received2Spring, [0, 1], [0.85, 1]);
-  const received2Opacity = interpolate(
-    local,
-    [received2Start, received2Start + sec(0.18, fps)],
-    [0, 1],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    },
-  );
-
-  // Received #3 timing: pops in shortly after received #2.
+  // Received #3 timing: pops in shortly after typing #2 morphs into
+  // the first text reply.
   const received3Start = sec(12.6, fps);
   const received3Spring = spring({
     frame: local - received3Start,
@@ -2599,33 +2569,35 @@ const Scene3: React.FC<Scene3Props> = ({
   // Sent2 sits another full row below the gray bubble.
   const sent2YOffset =
     receivedYOffset + receivedHeight / 2 + receivedGap + sent2Height / 2;
-  // Image attachment row (was typing #2's row). The image takes the
-  // place of the typing pill via the flight animation.
+  // Image attachment row.
   const imageBubbleTopAnchorY =
     sent2YOffset + sent2Height / 2 + receivedGap;
   const imageBubbleYOffset = imageBubbleTopAnchorY + imageBubbleSize / 2;
-  // Typing #2 still pulses at this same row position before the image
-  // arrives — its YOffset uses the typing pill's height (single-line)
-  // so the pill is centered vertically in the would-be image slot.
-  const typing2TopAnchorY = imageBubbleTopAnchorY;
-  const typing2YOffset = typing2TopAnchorY + typing2AnimatedH / 2;
   // Same-sender gap between consecutive gray bubbles (image → text replies).
   const sameSenderGap = 8 * scale;
-  // Received #2 sits below the image attachment with a same-sender
-  // gap (consecutive gray bubbles).
-  const received2YOffset =
-    imageBubbleTopAnchorY +
-    imageBubbleSize +
-    sameSenderGap +
-    received2Height / 2;
-  // Received #3 sits below received #2 with another same-sender gap.
+  // Typing #2 has TWO row positions:
+  //   - Before the image arrives, it pulses at the image's row
+  //     (`typing2TopAnchorBefore` — centered in the image slot).
+  //   - During/after the flight, it slides DOWN to the row below the
+  //     image so the image can take its place. This is the position
+  //     where it eventually morphs into "she posted italian food
+  //     before" (received #2).
+  // The slide is driven by `flightProgress` so typing #2 moves in
+  // lockstep with the image flying in.
+  const typing2TopAnchorBefore = imageBubbleTopAnchorY;
+  const typing2TopAnchorAfter =
+    imageBubbleTopAnchorY + imageBubbleSize + sameSenderGap;
+  const typing2TopAnchorY = interpolate(
+    flightProgress,
+    [0, 1],
+    [typing2TopAnchorBefore, typing2TopAnchorAfter],
+  );
+  const typing2YOffset = typing2TopAnchorY + typing2AnimatedH / 2;
+  // Received #3 sits below typing #2 (which morphs into received #2)
+  // with another same-sender gap. Anchored to typing #2's settled
+  // (post-slide) row so it doesn't move when the slide happens.
   const received3YOffset =
-    imageBubbleTopAnchorY +
-    imageBubbleSize +
-    sameSenderGap +
-    received2Height +
-    sameSenderGap +
-    received3Height / 2;
+    typing2TopAnchorAfter + received2Height + sameSenderGap + received3Height / 2;
 
   // Anchor for the entire conversation, so receipt indicators and the
   // received bubble all move with the sent bubble when it scrolls up.
@@ -3124,48 +3096,10 @@ const Scene3: React.FC<Scene3Props> = ({
         </div>
       )}
 
-      {/* Received bubble #2 — first text reply in the gray burst,
-          appearing AFTER the image attachment has settled. Pops in
-          below the image with a same-sender gap. (Previously this
-          was the morphed output of typing #2 — now it's a standalone
-          pop-in since the typing pill was replaced by the image
-          attachment.) */}
-      {received2Opacity > 0 && (
-        <div
-          style={{
-            position: "absolute",
-            left: chatEdgeMargin + received2Width / 2,
-            top: sentBubbleY + received2YOffset,
-            transform: `translate(-50%, -50%) scale(${received2Scale})`,
-            opacity: received2Opacity,
-          }}
-        >
-          <MessageBubble
-            width={received2Width}
-            height={received2Height}
-            cornerRadius={received2CornerRadius}
-            tailExt={received2TailExt}
-            tailHook={received2TailHook}
-            tailScaleX={1}
-            tailSide="left"
-            bubbleColor={RECEIVED_GRAY}
-            textColor={RECEIVED_TEXT}
-            fontSize={received2FontSize}
-            paddingX={received2PadX}
-            letterSpacing={-0.3 * scale}
-            text={received2Phrase}
-            shadowOpacity={0.08}
-            shadowBlur={16 * scale}
-            shadowOffsetY={3 * scale}
-            filterId="bubbleShadow-received2"
-          />
-        </div>
-      )}
-
       {/* Received bubble #3 — second text reply in the same-sender
-          burst. Pops in below received #2 with the tail (signaling
-          end of the burst). Uses a tighter same-sender gap (8px)
-          instead of the full inter-sender gap. */}
+          burst, popping in below typing #2 (which morphs into
+          received #2). Uses a tighter same-sender gap (8px) instead
+          of the full inter-sender gap. */}
       {received3Opacity > 0 && (
         <div
           style={{
