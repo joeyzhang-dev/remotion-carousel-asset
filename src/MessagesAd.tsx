@@ -3461,15 +3461,21 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
   replyAllScale = 1,
   replySentOpacity = 0,
 }) => {
-  const padX = 22 * scale;
-  const navH = 90 * scale;
-  const searchH = 90 * scale;
-  const tabsH = 80 * scale;
-  const emailItemH = 150 * scale;
+  // Mobile-native scale. The reference iPhone screenshots have ~22pt
+  // sender, ~18pt subject, ~16pt snippet, ~44px avatars, and rows
+  // ~120px tall — but rendered on a 390px-wide canvas. Our canvas
+  // is 1080px wide (~2.77× the iPhone), so the on-canvas pixel
+  // values need to scale up accordingly to keep the same visual
+  // density as a real phone screen.
+  const padX = 32 * scale;
+  const navH = 110 * scale;
+  const searchH = 100 * scale;
+  const tabsH = 0; // Native Gmail iOS doesn't show category tabs by default
+  const emailItemH = 230 * scale;
   // Inbox content spans behind the (eventually) visible email
   // detail card. Total content height set generous for scroll.
   const totalContentH =
-    navH + searchH + tabsH + emailItemH * 12 + 200 * scale;
+    navH + searchH + tabsH + emailItemH * 21 + 200 * scale;
   const maxScroll = Math.max(0, totalContentH - height);
 
   const driveSec = driveFrame / fps;
@@ -3612,14 +3618,17 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
   );
   const detailY = interpolate(detailSlideProgress, [0, 1], [height, 0]);
 
-  // Gmail palette.
-  const G_BG = "#FFFFFF";
-  const G_TEXT = "#202124";
-  const G_LIGHT = "#5F6368";
-  const G_BORDER = "#E8EAED";
-  const G_RED = "#EA4335";
-  const G_BLUE = "#1A73E8";
-  const G_BG_GREY = "#F1F3F4";
+  // Gmail palette — DARK MODE (matches the iPhone reference). Colors
+  // sampled from the actual iOS Gmail app's dark theme.
+  const G_BG = "#1F1F1F"; // pure-dark inbox bg
+  const G_BG_ELEVATED = "#2A2A2A"; // search bar / pill button bg
+  const G_TEXT = "#E8EAED"; // primary text on dark
+  const G_LIGHT = "#9AA0A6"; // secondary text
+  const G_BORDER = "#3C4043"; // hairline divider
+  const G_BLUE = "#8AB4F8"; // dark-mode primary accent
+  const G_YELLOW = "#FCC934"; // Inbox label pill
+  const G_GREEN = "#81C995"; // success
+  const G_PROMO_BG = "#1E3327"; // green tint for the inline reply box
 
   type Email = {
     initial: string;
@@ -3841,106 +3850,107 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
           transform: `translateY(${pageY}px)`,
         }}
       >
-        {/* Search bar */}
+        {/* Status bar spacer (transparent — IG/Amazon don't draw a
+            status bar, leave the canvas's space for it) */}
+        <div style={{ height: navH }} />
+        {/* Top search row — iOS Gmail's signature pill containing
+            hamburger + "Gmail" wordmark + account avatars + own avatar.
+            Sits ABOVE the email list, dark-elevated bg. */}
         <div
           style={{
-            height: navH + searchH,
-            paddingLeft: padX,
-            paddingRight: padX,
-            paddingTop: navH,
-            display: "flex",
-            alignItems: "center",
+            paddingLeft: padX * 0.6,
+            paddingRight: padX * 0.6,
+            paddingBottom: 24 * scale,
           }}
         >
           <div
             style={{
-              width: "100%",
-              height: 70 * scale,
+              height: 88 * scale,
               borderRadius: 999,
-              background: G_BG_GREY,
+              background: G_BG_ELEVATED,
               display: "flex",
               alignItems: "center",
               paddingLeft: 22 * scale,
+              paddingRight: 8 * scale,
               gap: 16 * scale,
               fontFamily: FONT_STACK,
-              fontSize: 22 * scale,
-              color: G_LIGHT,
             }}
           >
-            <span style={{ fontSize: 26 * scale }}>≡</span>
-            <span>Search in mail</span>
+            {/* Hamburger */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 * scale, flexShrink: 0 }}>
+              <div style={{ width: 24 * scale, height: 3 * scale, background: G_TEXT, borderRadius: 2 }} />
+              <div style={{ width: 24 * scale, height: 3 * scale, background: G_TEXT, borderRadius: 2 }} />
+              <div style={{ width: 24 * scale, height: 3 * scale, background: G_TEXT, borderRadius: 2 }} />
+            </div>
+            {/* Gmail logo (envelope) */}
+            <svg width={36 * scale} height={28 * scale} viewBox="0 0 36 28" fill="none">
+              <path d="M2 4 L34 4 L34 24 L2 24 Z" fill="none" stroke="#FFFFFF" strokeWidth="0" />
+              <path d="M2 4 L18 16 L34 4" fill="#EA4335" />
+              <path d="M2 4 L2 24 L10 24 L10 12 Z" fill="#4285F4" />
+              <path d="M34 4 L34 24 L26 24 L26 12 Z" fill="#34A853" />
+              <path d="M10 12 L10 24 L26 24 L26 12 L18 18 Z" fill="#FBBC04" />
+              <path d="M10 12 L18 18 L26 12 L18 4 Z" fill="#C5221F" />
+            </svg>
+            {/* Spacer */}
+            <div style={{ flex: 1 }} />
+            {/* Two presence dots — represent linked accounts in the
+                actual iOS Gmail UI ("Inboxes • • •") */}
+            <div style={{ display: "flex", gap: 4 * scale, marginRight: 4 * scale }}>
+              <div style={{ width: 8 * scale, height: 8 * scale, borderRadius: "50%", background: "#34A853" }} />
+              <div style={{ width: 8 * scale, height: 8 * scale, borderRadius: "50%", background: "#9AA0A6" }} />
+              <div style={{ width: 8 * scale, height: 8 * scale, borderRadius: "50%", background: "#9AA0A6" }} />
+            </div>
+            {/* User avatar */}
+            <div
+              style={{
+                width: 64 * scale,
+                height: 64 * scale,
+                borderRadius: "50%",
+                background:
+                  "linear-gradient(135deg, #C8B6A6 0%, #8C6E5A 100%)",
+                flexShrink: 0,
+              }}
+            />
           </div>
         </div>
-        {/* Primary tab strip */}
+        {/* "All inboxes" small label */}
         <div
           style={{
-            height: tabsH,
             paddingLeft: padX,
             paddingRight: padX,
-            display: "flex",
-            alignItems: "center",
-            gap: 24 * scale,
-            borderBottom: `${1 * scale}px solid ${G_BORDER}`,
+            paddingBottom: 16 * scale,
+            fontFamily: FONT_STACK,
+            fontSize: 22 * scale,
+            color: G_LIGHT,
           }}
         >
-          <div
-            style={{
-              fontFamily: FONT_STACK,
-              fontSize: 22 * scale,
-              fontWeight: 600,
-              color: G_RED,
-              borderBottom: `${3 * scale}px solid ${G_RED}`,
-              paddingTop: 14 * scale,
-              paddingBottom: 14 * scale,
-            }}
-          >
-            Primary
-          </div>
-          <div
-            style={{
-              fontFamily: FONT_STACK,
-              fontSize: 22 * scale,
-              color: G_LIGHT,
-            }}
-          >
-            Promotions
-          </div>
-          <div
-            style={{
-              fontFamily: FONT_STACK,
-              fontSize: 22 * scale,
-              color: G_LIGHT,
-            }}
-          >
-            Social
-          </div>
+          All inboxes
         </div>
         {/* Email list */}
         {emails.map((e, i) => (
           <div
             key={i}
             style={{
-              height: emailItemH,
+              minHeight: emailItemH,
               paddingLeft: padX,
               paddingRight: padX,
-              paddingTop: 18 * scale,
-              paddingBottom: 18 * scale,
-              borderBottom: `${1 * scale}px solid ${G_BORDER}`,
+              paddingTop: 22 * scale,
+              paddingBottom: 22 * scale,
               display: "flex",
-              gap: 18 * scale,
+              gap: 22 * scale,
               alignItems: "flex-start",
-              background: e.unread ? G_BG : "#FAFAFA",
               fontFamily: FONT_STACK,
             }}
           >
+            {/* Avatar */}
             <div
               style={{
-                width: 56 * scale,
-                height: 56 * scale,
+                width: 80 * scale,
+                height: 80 * scale,
                 borderRadius: "50%",
                 background: e.color,
                 color: "#fff",
-                fontSize: 28 * scale,
+                fontSize: 38 * scale,
                 fontWeight: 600,
                 display: "flex",
                 alignItems: "center",
@@ -3950,88 +3960,144 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
             >
               {e.initial}
             </div>
+            {/* Body column */}
             <div
               style={{
                 flex: 1,
                 display: "flex",
                 flexDirection: "column",
-                gap: 4 * scale,
+                gap: 8 * scale,
                 minWidth: 0,
               }}
             >
+              {/* Sender row + time */}
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "baseline",
+                  gap: 12 * scale,
                 }}
               >
                 <div
                   style={{
-                    fontSize: 22 * scale,
+                    fontSize: 30 * scale,
                     fontWeight: e.unread ? 700 : 500,
                     color: G_TEXT,
+                    letterSpacing: -0.2 * scale,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    flex: 1,
                   }}
                 >
+                  {e.unread && (
+                    <span
+                      style={{
+                        color: G_YELLOW,
+                        fontWeight: 800,
+                        marginRight: 6 * scale,
+                      }}
+                    >
+                      ❯
+                    </span>
+                  )}
                   {e.name}
                 </div>
-                <div style={{ fontSize: 16 * scale, color: G_LIGHT }}>
+                <div
+                  style={{
+                    fontSize: 20 * scale,
+                    color: G_LIGHT,
+                    flexShrink: 0,
+                    fontWeight: e.unread ? 600 : 400,
+                  }}
+                >
                   {e.time}
                 </div>
               </div>
+              {/* Subject */}
               <div
                 style={{
-                  fontSize: 20 * scale,
+                  fontSize: 26 * scale,
                   fontWeight: e.unread ? 600 : 400,
                   color: G_TEXT,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
+                  letterSpacing: -0.2 * scale,
                 }}
               >
                 {e.subject}
               </div>
+              {/* Snippet */}
               <div
                 style={{
-                  fontSize: 18 * scale,
+                  fontSize: 22 * scale,
                   color: G_LIGHT,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
+                  lineHeight: 1.3,
                 }}
               >
                 {e.snippet}
               </div>
             </div>
+            {/* Star (right side) */}
+            <div
+              style={{
+                fontSize: 32 * scale,
+                color: G_LIGHT,
+                flexShrink: 0,
+                paddingTop: 30 * scale,
+              }}
+            >
+              ☆
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Compose FAB (only visible when detail isn't covering yet) */}
+      {/* Compose FAB pill — bottom-right, with text + pencil icon
+          like the actual iOS Gmail compose button */}
       {detailSlideProgress < 0.7 && (
         <div
           style={{
             position: "absolute",
-            right: 30 * scale,
-            bottom: 80 * scale,
-            width: 90 * scale,
-            height: 90 * scale,
-            borderRadius: "50%",
-            background: G_RED,
+            right: 32 * scale,
+            bottom: 130 * scale,
+            height: 110 * scale,
+            paddingLeft: 36 * scale,
+            paddingRight: 40 * scale,
+            borderRadius: 999,
+            background: "#1F4FB6",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            fontSize: 40 * scale,
-            color: "#fff",
-            boxShadow: `0 ${6 * scale}px ${20 * scale}px rgba(234, 67, 53, 0.4)`,
+            gap: 16 * scale,
+            color: "#FFFFFF",
+            fontFamily: FONT_STACK,
+            fontSize: 32 * scale,
+            fontWeight: 500,
+            boxShadow: `0 ${10 * scale}px ${28 * scale}px rgba(31, 79, 182, 0.5)`,
             opacity: 1 - detailSlideProgress / 0.7,
           }}
         >
-          ✏
+          {/* Pencil icon */}
+          <svg width={36 * scale} height={36 * scale} viewBox="0 0 24 24" fill="none">
+            <path
+              d="M3 17.25 V21 H6.75 L17.81 9.93 L14.06 6.18 Z M20.71 7.04 C21.1 6.65 21.1 6.02 20.71 5.63 L18.37 3.29 C17.98 2.9 17.35 2.9 16.96 3.29 L15.13 5.12 L18.88 8.87 Z"
+              fill="#FFFFFF"
+            />
+          </svg>
+          Compose
         </div>
       )}
 
-      {/* Email detail card — slides up from below to cover the inbox */}
+      {/* Email detail card — slides up from below to cover the
+          inbox. Mirrors the iOS Gmail email-detail view: thin top
+          action row with back + archive/trash/unread/more icons, big
+          subject, "Inbox" label pill, sender row, body, then a
+          bottom action bar with Reply / Reply all / Forward pills. */}
       <div
         style={{
           position: "absolute",
@@ -4041,48 +4107,104 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
           height,
           background: G_BG,
           transform: `translateY(${detailY}px)`,
-          boxShadow: `0 ${-10 * scale}px ${30 * scale}px rgba(0,0,0,0.15)`,
+          boxShadow: `0 ${-10 * scale}px ${30 * scale}px rgba(0,0,0,0.4)`,
           display: "flex",
           flexDirection: "column",
         }}
       >
-        {/* Detail nav: back, archive, delete */}
+        {/* Top action row — back + archive + trash + mark-unread + more */}
         <div
           style={{
-            height: navH * 1.2,
             paddingLeft: padX,
             paddingRight: padX,
-            paddingTop: navH * 0.5,
+            paddingTop: navH,
+            paddingBottom: 16 * scale,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             fontFamily: FONT_STACK,
             color: G_TEXT,
-            borderBottom: `${1 * scale}px solid ${G_BORDER}`,
           }}
         >
-          <div style={{ fontSize: 36 * scale, fontWeight: 300 }}>←</div>
-          <div style={{ display: "flex", gap: 28 * scale, fontSize: 26 * scale, color: G_LIGHT }}>
-            <span>📁</span>
-            <span>🗑</span>
-            <span>⋯</span>
+          {/* Back chevron */}
+          <svg width={48 * scale} height={48 * scale} viewBox="0 0 24 24" fill="none">
+            <path
+              d="M15 6 L9 12 L15 18"
+              stroke={G_TEXT}
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          </svg>
+          {/* Right cluster: archive, trash, mark-unread, more */}
+          <div style={{ display: "flex", gap: 36 * scale, alignItems: "center" }}>
+            {/* Archive (down arrow into box) */}
+            <svg width={36 * scale} height={36 * scale} viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="5" rx="1" fill={G_TEXT} />
+              <rect x="4" y="9" width="16" height="12" rx="1" stroke={G_TEXT} strokeWidth="2" fill="none" />
+              <line x1="9" y1="14" x2="15" y2="14" stroke={G_TEXT} strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            {/* Trash */}
+            <svg width={36 * scale} height={36 * scale} viewBox="0 0 24 24" fill="none">
+              <path d="M5 7 L7 21 H17 L19 7 Z" stroke={G_TEXT} strokeWidth="2" fill="none" strokeLinejoin="round" />
+              <line x1="3" y1="7" x2="21" y2="7" stroke={G_TEXT} strokeWidth="2" strokeLinecap="round" />
+              <path d="M9 7 V5 C9 4 9.5 3 11 3 H13 C14.5 3 15 4 15 5 V7" stroke={G_TEXT} strokeWidth="2" fill="none" strokeLinecap="round" />
+            </svg>
+            {/* Mark unread (envelope) */}
+            <svg width={36 * scale} height={36 * scale} viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="5" width="18" height="14" rx="2" stroke={G_TEXT} strokeWidth="2" fill="none" />
+              <path d="M3 7 L12 13 L21 7" stroke={G_TEXT} strokeWidth="2" fill="none" strokeLinecap="round" />
+            </svg>
+            {/* More (3 dots) */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 * scale }}>
+              <div style={{ width: 6 * scale, height: 6 * scale, borderRadius: "50%", background: G_TEXT }} />
+              <div style={{ width: 6 * scale, height: 6 * scale, borderRadius: "50%", background: G_TEXT }} />
+              <div style={{ width: 6 * scale, height: 6 * scale, borderRadius: "50%", background: G_TEXT }} />
+            </div>
           </div>
         </div>
-        {/* Subject — driven by current speedup email */}
+        {/* Subject + Inbox label pill + star */}
         <div
           style={{
             paddingLeft: padX,
             paddingRight: padX,
-            paddingTop: 24 * scale,
-            paddingBottom: 16 * scale,
+            paddingTop: 16 * scale,
+            paddingBottom: 20 * scale,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 18 * scale,
             fontFamily: FONT_STACK,
-            fontSize: 32 * scale,
-            fontWeight: 600,
-            color: G_TEXT,
-            lineHeight: 1.25,
           }}
         >
-          {activeEmail.subject}
+          <div
+            style={{
+              flex: 1,
+              fontSize: 38 * scale,
+              fontWeight: 500,
+              color: G_TEXT,
+              lineHeight: 1.25,
+              letterSpacing: -0.3 * scale,
+              display: "flex",
+              alignItems: "baseline",
+              gap: 14 * scale,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{activeEmail.subject}</span>
+            <span
+              style={{
+                fontSize: 22 * scale,
+                fontWeight: 500,
+                color: G_YELLOW,
+                whiteSpace: "nowrap",
+              }}
+            >
+              ❯ Inbox
+            </span>
+          </div>
+          {/* Star (filled blue, like the reference) */}
+          <div style={{ fontSize: 36 * scale, color: G_BLUE, paddingTop: 4 * scale }}>★</div>
         </div>
         {/* Sender row */}
         <div
@@ -4091,22 +4213,23 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
             paddingRight: padX,
             display: "flex",
             alignItems: "center",
-            gap: 16 * scale,
-            paddingBottom: 16 * scale,
+            gap: 18 * scale,
+            paddingBottom: 28 * scale,
           }}
         >
           <div
             style={{
-              width: 56 * scale,
-              height: 56 * scale,
+              width: 76 * scale,
+              height: 76 * scale,
               borderRadius: "50%",
               background: activeEmail.color,
               color: "#fff",
-              fontSize: 28 * scale,
+              fontSize: 36 * scale,
               fontWeight: 600,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              flexShrink: 0,
             }}
           >
             {activeEmail.initial}
@@ -4118,60 +4241,90 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
               display: "flex",
               flexDirection: "column",
               gap: 4 * scale,
+              minWidth: 0,
             }}
           >
-            <div style={{ fontSize: 22 * scale, fontWeight: 600, color: G_TEXT }}>
-              {activeEmail.name}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: 12 * scale,
+              }}
+            >
+              <div style={{ fontSize: 26 * scale, fontWeight: 600, color: G_TEXT }}>
+                {activeEmail.name}
+              </div>
+              <div style={{ fontSize: 20 * scale, color: G_LIGHT, whiteSpace: "nowrap" }}>
+                Apr 30
+              </div>
             </div>
-            <div style={{ fontSize: 18 * scale, color: G_LIGHT }}>
-              to me · 9:42 AM
+            <div
+              style={{
+                fontSize: 20 * scale,
+                color: G_LIGHT,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              to Summer, William, khaledasad9... ▾
+            </div>
+          </div>
+          {/* Right cluster: smile, back-arrow, ⋯ — like the iOS ref */}
+          <div style={{ display: "flex", gap: 18 * scale, alignItems: "center", flexShrink: 0 }}>
+            <span style={{ fontSize: 24 * scale, color: G_LIGHT }}>☺</span>
+            <svg width={28 * scale} height={28 * scale} viewBox="0 0 24 24" fill="none">
+              <path d="M9 10 L4 14 L9 18" stroke={G_LIGHT} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M4 14 H14 C17 14 20 12 20 8 V6" stroke={G_LIGHT} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 * scale }}>
+              <div style={{ width: 5 * scale, height: 5 * scale, borderRadius: "50%", background: G_LIGHT }} />
+              <div style={{ width: 5 * scale, height: 5 * scale, borderRadius: "50%", background: G_LIGHT }} />
+              <div style={{ width: 5 * scale, height: 5 * scale, borderRadius: "50%", background: G_LIGHT }} />
             </div>
           </div>
         </div>
-        {/* Body preview */}
+        {/* Body */}
         <div
           style={{
             paddingLeft: padX,
             paddingRight: padX,
-            paddingTop: 12 * scale,
+            paddingTop: 0,
             paddingBottom: 16 * scale,
             fontFamily: FONT_STACK,
-            fontSize: 22 * scale,
+            fontSize: 26 * scale,
             color: G_TEXT,
-            lineHeight: 1.5,
+            lineHeight: 1.45,
             flex: 1,
           }}
         >
-          <div style={{ marginBottom: 16 * scale }}>
-            {activeEmail.body}
-          </div>
-          <div style={{ color: G_LIGHT }}>—</div>
+          <div style={{ marginBottom: 22 * scale }}>{activeEmail.body}</div>
+          <div style={{ color: G_LIGHT, marginBottom: 22 * scale }}>—</div>
         </div>
-        {/* Inline reply preview — agent's typed-out response. Only
-            visible during the speedup montage. Reads as the AI
-            assistant drafting + sending replies in real time. */}
+        {/* Inline reply preview — agent's typed-out response */}
         {replyPreviewVisible && (
           <div
             style={{
               marginLeft: padX,
               marginRight: padX,
-              marginBottom: 12 * scale,
-              padding: `${14 * scale}px ${18 * scale}px`,
-              borderRadius: 14 * scale,
-              background: "#E6F4EA",
-              border: `${1.5 * scale}px solid #34A853`,
+              marginBottom: 18 * scale,
+              padding: `${20 * scale}px ${22 * scale}px`,
+              borderRadius: 18 * scale,
+              background: G_PROMO_BG,
+              border: `${2 * scale}px solid ${G_GREEN}`,
               display: "flex",
               alignItems: "flex-start",
-              gap: 12 * scale,
+              gap: 16 * scale,
               fontFamily: FONT_STACK,
             }}
           >
             <div
               style={{
-                fontSize: 14 * scale,
+                fontSize: 16 * scale,
                 fontWeight: 700,
-                color: "#34A853",
-                letterSpacing: 0.5 * scale,
+                color: G_GREEN,
+                letterSpacing: 0.8 * scale,
                 paddingTop: 4 * scale,
                 whiteSpace: "nowrap",
               }}
@@ -4181,92 +4334,110 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
             <div
               style={{
                 flex: 1,
-                fontSize: 20 * scale,
-                color: "#202124",
+                fontSize: 26 * scale,
+                color: G_TEXT,
                 lineHeight: 1.4,
               }}
             >
               {typedReplyText}
-              {/* Blinking-style cursor (always-on during montage) */}
               <span
                 style={{
                   display: "inline-block",
-                  width: 2 * scale,
-                  height: 22 * scale,
-                  marginLeft: 3 * scale,
-                  background: "#34A853",
+                  width: 3 * scale,
+                  height: 28 * scale,
+                  marginLeft: 4 * scale,
+                  background: G_GREEN,
                   verticalAlign: "text-bottom",
-                  transform: "translateY(2px)",
+                  transform: "translateY(3px)",
                 }}
               />
             </div>
           </div>
         )}
-        {/* Reply chips */}
+        {/* Bottom action bar — Reply / Reply all / Forward / smile */}
         <div
           style={{
             paddingLeft: padX,
             paddingRight: padX,
             paddingTop: 18 * scale,
-            paddingBottom: 18 * scale,
+            paddingBottom: 30 * scale,
             display: "flex",
-            gap: 12 * scale,
+            gap: 14 * scale,
             borderTop: `${1 * scale}px solid ${G_BORDER}`,
-            background: G_BG_GREY,
+            background: G_BG,
           }}
         >
+          {/* Reply pill */}
           <div
             style={{
               flex: 1,
-              height: 70 * scale,
+              height: 90 * scale,
               borderRadius: 999,
-              border: `${1.5 * scale}px solid ${G_BORDER}`,
-              background: G_BG,
+              background: G_BG_ELEVATED,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              gap: 10 * scale,
               fontFamily: FONT_STACK,
-              fontSize: 22 * scale,
+              fontSize: 24 * scale,
+              fontWeight: 500,
               color: G_TEXT,
             }}
           >
-            ↩ Reply
+            <svg width={26 * scale} height={26 * scale} viewBox="0 0 24 24" fill="none">
+              <path d="M10 8 L4 12 L10 16" stroke={G_TEXT} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M4 12 H16 C19 12 21 14 21 17 V19" stroke={G_TEXT} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Reply
           </div>
+          {/* Reply all pill (the tap target) */}
           <div
             style={{
               flex: 1,
-              height: 70 * scale,
+              height: 90 * scale,
               borderRadius: 999,
-              background: G_BLUE,
+              background: G_BG_ELEVATED,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              gap: 10 * scale,
               fontFamily: FONT_STACK,
-              fontSize: 22 * scale,
-              fontWeight: 600,
-              color: "#fff",
+              fontSize: 24 * scale,
+              fontWeight: 500,
+              color: G_TEXT,
               transform: `scale(${replyAllScale})`,
               transformOrigin: "center",
             }}
           >
-            ↩↩ Reply all
+            <svg width={28 * scale} height={26 * scale} viewBox="0 0 28 24" fill="none">
+              <path d="M9 8 L3 12 L9 16" stroke={G_TEXT} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M14 8 L8 12 L14 16" stroke={G_TEXT} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M8 12 H18 C21 12 23 14 23 17 V19" stroke={G_TEXT} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Reply all
           </div>
+          {/* Forward pill */}
           <div
             style={{
               flex: 1,
-              height: 70 * scale,
+              height: 90 * scale,
               borderRadius: 999,
-              border: `${1.5 * scale}px solid ${G_BORDER}`,
-              background: G_BG,
+              background: G_BG_ELEVATED,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              gap: 10 * scale,
               fontFamily: FONT_STACK,
-              fontSize: 22 * scale,
+              fontSize: 24 * scale,
+              fontWeight: 500,
               color: G_TEXT,
             }}
           >
-            ↳ Forward
+            <svg width={26 * scale} height={26 * scale} viewBox="0 0 24 24" fill="none">
+              <path d="M14 8 L20 12 L14 16" stroke={G_TEXT} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M20 12 H8 C5 12 3 14 3 17 V19" stroke={G_TEXT} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Forward
           </div>
         </div>
       </div>
