@@ -3793,48 +3793,122 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 </div>
               </div>
             </div>
-            {/* Apple-spec DONE moment — blue ring, blue check, black label */}
-            <div
-              style={{
-                margin: `${16 * scale}px ${28 * scale}px ${28 * scale}px`,
-                padding: `${44 * scale}px ${28 * scale}px`,
-                borderRadius: 24 * scale,
-                background: "#FFFFFF",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 18 * scale,
-              }}
-            >
-              <svg width={140 * scale} height={140 * scale} viewBox="0 0 100 100" fill="none">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="44"
-                  stroke="#0A84FF"
-                  strokeWidth="4.5"
-                  fill="none"
-                />
-                <path
-                  d="M30 52 L44 66 L72 36"
-                  stroke="#0A84FF"
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              </svg>
-              <div
-                style={{
-                  fontSize: 32 * scale,
-                  fontWeight: 500,
-                  color: "#000000",
-                  letterSpacing: -0.2 * scale,
-                }}
-              >
-                Done
-              </div>
-            </div>
+            {/* Apple-spec DONE moment — blue ring traces in, then check
+                writes itself across. The ring (circumference 2π·44 ≈ 277)
+                and the check polyline (length ≈ 53) are drawn with
+                stroke-dasharray + animated stroke-dashoffset, driven by
+                paymentConfirmOpacity. The whole thing also pops in. */}
+            {(() => {
+              const ringCirc = 2 * Math.PI * 44;
+              const checkLen = 53;
+              // Stage gates on confirm opacity:
+              //   0.0 → 0.35: ring traces in (offset: ringCirc → 0)
+              //   0.35 → 0.6: check writes (offset: checkLen → 0)
+              const ringT = interpolate(
+                paymentConfirmOpacity,
+                [0, 0.35],
+                [1, 0],
+                { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+              );
+              const checkT = interpolate(
+                paymentConfirmOpacity,
+                [0.35, 0.6],
+                [1, 0],
+                { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+              );
+              // Soft scale pop the moment the check completes.
+              const popT = interpolate(
+                paymentConfirmOpacity,
+                [0.55, 0.7, 0.85],
+                [1, 1.08, 1],
+                { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+              );
+              // "Done" label fades + slides up after the check finishes.
+              const labelOpacity = interpolate(
+                paymentConfirmOpacity,
+                [0.55, 0.75],
+                [0, 1],
+                { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+              );
+              const labelTy = interpolate(
+                paymentConfirmOpacity,
+                [0.55, 0.75],
+                [10, 0],
+                { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+              );
+              return (
+                <div
+                  style={{
+                    margin: `${16 * scale}px ${28 * scale}px ${28 * scale}px`,
+                    padding: `${44 * scale}px ${28 * scale}px`,
+                    borderRadius: 24 * scale,
+                    background: "#FFFFFF",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 18 * scale,
+                  }}
+                >
+                  <svg
+                    width={140 * scale}
+                    height={140 * scale}
+                    viewBox="0 0 100 100"
+                    fill="none"
+                    style={{
+                      transform: `scale(${popT})`,
+                      transformOrigin: "center",
+                    }}
+                  >
+                    {/* Faint background ring so the trace is visible */}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="44"
+                      stroke="#0A84FF"
+                      strokeOpacity="0.12"
+                      strokeWidth="4.5"
+                      fill="none"
+                    />
+                    {/* Animated ring — start at 12 o'clock, sweep clockwise */}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="44"
+                      stroke="#0A84FF"
+                      strokeWidth="4.5"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={ringCirc}
+                      strokeDashoffset={ringCirc * ringT}
+                      transform="rotate(-90 50 50)"
+                    />
+                    {/* Animated check */}
+                    <path
+                      d="M30 52 L44 66 L72 36"
+                      stroke="#0A84FF"
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                      strokeDasharray={checkLen}
+                      strokeDashoffset={checkLen * checkT}
+                    />
+                  </svg>
+                  <div
+                    style={{
+                      fontSize: 32 * scale,
+                      fontWeight: 500,
+                      color: "#000000",
+                      letterSpacing: -0.2 * scale,
+                      opacity: labelOpacity,
+                      transform: `translateY(${labelTy * scale}px)`,
+                    }}
+                  >
+                    Done
+                  </div>
+                </div>
+              );
+            })()}
             {/* Face ID hint pill */}
             <div
               style={{
