@@ -4575,31 +4575,38 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
   const toolbarH = 70 * scale;
   const docMarginX = 36 * scale;
 
-  // Generate paragraph blocks (placeholder text bars representing
-  // body paragraphs of the essay).
-  const paragraphs: number[][] = [
-    // Each paragraph is a list of line-widths as fractions of canvas
-    // width — produces the realistic "uneven last line" look.
-    [0.78, 0.86, 0.74, 0.81, 0.55],
-    [0.82, 0.79, 0.84, 0.73, 0.66, 0.42],
-    [0.76, 0.83, 0.79, 0.61],
-    [0.85, 0.78, 0.82, 0.74, 0.79, 0.53],
-    [0.81, 0.86, 0.74, 0.79, 0.6],
-    [0.73, 0.82, 0.78, 0.84, 0.76, 0.31],
-    [0.85, 0.79, 0.74, 0.49],
-    [0.78, 0.83, 0.81, 0.74, 0.86, 0.62],
+  // Body paragraphs — real essay-like prose rendered with a strong
+  // blur so the doc reads as "obviously a body of text" without
+  // being legible. Beats the previous black-bar treatment because
+  // the actual line-breaks, paragraph rhythm, and word boundaries
+  // come through naturally.
+  const paragraphs: string[] = [
+    "The Industrial Revolution, beginning in the late eighteenth century in Britain, fundamentally restructured the economic, social, and political institutions of the Western world. Prior to this transformation, the vast majority of the population lived in rural agrarian communities organized around subsistence farming and small-scale handicraft production. Within the span of a few generations, a series of mechanical innovations — most notably the steam engine, the spinning jenny, and the power loom — converged with abundant coal reserves and a growing colonial empire to produce a wholly new economic order rooted in industrial wage labor.",
+    "Several factors made Britain the cradle of this transformation rather than France, the Netherlands, or any of the other competing European powers of the period. Britain's parliamentary system had created relatively stable property rights and a functional banking sector capable of mobilizing capital across long distances. The country had also developed an unusually integrated internal market, knit together by an expanding network of canals and turnpikes that lowered the cost of moving goods and people between regions. Finally, the enclosure movement — controversial then and now — had displaced large numbers of rural workers from common lands, providing the labor force that early factories would soon absorb.",
+    "The cotton textile industry of Lancashire offers perhaps the clearest case study in how these forces interacted. In 1750, the production of cotton cloth was a cottage industry conducted in workers' homes using hand-cranked spinning wheels and simple looms. By 1830, it had become a vast, mechanized export business concentrated in Manchester, Bolton, and Oldham, employing hundreds of thousands of workers in purpose-built factories that ran day and night. The price of finished cotton cloth fell by more than ninety percent over this period, putting affordable clothing within reach of working families for the first time in human history while simultaneously devastating traditional handloom weavers across both Britain and India.",
+    "The social consequences of this rapid mechanization were profound and contradictory. On one hand, real wages for industrial workers rose modestly over the long term, life expectancy gradually improved as nutrition and public health advanced, and entirely new professions emerged in engineering, accounting, and management. On the other hand, the conditions endured by the first generations of factory workers were genuinely harrowing — sixteen-hour days, dangerous machinery without safety guards, child labor as young as five years old, and crowded urban tenements without sanitation. Friedrich Engels' 1845 study of Manchester remains one of the most damning portraits of early industrial capitalism ever written.",
+    "Politically, the Industrial Revolution generated pressures that traditional aristocratic governments proved unable to contain. The new industrial bourgeoisie — factory owners, bankers, merchants — demanded political representation commensurate with their economic power, leading to the Reform Acts of 1832 and 1867 that progressively expanded the British electorate. At the same time, the industrial working class began to organize through trade unions and Chartist movements, eventually winning the right to vote, the right to strike, and a series of factory acts that limited working hours and banned the most egregious forms of child labor. Similar dynamics played out, with significant national variations, across France, Germany, the United States, and Japan.",
+    "Perhaps the most lasting consequence of the Industrial Revolution was the establishment of sustained economic growth as a normal feature of human existence. For most of recorded history, per capita output had been roughly stagnant — periods of expansion followed by demographic collapse, plague, or war. After 1800, in the industrializing economies, per capita output began to grow at one to two percent per year and continued doing so for two centuries. This unprecedented growth funded the public health, mass education, social insurance, and technological infrastructure of the modern world, but it also accelerated resource extraction and environmental degradation in ways whose consequences we are still working through today.",
+    "In retrospect, the Industrial Revolution should be understood as the inflection point at which a particular bundle of technologies, institutions, and ideas — wage labor, market capitalism, scientific rationality, fossil energy — became globally hegemonic. Every subsequent transformation, from the mass production economy of the early twentieth century to the digital information economy of our own time, has operated within the framework that the first industrialists improvised in the mills of Lancashire and the foundries of Birmingham. Understanding what they built, and what they cost, is therefore not a question of antiquarian history but of contemporary self-understanding.",
   ];
-  const lineH = 28 * scale;
-  const lineGap = 14 * scale;
-  const paragraphGap = 28 * scale;
   const docTitleH = 70 * scale;
   const docAuthorH = 50 * scale;
   const docHeaderTotalH = docTitleH + docAuthorH + 30 * scale;
-  const paragraphsH = paragraphs.reduce(
-    (sum, p) =>
-      sum + p.length * lineH + (p.length - 1) * lineGap + paragraphGap,
-    0,
-  );
+  const paragraphFontSize = 24 * scale;
+  const paragraphLineHeight = 1.55;
+  // Approximate paragraph height for scroll-content sizing. Chars
+  // per line × line height. We don't need pixel-accurate; we just
+  // need enough room that the doc scrolls.
+  const charsPerLine = 38;
+  const paragraphGap = 28 * scale;
+  const paragraphsH = paragraphs.reduce((sum, p) => {
+    const lines = Math.ceil(p.length / charsPerLine);
+    return (
+      sum +
+      lines * paragraphFontSize * paragraphLineHeight +
+      paragraphGap
+    );
+  }, 0);
   const totalContentH =
     navH + toolbarH + docHeaderTotalH + paragraphsH + 200 * scale;
   const maxScroll = Math.max(0, totalContentH - height);
@@ -4631,7 +4638,6 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
   const D_BLUE = "#1A73E8";
   const D_TOOLBAR_BG = "#F8F9FA";
   const D_PAGE_BG = "#FFFFFF";
-  const D_TEXT_BAR = "#3C4043";
 
   return (
     <div
@@ -4772,30 +4778,30 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
           >
             By Student · 5 pages · 1,247 words
           </div>
-          {/* Body paragraphs (rendered as line bars) */}
-          <div style={{ marginTop: 30 * scale }}>
+          {/* Body paragraphs — real essay prose with a blur filter
+              applied so it reads as "actual text on a doc" rather
+              than legible content. The blur strength is tuned to be
+              strong enough to obscure individual words but light
+              enough that line rhythm + paragraph breaks come through. */}
+          <div
+            style={{
+              marginTop: 30 * scale,
+              filter: `blur(${4 * scale}px)`,
+              fontFamily: FONT_STACK,
+              fontSize: paragraphFontSize,
+              color: D_TEXT,
+              lineHeight: paragraphLineHeight,
+              textAlign: "justify",
+            }}
+          >
             {paragraphs.map((para, pi) => (
               <div
                 key={pi}
                 style={{
                   marginBottom: paragraphGap,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: lineGap,
                 }}
               >
-                {para.map((wfrac, li) => (
-                  <div
-                    key={li}
-                    style={{
-                      width: `${wfrac * 100}%`,
-                      height: lineH,
-                      background: D_TEXT_BAR,
-                      borderRadius: 3 * scale,
-                      opacity: 0.88,
-                    }}
-                  />
-                ))}
+                {para}
               </div>
             ))}
           </div>
