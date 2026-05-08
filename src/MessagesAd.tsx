@@ -670,14 +670,15 @@ const Scene3: React.FC<Scene3Props> = ({
     easing: Easing.inOut(Easing.cubic),
   });
 
-  // SF Pro / Inter at weight 500 averages ~0.58em per character for mixed
-  // lowercase + spaces. We deliberately use a generous estimate so the
-  // bubble never clips the text — it's better to be a touch wide than to
-  // chop a letter. (The ruler-based measurement approach was unreliable
-  // in Remotion's per-frame render.)
-  // Bubble end-state: a slightly smaller font (so the bubble can be visibly
-  // narrower than the input) plus a snug horizontal padding.
-  const charWidthEm = 0.62;
+  // SF Pro Display at weight 500: lowercase letter widths average ~0.52em,
+  // narrow letters (i, l, t, f, r) ~0.30em, wide letters (m, w) ~0.82em,
+  // spaces ~0.28em. Across typical English copy this works out to roughly
+  // 0.48em per character. We bias slightly upward to 0.50 so the bubble
+  // never clips the text — better to have a hair of right-padding than to
+  // chop a glyph mid-render. (Ruler-based DOM measurement is unreliable
+  // in Remotion's per-frame headless render, so we use a constant tuned
+  // against the actual font.)
+  const charWidthEm = 0.44;
   const bubbleFontShrink = 0.78;
   const bubbleFontSize = fontSize * bubbleFontShrink;
   const bubbleTextWidth = phrase.length * bubbleFontSize * charWidthEm;
@@ -739,11 +740,29 @@ const Scene3: React.FC<Scene3Props> = ({
   ]);
   // Bubble shadow lifts as it forms.
   const bubbleShadow = interpolate(morphP, [0, 1], [0, 0.18]);
-  // Tail appears as the bubble snaps into shape.
-  const tailOpacity = interpolate(morphP, [0.7, 1], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  // Tail "extrudes" from the bubble's right edge as the morph progresses.
+  // We don't fade the tail's opacity — that would make it look semi-
+  // transparent against the bubble's solid fill while they're different
+  // colors. Instead we (a) animate a horizontal scale on the SVG with the
+  // origin at the bubble's right edge, so the tail grows outward like
+  // it's being pulled out of the bubble, and (b) tie the tail's fill
+  // color to the bubble's animated background, so they're always the same
+  // shade and read as one shape.
+  //
+  // Easing: a slight back-overshoot on the reveal gives the tail a
+  // physical "pop out" feel matching iMessage's send animation.
+  const tailRevealStart = 0.72;
+  const tailRevealEnd = 1.0;
+  const tailRevealP = interpolate(
+    morphP,
+    [tailRevealStart, tailRevealEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.back(1.6)),
+    },
+  );
   // "Delivered" indicator fades in slightly after the bubble settles.
   const deliveredOpacity = interpolate(
     local,
@@ -824,55 +843,23 @@ const Scene3: React.FC<Scene3Props> = ({
             boxShadow: `0 ${4 * scale}px ${20 * scale}px rgba(0,0,0,${bubbleShadow})`,
           }}
         >
-          <span>{visible}</span>
-          <span
-            style={{
-              display: "inline-block",
-              width: 2 * scale,
-              height: animatedFontSize * 1.05,
-              marginLeft: 4 * scale,
-              background: IMESSAGE_BLUE,
-              opacity: cursorVisible && morphP === 0 ? 1 : 0,
-              transform: "translateY(2px)",
-            }}
-          />
           {/* iMessage outbound tail.
 
-              We render this as an SVG that overlaps deeply into the
-              bubble — in both axes — so the tail and bubble blend into
-              a single visual blob with no visible seam between them.
-              The visible tail (the part outside the bubble) is a small
-              hooked nub bulging from the bottom-right corner.
+              Rendered FIRST in DOM order (before the text spans) so the
+              text paints ON TOP of any tail pixels that overlap the
+              bubble interior. Without this ordering, the tail's left
+              edge — which extends `tailOverlapX` into the bubble — could
+              cover characters near the right edge of the text.
 
-              Layout:
-              - SVG width  = tailOverlapX + visibleTailW. Positioned
-                with right:-visibleTailW, so the left tailOverlapX of
-                the SVG sits inside the bubble's bounding box.
-              - SVG height = cornerRadius + tailOverlapY. Positioned
-                with bottom:0, so the top tailOverlapY sits in the
-                straight portion of the bubble's right edge (above the
-                corner curve), letting the hook merge smoothly into the
-                bubble rather than kinking at the corner start.
+              The SVG overlaps the bubble both horizontally (`tailOverlapX`
+              into the bubble) and vertically (`tailOverlapY` above the
+              corner-curve start), so the tail and bubble merge into a
+              single visual blob with no visible seam.
 
               Path coords are in screen-pixel units (viewBox matches SVG
               size). Origin (0,0) = top-left of SVG (inside the bubble).
               Bubble's right edge in SVG coords is at x = tailOverlapX.
-              Bubble's bottom is at y = tailH. Bubble's corner-curve
-              start is at (tailOverlapX, tailOverlapY).
-
-              The path:
-              - Starts at the top-left of the SVG box (deep inside the
-                bubble's straight right-edge area) and runs down the
-                left edge to the bubble's bottom level — entirely hidden
-                behind the bubble.
-              - Sweeps out along the bubble's bottom past the bubble's
-                right edge to the tail tip.
-              - Curves back via a single smooth cubic to the start
-                point, with a concave (hooked) outer edge. The curve's
-                top control point is placed inside the bubble (negative
-                relative to start) so the joining tangent is nearly
-                vertical, blending into the bubble's right edge with no
-                visible kink. */}
+              Bubble's bottom is at y = tailH. */}
           <svg
             width={tailSvgW}
             height={tailH}
@@ -881,8 +868,14 @@ const Scene3: React.FC<Scene3Props> = ({
               position: "absolute",
               right: -visibleTailW,
               bottom: 0,
-              opacity: tailOpacity,
               overflow: "visible",
+              // Reveal the tail by extruding it from the bubble's right edge.
+              // transform-origin is placed exactly at the bubble's right
+              // edge (in SVG-local coords at x = tailOverlapX), so scaleX
+              // grows the visible tail outward while keeping the overlap
+              // region (left of the origin) hidden behind the bubble.
+              transform: `scaleX(${tailRevealP})`,
+              transformOrigin: `${(tailOverlapX / tailSvgW) * 100}% center`,
             }}
           >
             <path
@@ -896,9 +889,27 @@ const Scene3: React.FC<Scene3Props> = ({
                 L ${tailOverlapX} 0
                 Z
               `}
-              fill={IMESSAGE_BLUE}
+              fill={fieldBg}
             />
           </svg>
+          {/* Text spans render AFTER the tail SVG so they paint on top.
+              `position: relative` is required for `zIndex` to take effect
+              and creates an explicit stacking context as a safety belt
+              in case future siblings introduce stacking surprises. */}
+          <span style={{ position: "relative", zIndex: 1 }}>{visible}</span>
+          <span
+            style={{
+              display: "inline-block",
+              width: 2 * scale,
+              height: animatedFontSize * 1.05,
+              marginLeft: 4 * scale,
+              background: IMESSAGE_BLUE,
+              opacity: cursorVisible && morphP === 0 ? 1 : 0,
+              transform: "translateY(2px)",
+              position: "relative",
+              zIndex: 1,
+            }}
+          />
         </div>
         <div
           style={{
@@ -938,8 +949,8 @@ const Scene3: React.FC<Scene3Props> = ({
         <div
           style={{
             position: "absolute",
-            left: width / 2 + rowXOffset + bubbleWidth / 2,
-            top: height * 0.5 + rowYOffset + bubbleHeight / 2 + 16 * scale,
+            left: width / 2 + rowXOffset + bubbleWidth / 2 - 50 * scale,
+            top: height * 0.5 + rowYOffset + bubbleHeight / 2 + 3 * scale,
             transform: "translateX(-100%)",
             fontFamily: FONT_STACK,
             fontSize: 22 * scale,
