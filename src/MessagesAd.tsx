@@ -2432,7 +2432,10 @@ const Scene3: React.FC<Scene3Props> = ({
   const sent3CornerRadius = sent3Height * 0.42;
   const sent3TailExt = sent3CornerRadius * 0.5;
   const sent3TailHook = sent3CornerRadius * 0.2;
-  const sent3Start = sec(13.4, fps);
+  // 0.4s pause after received #3 settles (12.95s) before the prior-
+  // bubbles fade-out starts (sent3Start - 0.3s ≈ 13.5s). The viewer
+  // gets a beat to read the gray reply burst before the punchline.
+  const sent3Start = sec(13.8, fps);
   // sent #3 lands as the punchline of the scene — everything else
   // fades out so this bubble sits alone on screen, and it enters
   // with a more pronounced expand (0.5 → 1.0 scale, slower settle
@@ -2442,7 +2445,9 @@ const Scene3: React.FC<Scene3Props> = ({
     fps,
     config: { damping: 16, stiffness: 110, mass: 0.7 },
   });
-  const sent3Scale = interpolate(sent3Spring, [0, 1], [0.5, 1]);
+  // Sent #3 is the closing punchline — settles at 1.7× scale so it
+  // dominates the screen center, much larger than every other bubble.
+  const sent3Scale = interpolate(sent3Spring, [0, 1], [0.5, 1.7]);
   const sent3Opacity = interpolate(
     local,
     [sent3Start, sent3Start + sec(0.25, fps)],
@@ -2658,7 +2663,7 @@ const Scene3: React.FC<Scene3Props> = ({
   // 6) Sent #3 (closing reply) becomes the newest.
   conversationShift = interpolate(
     local,
-    [sec(13.4, fps), sec(13.85, fps)],
+    [sec(13.8, fps), sec(14.25, fps)],
     [conversationShift, -sent3YOffset],
     {
       extrapolateLeft: "clamp",
@@ -3201,15 +3206,16 @@ const Scene3: React.FC<Scene3Props> = ({
         </div>
       )}
 
-      {/* Sent bubble #3 — pops in after received #3. Right-aligned
-          like the other blue bubbles, with the same right-edge inset.
-          No delivered/read receipts (this closes the conversation). */}
+      {/* Sent bubble #3 — closing punchline. Centered on screen
+          (both axes) and scaled up dramatically (~1.7×) so it
+          dominates the frame as the focal-point closer. The other
+          bubbles are already faded out by the time this lands. */}
       {sent3Opacity > 0 && (
         <div
           style={{
             position: "absolute",
-            left: width - chatEdgeMargin - sent3Width / 2,
-            top: sentBubbleY + sent3YOffset,
+            left: width / 2,
+            top: height / 2,
             transform: `translate(-50%, -50%) scale(${sent3Scale})`,
             opacity: sent3Opacity,
           }}
@@ -3383,10 +3389,10 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
         />
       </Sequence>
 
-      {/* Scene 3 — starts at 5s. Extended to 15s to fit the closing
-          punchline reveal: prior conversation fades out, then sent #3
-          ("bet, order some protection") expands into the center alone. */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(15, fps)}>
+      {/* Scene 3 — starts at 5s. Extended to 15.4s to give received
+          #3 a 0.4s hold before the closing punchline ("bet, order
+          some protection") starts entering. */}
+      <Sequence from={sec(5, fps)} durationInFrames={sec(15.4, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
@@ -3400,18 +3406,18 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           sent #3 sits alone on screen as the focal point. */}
       <Sequence
         from={sec(5 - xfade, fps)}
-        durationInFrames={sec(15 + xfade, fps)}
+        durationInFrames={sec(15.4 + xfade, fps)}
       >
         <Caption
           text="schedule a date with my crush"
           scale={scale}
           width={layoutWidth}
           height={layoutHeight}
-          // sent3Start is at Scene 3 local 13.4s = video 18.4s.
+          // sent3Start is at Scene 3 local 13.8s = video 18.8s.
           // Caption local time = video time - (5 - xfade) = video - 4.65s.
-          // priorFadeStart = sent3Start - 0.3s → caption-local 13.45s.
-          fadeOutAtSec={13.45}
-          durationSec={13.7}
+          // priorFadeStart = sent3Start - 0.3s → caption-local 13.85s.
+          fadeOutAtSec={13.85}
+          durationSec={14.1}
         />
       </Sequence>
     </AbsoluteFill>
