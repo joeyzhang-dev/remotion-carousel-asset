@@ -6708,7 +6708,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const igFeedFadeIn = interpolate(
     local,
     [igFeedFadeStart, igFeedFadeStart + sec(0.18, fps)],
-    [0, 0.55],
+    [0, 0.85],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -7054,7 +7054,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const amazonFadeIn = interpolate(
     local,
     [amazonFadeStart, amazonFadeStart + sec(0.18, fps)],
-    [0, 0.45],
+    [0, 0.85],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -7140,7 +7140,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const flightFadeIn = interpolate(
     local,
     [flightFadeStart, flightFadeStart + sec(0.18, fps)],
-    [0, 0.45],
+    [0, 0.85],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -7255,7 +7255,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const walletFadeIn = interpolate(
     local,
     [walletFadeStart, walletFadeStart + sec(0.18, fps)],
-    [0, 0.45],
+    [0, 0.85],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -7359,7 +7359,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const gmailFadeIn = interpolate(
     local,
     [gmailFadeStart, gmailFadeStart + sec(0.18, fps)],
-    [0, 0.45],
+    [0, 0.85],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -7463,7 +7463,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const docsFadeIn = interpolate(
     local,
     [docsFadeStart, docsFadeStart + sec(0.18, fps)],
-    [0, 0.45],
+    [0, 0.85],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
