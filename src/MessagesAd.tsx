@@ -2433,19 +2433,41 @@ const Scene3: React.FC<Scene3Props> = ({
   const sent3TailExt = sent3CornerRadius * 0.5;
   const sent3TailHook = sent3CornerRadius * 0.2;
   const sent3Start = sec(13.4, fps);
+  // sent #3 lands as the punchline of the scene — everything else
+  // fades out so this bubble sits alone on screen, and it enters
+  // with a more pronounced expand (0.5 → 1.0 scale, slower settle
+  // than the other bubbles' pop-ins).
   const sent3Spring = spring({
     frame: local - sent3Start,
     fps,
-    config: { damping: 14, stiffness: 180, mass: 0.55 },
+    config: { damping: 16, stiffness: 110, mass: 0.7 },
   });
-  const sent3Scale = interpolate(sent3Spring, [0, 1], [0.85, 1]);
+  const sent3Scale = interpolate(sent3Spring, [0, 1], [0.5, 1]);
   const sent3Opacity = interpolate(
     local,
-    [sent3Start, sent3Start + sec(0.18, fps)],
+    [sent3Start, sent3Start + sec(0.25, fps)],
     [0, 1],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+
+  // Prior-bubbles + caption fade-out, timed JUST BEFORE sent #3
+  // arrives. By the time sent #3 starts springing in, the rest of
+  // the conversation (and the caption) has dissolved away — leaving
+  // sent #3 alone on screen as the closing punchline.
+  const priorFadeStart = sent3Start - sec(0.3, fps);
+  const priorFadeEnd = sent3Start - sec(0.05, fps);
+  const priorBubblesOpacity = interpolate(
+    local,
+    [priorFadeStart, priorFadeEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
     },
   );
 
@@ -2746,6 +2768,7 @@ const Scene3: React.FC<Scene3Props> = ({
           display: "flex",
           alignItems: "center",
           gap: 16 * scale * (1 - morphP),
+          opacity: priorBubblesOpacity,
         }}
       >
         <MessageBubble
@@ -2811,13 +2834,13 @@ const Scene3: React.FC<Scene3Props> = ({
 
       {/* "Delivered" — fades in after settle, then fades out into "Read". */}
       {deliveredFinalOpacity > 0 && (
-        <div style={{ ...receiptStyle, opacity: deliveredFinalOpacity }}>
+        <div style={{ ...receiptStyle, opacity: deliveredFinalOpacity * priorBubblesOpacity }}>
           Delivered
         </div>
       )}
       {/* "Read" — fades in as "Delivered" fades out. */}
       {readOpacity > 0 && (
-        <div style={{ ...receiptStyle, opacity: readOpacity }}>Read</div>
+        <div style={{ ...receiptStyle, opacity: readOpacity * priorBubblesOpacity }}>Read</div>
       )}
 
       {/* Typing indicator → received reply bubble.
@@ -2839,7 +2862,7 @@ const Scene3: React.FC<Scene3Props> = ({
             left: chatEdgeMargin + animatedBubbleW / 2,
             top: sentBubbleY + receivedYOffset,
             transform: `translate(-50%, -50%) scale(${receivedScale})`,
-            opacity: receivedOpacity,
+            opacity: receivedOpacity * priorBubblesOpacity,
           }}
         >
           <div style={{ position: "relative" }}>
@@ -2958,7 +2981,7 @@ const Scene3: React.FC<Scene3Props> = ({
               left: width - chatEdgeMargin - sent2Width / 2,
               top: sentBubbleY + sent2YOffset,
               transform: `translate(-50%, -50%) scale(${sent2Scale})`,
-              opacity: sent2Opacity,
+              opacity: sent2Opacity * priorBubblesOpacity,
             }}
           >
             <MessageBubble
@@ -2995,7 +3018,7 @@ const Scene3: React.FC<Scene3Props> = ({
                   sent2YOffset +
                   sent2Height / 2 +
                   3 * scale,
-                opacity: sent2DeliveredOpacity,
+                opacity: sent2DeliveredOpacity * priorBubblesOpacity,
               }}
             >
               Delivered
@@ -3011,7 +3034,7 @@ const Scene3: React.FC<Scene3Props> = ({
                   sent2YOffset +
                   sent2Height / 2 +
                   3 * scale,
-                opacity: sent2ReadOpacity,
+                opacity: sent2ReadOpacity * priorBubblesOpacity,
               }}
             >
               Read
@@ -3043,7 +3066,7 @@ const Scene3: React.FC<Scene3Props> = ({
             left: chatEdgeMargin + typing2AnimatedW / 2,
             top: sentBubbleY + typing2YOffset,
             transform: `translate(-50%, -50%) scale(${typing2Scale})`,
-            opacity: typing2Opacity,
+            opacity: typing2Opacity * priorBubblesOpacity,
           }}
         >
           <div style={{ position: "relative" }}>
@@ -3153,7 +3176,7 @@ const Scene3: React.FC<Scene3Props> = ({
             left: chatEdgeMargin + received3Width / 2,
             top: sentBubbleY + received3YOffset,
             transform: `translate(-50%, -50%) scale(${received3Scale})`,
-            opacity: received3Opacity,
+            opacity: received3Opacity * priorBubblesOpacity,
           }}
         >
           <MessageBubble
@@ -3275,7 +3298,7 @@ const Scene3: React.FC<Scene3Props> = ({
                 borderRadius: cloneRadius,
                 background: dwelledCellColor,
                 transform: `translate(-50%, -50%) scale(${tapScale})`,
-                opacity: dwelledCellHighlightOpacity,
+                opacity: dwelledCellHighlightOpacity * priorBubblesOpacity,
                 boxShadow:
                   flightProgress > 0.5
                     ? `0 ${3 * scale}px ${16 * scale}px rgba(0,0,0,0.08)`
@@ -3360,10 +3383,10 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
         />
       </Sequence>
 
-      {/* Scene 3 — starts at 5s. Extended to 14.2s to fit a closing
-          blue bubble ("bet, order some protection") after the gray
-          replies. */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(14.2, fps)}>
+      {/* Scene 3 — starts at 5s. Extended to 15s to fit the closing
+          punchline reveal: prior conversation fades out, then sent #3
+          ("bet, order some protection") expands into the center alone. */}
+      <Sequence from={sec(5, fps)} durationInFrames={sec(15, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
@@ -3372,16 +3395,23 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
       </Sequence>
 
       {/* Caption 3 — overlaps with Caption 2 (text-only crossfade is fine).
-          Holds for Scene 3's full duration. */}
+          Fades out alongside the prior conversation just before the
+          closing punchline ("bet, order some protection") enters, so
+          sent #3 sits alone on screen as the focal point. */}
       <Sequence
         from={sec(5 - xfade, fps)}
-        durationInFrames={sec(14.2 + xfade, fps)}
+        durationInFrames={sec(15 + xfade, fps)}
       >
         <Caption
           text="schedule a date with my crush"
           scale={scale}
           width={layoutWidth}
           height={layoutHeight}
+          // sent3Start is at Scene 3 local 13.4s = video 18.4s.
+          // Caption local time = video time - (5 - xfade) = video - 4.65s.
+          // priorFadeStart = sent3Start - 0.3s → caption-local 13.45s.
+          fadeOutAtSec={13.45}
+          durationSec={13.7}
         />
       </Sequence>
     </AbsoluteFill>
