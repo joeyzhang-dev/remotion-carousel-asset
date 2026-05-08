@@ -3187,7 +3187,6 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
   const G_BORDER = "#E8EAED";
   const G_RED = "#EA4335";
   const G_BLUE = "#1A73E8";
-  const G_GREEN = "#34A853";
   const G_BG_GREY = "#F1F3F4";
 
   type Email = {
@@ -3685,105 +3684,190 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
           <div
             style={{
               width: width * 0.84,
-              padding: `${48 * scale}px ${36 * scale}px`,
               borderRadius: 24 * scale,
               background: "#FFFFFF",
               fontFamily: FONT_STACK,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 18 * scale,
+              overflow: "hidden",
               boxShadow: `0 ${20 * scale}px ${60 * scale}px rgba(0,0,0,0.35)`,
+              position: "relative",
             }}
           >
+            {/* Google 4-color top stripe */}
+            <div style={{ display: "flex", height: 6 * scale }}>
+              <div style={{ flex: 1, background: "#EA4335" }} />
+              <div style={{ flex: 1, background: "#FBBC04" }} />
+              <div style={{ flex: 1, background: "#34A853" }} />
+              <div style={{ flex: 1, background: "#4285F4" }} />
+            </div>
+            {/* Streak badge top-right */}
             <div
               style={{
-                width: 130 * scale,
-                height: 130 * scale,
-                borderRadius: "50%",
-                background: G_GREEN,
+                position: "absolute",
+                top: 22 * scale,
+                right: 22 * scale,
+                padding: `${8 * scale}px ${14 * scale}px`,
+                borderRadius: 999,
+                background: "#FEF7E0",
+                display: "flex",
+                alignItems: "center",
+                gap: 6 * scale,
+                fontSize: 16 * scale,
+                fontWeight: 600,
+                color: "#B06000",
+              }}
+            >
+              🔥 Streak 3 days
+            </div>
+            {/* Hero illustration band — empty inbox */}
+            <div
+              style={{
+                background: "#E6F4EA",
+                height: 200 * scale,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 80 * scale,
-                color: "#FFFFFF",
-                fontWeight: 700,
-                boxShadow: `0 ${6 * scale}px ${20 * scale}px rgba(52, 168, 83, 0.35)`,
+                position: "relative",
               }}
             >
-              ✓
+              <svg
+                width={150 * scale}
+                height={130 * scale}
+                viewBox="0 0 150 130"
+                fill="none"
+              >
+                {/* whoosh lines */}
+                <path d="M5 40 L30 40" stroke="#34A853" strokeWidth="3" strokeLinecap="round" />
+                <path d="M10 55 L35 55" stroke="#34A853" strokeWidth="3" strokeLinecap="round" />
+                <path d="M0 70 L25 70" stroke="#34A853" strokeWidth="3" strokeLinecap="round" />
+                {/* Envelope */}
+                <rect x="40" y="35" width="100" height="70" rx="8" fill="#FFFFFF" stroke="#34A853" strokeWidth="3" />
+                <path d="M40 43 L90 80 L140 43" stroke="#34A853" strokeWidth="3" fill="none" />
+                {/* Check inside */}
+                <circle cx="115" cy="80" r="20" fill="#34A853" />
+                <path d="M105 80 L113 88 L126 73" stroke="#FFFFFF" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </div>
+            {/* Title block */}
             <div
               style={{
-                fontSize: 44 * scale,
-                fontWeight: 700,
-                color: G_TEXT,
-                letterSpacing: -0.5 * scale,
-                marginTop: 8 * scale,
-                textAlign: "center",
+                paddingLeft: 36 * scale,
+                paddingRight: 36 * scale,
+                paddingTop: 28 * scale,
+                paddingBottom: 8 * scale,
               }}
             >
-              Replied to 47 emails
-            </div>
-            <div
-              style={{
-                fontSize: 22 * scale,
-                color: G_LIGHT,
-                textAlign: "center",
-              }}
-            >
-              Drafts auto-sent · 0 errors
-            </div>
-            <div
-              style={{
-                width: "100%",
-                height: 1 * scale,
-                background: G_BORDER,
-                marginTop: 4 * scale,
-                marginBottom: 4 * scale,
-              }}
-            />
-            {[
-              { label: "Personal", value: "12 replies" },
-              { label: "Work", value: "28 replies" },
-              { label: "Promotional", value: "7 archived" },
-            ].map((r) => (
               <div
-                key={r.label}
                 style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  fontFamily: FONT_STACK,
+                  fontSize: 44 * scale,
+                  fontWeight: 700,
+                  color: "#202124",
+                  letterSpacing: -0.5 * scale,
                 }}
               >
-                <div style={{ fontSize: 22 * scale, color: G_LIGHT }}>
-                  {r.label}
-                </div>
-                <div style={{ fontSize: 22 * scale, color: G_TEXT, fontWeight: 600 }}>
-                  {r.value}
-                </div>
+                All caught up
               </div>
-            ))}
+              <div
+                style={{
+                  fontSize: 22 * scale,
+                  color: "#5F6368",
+                  marginTop: 6 * scale,
+                }}
+              >
+                47 conversations replied · 12 archived
+              </div>
+            </div>
+            {/* Stacked bar breakdown */}
             <div
               style={{
-                width: "100%",
-                marginTop: 12 * scale,
-                padding: `${18 * scale}px ${22 * scale}px`,
-                borderRadius: 14 * scale,
-                background: "#E6F4EA",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
+                paddingLeft: 36 * scale,
+                paddingRight: 36 * scale,
+                paddingTop: 18 * scale,
               }}
             >
-              <div style={{ fontSize: 22 * scale, color: G_LIGHT }}>
-                Inbox
+              <div
+                style={{
+                  display: "flex",
+                  height: 32 * scale,
+                  borderRadius: 16 * scale,
+                  overflow: "hidden",
+                }}
+              >
+                <div style={{ flex: 12, background: "#EA4335" }} />
+                <div style={{ flex: 28, background: "#4285F4" }} />
+                <div style={{ flex: 7, background: "#FBBC04" }} />
               </div>
-              <div style={{ fontSize: 32 * scale, fontWeight: 700, color: G_GREEN }}>
-                Empty ✓
+              {/* Legend */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginTop: 14 * scale,
+                  fontSize: 18 * scale,
+                  color: "#202124",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6 * scale }}>
+                  <div style={{ width: 10 * scale, height: 10 * scale, borderRadius: "50%", background: "#EA4335" }} />
+                  <span>Personal · 12</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 * scale }}>
+                  <div style={{ width: 10 * scale, height: 10 * scale, borderRadius: "50%", background: "#4285F4" }} />
+                  <span>Work · 28</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 * scale }}>
+                  <div style={{ width: 10 * scale, height: 10 * scale, borderRadius: "50%", background: "#FBBC04" }} />
+                  <span>Promo · 7</span>
+                </div>
               </div>
+            </div>
+            {/* Time saved hero card */}
+            <div
+              style={{
+                margin: 36 * scale,
+                marginTop: 28 * scale,
+                padding: `${22 * scale}px ${24 * scale}px`,
+                borderRadius: 14 * scale,
+                background: "#E8F0FE",
+                display: "flex",
+                alignItems: "center",
+                gap: 14 * scale,
+              }}
+            >
+              <svg width={42 * scale} height={42 * scale} viewBox="0 0 42 42" fill="none">
+                <circle cx="21" cy="21" r="18" stroke="#1A73E8" strokeWidth="3" fill="none" />
+                <path d="M21 11 L21 21 L29 25" stroke="#1A73E8" strokeWidth="3" strokeLinecap="round" fill="none" />
+              </svg>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 30 * scale, fontWeight: 700, color: "#1A73E8", letterSpacing: -0.3 * scale }}>
+                  4h 12m saved
+                </div>
+                <div style={{ fontSize: 16 * scale, color: "#5F6368", marginTop: 2 * scale }}>
+                  vs. typing manually
+                </div>
+              </div>
+            </div>
+            {/* Inbox Zero footer */}
+            <div
+              style={{
+                background: "#34A853",
+                padding: `${20 * scale}px ${36 * scale}px`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 14 * scale,
+                fontSize: 26 * scale,
+                fontWeight: 700,
+                color: "#FFFFFF",
+                letterSpacing: 0.3 * scale,
+              }}
+            >
+              <span>Inbox Zero ✓</span>
+              {/* Confetti */}
+              <span style={{ display: "inline-flex", gap: 4 * scale }}>
+                <span style={{ width: 8 * scale, height: 8 * scale, background: "#FBBC04", transform: "rotate(15deg)", display: "inline-block" }} />
+                <span style={{ width: 8 * scale, height: 8 * scale, background: "#EA4335", transform: "rotate(-20deg)", display: "inline-block" }} />
+                <span style={{ width: 8 * scale, height: 8 * scale, background: "#4285F4", transform: "rotate(35deg)", display: "inline-block" }} />
+              </span>
             </div>
           </div>
         </div>
