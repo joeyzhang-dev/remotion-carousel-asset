@@ -2848,7 +2848,6 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
   const W_TEXT = "#1C1C1E";
   const W_LIGHT = "#8E8E93";
   const W_BORDER = "#E5E5EA";
-  const W_GREEN = "#34C759";
   const W_RED = "#FF3B30";
 
   return (
@@ -3139,7 +3138,11 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
         </div>
       </div>
 
-      {/* Payment Sent confirmation card */}
+      {/* Payment Sent — Apple Wallet confirmation. Black hero with
+          tilted Sapphire card visual + green check badge overlapping
+          the card corner (Apple's signature payment-confirm moment).
+          Below: "Done" big title, amount, contactless wave row, and
+          a clean receipt strip. */}
       {paymentConfirmOpacity > 0 && (
         <div
           style={{
@@ -3159,118 +3162,246 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
           <div
             style={{
               width: width * 0.84,
-              padding: `${48 * scale}px ${36 * scale}px`,
-              borderRadius: 24 * scale,
+              borderRadius: 26 * scale,
               background: "#FFFFFF",
               fontFamily: FONT_STACK,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 18 * scale,
-              boxShadow: `0 ${20 * scale}px ${60 * scale}px rgba(0,0,0,0.35)`,
+              boxShadow: `0 ${20 * scale}px ${60 * scale}px rgba(0,0,0,0.4)`,
+              overflow: "hidden",
             }}
           >
+            {/* Black hero — tilted card + green badge */}
             <div
               style={{
-                width: 130 * scale,
-                height: 130 * scale,
-                borderRadius: "50%",
-                background: W_GREEN,
+                background: "#000000",
+                paddingTop: 50 * scale,
+                paddingBottom: 60 * scale,
+                position: "relative",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 80 * scale,
-                color: "#FFFFFF",
-                fontWeight: 700,
-                boxShadow: `0 ${6 * scale}px ${20 * scale}px rgba(52, 199, 89, 0.35)`,
               }}
             >
-              ✓
+              {/* Faint world-map dot pattern */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  opacity: 0.08,
+                  backgroundImage:
+                    "radial-gradient(circle, #FFFFFF 1px, transparent 1px)",
+                  backgroundSize: `${24 * scale}px ${24 * scale}px`,
+                }}
+              />
+              {/* Tilted credit card */}
+              <div
+                style={{
+                  width: width * 0.62,
+                  aspectRatio: "1.586",
+                  borderRadius: 18 * scale,
+                  background:
+                    "linear-gradient(135deg, #1F3A5F 0%, #0A1F3D 60%, #1F3A5F 100%)",
+                  transform: "rotate(-3deg)",
+                  padding: `${22 * scale}px ${26 * scale}px`,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  color: "#FFFFFF",
+                  fontFamily: FONT_STACK,
+                  boxShadow: `0 ${14 * scale}px ${36 * scale}px rgba(0,0,0,0.5)`,
+                  position: "relative",
+                }}
+              >
+                {/* Metallic sheen overlay */}
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    borderRadius: 18 * scale,
+                    background:
+                      "linear-gradient(115deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.05) 100%)",
+                    pointerEvents: "none",
+                  }}
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div style={{ fontSize: 22 * scale, fontWeight: 600 }}>
+                    Sapphire
+                  </div>
+                  {/* Chip */}
+                  <div
+                    style={{
+                      width: 36 * scale,
+                      height: 28 * scale,
+                      borderRadius: 4 * scale,
+                      background:
+                        "linear-gradient(135deg, #C9A95C 0%, #8C7038 100%)",
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    fontSize: 22 * scale,
+                    letterSpacing: 4 * scale,
+                    fontFamily: "monospace",
+                    fontWeight: 500,
+                  }}
+                >
+                  ···· ···· ···· 4829
+                </div>
+                <div
+                  style={{
+                    fontSize: 14 * scale,
+                    color: "rgba(255,255,255,0.7)",
+                    letterSpacing: 1 * scale,
+                  }}
+                >
+                  ALEX RIVERA
+                </div>
+              </div>
+              {/* Green check badge — overlaps the bottom-right of the card */}
+              <div
+                style={{
+                  position: "absolute",
+                  right: width * 0.22,
+                  bottom: 30 * scale,
+                  width: 88 * scale,
+                  height: 88 * scale,
+                  borderRadius: "50%",
+                  background: "#34C759",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: `0 ${8 * scale}px ${20 * scale}px rgba(52, 199, 89, 0.45), 0 0 0 ${4 * scale}px #000000`,
+                }}
+              >
+                <svg width={48 * scale} height={48 * scale} viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M4 12 L10 18 L20 6"
+                    stroke="#FFFFFF"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
             </div>
+            {/* Done + amount */}
             <div
               style={{
-                fontSize: 44 * scale,
-                fontWeight: 700,
-                color: W_TEXT,
-                letterSpacing: -0.5 * scale,
-                marginTop: 8 * scale,
-              }}
-            >
-              Payment Sent
-            </div>
-            <div
-              style={{
-                fontSize: 22 * scale,
-                color: W_LIGHT,
+                paddingLeft: 36 * scale,
+                paddingRight: 36 * scale,
+                paddingTop: 32 * scale,
+                paddingBottom: 8 * scale,
                 textAlign: "center",
               }}
             >
-              Confirmation #{" "}
-              <span style={{ color: W_TEXT, fontWeight: 600 }}>
-                WL2K-9X4M
-              </span>
-            </div>
-            <div
-              style={{
-                width: "100%",
-                height: 1 * scale,
-                background: W_BORDER,
-                marginTop: 4 * scale,
-                marginBottom: 4 * scale,
-              }}
-            />
-            <div
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12 * scale,
-              }}
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 * scale }}>
-                <div style={{ fontSize: 24 * scale, fontWeight: 600, color: W_TEXT }}>
-                  Sapphire ····4829
-                </div>
-                <div style={{ fontSize: 18 * scale, color: W_LIGHT }}>
-                  Paid · Fri May 8
-                </div>
+              <div
+                style={{
+                  fontSize: 56 * scale,
+                  fontWeight: 700,
+                  color: "#000000",
+                  letterSpacing: -1 * scale,
+                  lineHeight: 1,
+                }}
+              >
+                Done
               </div>
               <div
                 style={{
-                  fontSize: 22 * scale,
-                  color: W_LIGHT,
+                  fontSize: 38 * scale,
+                  fontWeight: 600,
+                  color: "#000000",
+                  marginTop: 12 * scale,
+                  letterSpacing: -0.5 * scale,
                 }}
               >
-                →
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 * scale, alignItems: "flex-end" }}>
-                <div style={{ fontSize: 24 * scale, fontWeight: 600, color: W_TEXT }}>
-                  Statement
-                </div>
-                <div style={{ fontSize: 18 * scale, color: W_LIGHT }}>
-                  Balance cleared
-                </div>
+                −$2,847.13
               </div>
             </div>
+            {/* Contactless wave row */}
             <div
               style={{
-                width: "100%",
-                marginTop: 12 * scale,
-                padding: `${18 * scale}px ${22 * scale}px`,
+                margin: `${20 * scale}px ${28 * scale}px`,
+                padding: `${14 * scale}px ${18 * scale}px`,
                 borderRadius: 14 * scale,
-                background: "#F1F8F4",
+                background: "#F2F2F7",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
+                gap: 14 * scale,
               }}
             >
-              <div style={{ fontSize: 22 * scale, color: W_LIGHT }}>
-                Total paid
+              {/* Contactless wave glyph */}
+              <svg width={32 * scale} height={32 * scale} viewBox="0 0 24 24" fill="none">
+                <path d="M5 8 Q10 12 5 16" stroke="#000000" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+                <path d="M9 6 Q15 12 9 18" stroke="#000000" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+                <path d="M13 4 Q20 12 13 20" stroke="#000000" strokeWidth="2" strokeLinecap="round" fill="none" />
+              </svg>
+              <div style={{ flex: 1, fontSize: 20 * scale, color: "#000000", fontWeight: 500 }}>
+                Statement balance cleared
               </div>
-              <div style={{ fontSize: 36 * scale, fontWeight: 700, color: W_GREEN }}>
-                $2,847.13
-              </div>
+            </div>
+            {/* Receipt rows */}
+            <div
+              style={{
+                paddingLeft: 36 * scale,
+                paddingRight: 36 * scale,
+                paddingBottom: 8 * scale,
+              }}
+            >
+              {[
+                { label: "From", value: "Apple Cash · ····4829" },
+                { label: "To", value: "Chase Sapphire · ····4829" },
+                { label: "Date", value: "Today, 7:42 PM" },
+                { label: "Confirmation", value: "WL2K-9X4M", mono: true },
+              ].map((r, i, arr) => (
+                <div
+                  key={r.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingTop: 14 * scale,
+                    paddingBottom: 14 * scale,
+                    borderBottom:
+                      i < arr.length - 1 ? `${1 * scale}px solid #E5E5EA` : "none",
+                  }}
+                >
+                  <div style={{ fontSize: 18 * scale, color: "#8E8E93" }}>
+                    {r.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 18 * scale,
+                      color: "#000000",
+                      fontWeight: 500,
+                      fontFamily: r.mono ? "monospace" : FONT_STACK,
+                      letterSpacing: r.mono ? 0.5 * scale : 0,
+                    }}
+                  >
+                    {r.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Track in Wallet footer */}
+            <div
+              style={{
+                paddingLeft: 36 * scale,
+                paddingRight: 36 * scale,
+                paddingTop: 14 * scale,
+                paddingBottom: 22 * scale,
+                textAlign: "center",
+                fontSize: 20 * scale,
+                color: "#007AFF",
+                fontWeight: 500,
+              }}
+            >
+              Track in Wallet ›
             </div>
           </div>
         </div>
