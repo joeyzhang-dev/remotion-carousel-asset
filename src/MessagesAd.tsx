@@ -18,6 +18,9 @@ const FONT_STACK =
 const IMESSAGE_BLUE = "#007AFF";
 const FIELD_GRAY = "#F2F2F7";
 const BG_WHITE = "#FFFFFF";
+// Incoming-message gray (iMessage's standard light-mode received bubble).
+const RECEIVED_GRAY = "#E9E9EB";
+const RECEIVED_TEXT = "#000000";
 
 const sec = (s: number, fps: number) => Math.round(s * fps);
 
@@ -199,6 +202,325 @@ const useSceneEnvelope = ({
   }
 
   return { opacity, scaleEnv };
+};
+
+/**
+ * Build the SVG `d` string for an iMessage-style bubble whose
+ * bottom-right or bottom-LEFT corner morphs into a hooked tail.
+ *
+ * The bubble outline is walked clockwise from the top-left. The "tail
+ * corner" replaces what would otherwise be a quarter-circle rounded
+ * corner with two cubic Béziers that blend smoothly between an arc
+ * (when ext = 0) and an iMessage tail (when ext = full extrusion).
+ *
+ * Params:
+ *   width:      bubble width
+ *   height:     bubble height
+ *   cr:         corner radius
+ *   ext:        visible tail extrusion past the bubble's tail-side edge
+ *   hookH:      "hook depth" — how far the tail dips below baseline
+ *   tailScaleX: 0..1, drives the arc→hook control-point blend (also
+ *               typically what `ext` is derived from)
+ *   tailSide:   "right" or "left" — which bottom corner becomes the tail
+ *   originX/Y:  top-left of the bubble in SVG coordinates
+ */
+type TailSide = "right" | "left";
+const buildBubblePath = ({
+  width,
+  height,
+  cr,
+  ext,
+  hookH,
+  tailScaleX,
+  tailSide,
+  originX,
+  originY,
+}: {
+  width: number;
+  height: number;
+  cr: number;
+  ext: number;
+  hookH: number;
+  tailScaleX: number;
+  tailSide: TailSide;
+  originX: number;
+  originY: number;
+}): string => {
+  const K = 0.5523; // standard cubic-bezier circle-approximation factor
+  const cornerMidInset = cr * (1 - Math.SQRT1_2);
+  const blend = tailScaleX;
+
+  const bx = originX;
+  const by = originY;
+  const bRight = bx + width;
+  const bBottom = by + height;
+
+  if (tailSide === "right") {
+    // Tail at bottom-right — see Scene 3 sent bubble for original layout.
+    const aX = bRight;
+    const aY = bBottom - cr;
+    const bX2 = bRight - cr;
+    const bY2 = bBottom;
+
+    const cornerMidX = bRight - cornerMidInset;
+    const cornerMidY = bBottom - cornerMidInset;
+    const tailTipX = bRight + ext;
+    const tailTipY = bBottom + hookH * 0.08;
+    const tX = cornerMidX * (1 - blend) + tailTipX * blend;
+    const tY = cornerMidY * (1 - blend) + tailTipY * blend;
+
+    const arcA1x = aX;
+    const arcA1y = aY + cr * K * 0.55;
+    const arcA2x = cornerMidX + cr * K * 0.4;
+    const arcA2y = cornerMidY - cr * K * 0.4;
+    const tailA1x = aX + ext * 0.05;
+    const tailA1y = aY + cr * 0.55;
+    const tailA2x = tailTipX - ext * 0.3;
+    const tailA2y = tailTipY - hookH * 0.45;
+    const a1x = arcA1x * (1 - blend) + tailA1x * blend;
+    const a1y = arcA1y * (1 - blend) + tailA1y * blend;
+    const a2x = arcA2x * (1 - blend) + tailA2x * blend;
+    const a2y = arcA2y * (1 - blend) + tailA2y * blend;
+
+    const arcB1x = cornerMidX - cr * K * 0.4;
+    const arcB1y = cornerMidY + cr * K * 0.4;
+    const arcB2x = bX2 + cr * K * 0.55;
+    const arcB2y = bY2;
+    const tailB1x = tailTipX - ext * 0.5;
+    const tailB1y = tailTipY - hookH * 0.55;
+    const tailB2x = bX2 + cr * 0.6;
+    const tailB2y = bY2;
+    const b1x = arcB1x * (1 - blend) + tailB1x * blend;
+    const b1y = arcB1y * (1 - blend) + tailB1y * blend;
+    const b2x = arcB2x * (1 - blend) + tailB2x * blend;
+    const b2y = arcB2y * (1 - blend) + tailB2y * blend;
+
+    return [
+      `M ${bx + cr} ${by}`,
+      `L ${bRight - cr} ${by}`,
+      `A ${cr} ${cr} 0 0 1 ${bRight} ${by + cr}`,
+      `L ${aX} ${aY}`,
+      `C ${a1x} ${a1y} ${a2x} ${a2y} ${tX} ${tY}`,
+      `C ${b1x} ${b1y} ${b2x} ${b2y} ${bX2} ${bY2}`,
+      `L ${bx + cr} ${bBottom}`,
+      `A ${cr} ${cr} 0 0 1 ${bx} ${bBottom - cr}`,
+      `L ${bx} ${by + cr}`,
+      `A ${cr} ${cr} 0 0 1 ${bx + cr} ${by}`,
+      `Z`,
+    ].join(" ");
+  }
+
+  // tailSide === "left": mirror the bottom-right tail to bottom-left.
+  // Walk clockwise from top-left as before, but swap the bottom-left
+  // corner with the tail and keep the bottom-right as a normal arc.
+  const aX = bx;
+  const aY = bBottom - cr;
+  const bX2 = bx + cr;
+  const bY2 = bBottom;
+
+  const cornerMidX = bx + cornerMidInset;
+  const cornerMidY = bBottom - cornerMidInset;
+  const tailTipX = bx - ext;
+  const tailTipY = bBottom + hookH * 0.08;
+  const tX = cornerMidX * (1 - blend) + tailTipX * blend;
+  const tY = cornerMidY * (1 - blend) + tailTipY * blend;
+
+  // Mirror the right-side control logic across the vertical axis at
+  // the bubble's left edge: x-offsets flip sign.
+  const arcA1x = aX;
+  const arcA1y = aY + cr * K * 0.55;
+  const arcA2x = cornerMidX - cr * K * 0.4;
+  const arcA2y = cornerMidY - cr * K * 0.4;
+  const tailA1x = aX - ext * 0.05;
+  const tailA1y = aY + cr * 0.55;
+  const tailA2x = tailTipX + ext * 0.3;
+  const tailA2y = tailTipY - hookH * 0.45;
+  const a1x = arcA1x * (1 - blend) + tailA1x * blend;
+  const a1y = arcA1y * (1 - blend) + tailA1y * blend;
+  const a2x = arcA2x * (1 - blend) + tailA2x * blend;
+  const a2y = arcA2y * (1 - blend) + tailA2y * blend;
+
+  const arcB1x = cornerMidX + cr * K * 0.4;
+  const arcB1y = cornerMidY + cr * K * 0.4;
+  const arcB2x = bX2 - cr * K * 0.55;
+  const arcB2y = bY2;
+  const tailB1x = tailTipX + ext * 0.5;
+  const tailB1y = tailTipY - hookH * 0.55;
+  const tailB2x = bX2 - cr * 0.6;
+  const tailB2y = bY2;
+  const b1x = arcB1x * (1 - blend) + tailB1x * blend;
+  const b1y = arcB1y * (1 - blend) + tailB1y * blend;
+  const b2x = arcB2x * (1 - blend) + tailB2x * blend;
+  const b2y = arcB2y * (1 - blend) + tailB2y * blend;
+
+  return [
+    `M ${bx + cr} ${by}`,
+    `L ${bRight - cr} ${by}`,
+    `A ${cr} ${cr} 0 0 1 ${bRight} ${by + cr}`,
+    `L ${bRight} ${bBottom - cr}`,
+    `A ${cr} ${cr} 0 0 1 ${bRight - cr} ${bBottom}`,
+    `L ${bX2} ${bY2}`,
+    // Reverse direction for the left-side tail: we go from B → T → A
+    // (bottom of the corner up to the top of the corner).
+    `C ${b1x} ${b1y} ${b2x} ${b2y} ${tX} ${tY}`,
+    `C ${a2x} ${a2y} ${a1x} ${a1y} ${aX} ${aY}`,
+    `L ${bx} ${by + cr}`,
+    `A ${cr} ${cr} 0 0 1 ${bx + cr} ${by}`,
+    `Z`,
+  ].join(" ");
+};
+
+/**
+ * Reusable bubble component. Renders the bubble + tail as a single SVG
+ * path with a drop-shadow filter, plus a text overlay aligned to the
+ * bubble's interior. Both the sent (right-tail) and received (left-tail)
+ * bubbles in this composition use this.
+ */
+type MessageBubbleProps = {
+  width: number;
+  height: number;
+  cornerRadius: number;
+  /** Visible tail length past the bubble's tail-side edge, in pixels. */
+  tailExt: number;
+  /** Tail dip below baseline, in pixels. */
+  tailHook: number;
+  /** Arc→tail blend factor, 0..1. Usually equals tailExt/tailExtFull. */
+  tailScaleX: number;
+  tailSide: TailSide;
+  bubbleColor: string;
+  textColor: string;
+  fontSize: number;
+  paddingX: number;
+  letterSpacing: number;
+  text: string;
+  /** Optional cursor span (typing). */
+  cursor?: { visible: boolean; color: string; widthPx: number };
+  /** Drop-shadow opacity, 0..1. 0 disables shadow. */
+  shadowOpacity?: number;
+  shadowBlur?: number;
+  shadowOffsetY?: number;
+  /** Stable id for the SVG filter (must be unique per bubble). */
+  filterId: string;
+};
+const MessageBubble: React.FC<MessageBubbleProps> = ({
+  width,
+  height,
+  cornerRadius,
+  tailExt,
+  tailHook,
+  tailScaleX,
+  tailSide,
+  bubbleColor,
+  textColor,
+  fontSize,
+  paddingX,
+  letterSpacing,
+  text,
+  cursor,
+  shadowOpacity = 0.18,
+  shadowBlur = 20,
+  shadowOffsetY = 4,
+  filterId,
+}) => {
+  // The SVG box must include the visible tail and the shadow blur.
+  const svgPadding = shadowBlur * 1.5;
+  const extPadLeft = tailSide === "left" ? tailExt + svgPadding : svgPadding;
+  const extPadRight = tailSide === "right" ? tailExt + svgPadding : svgPadding;
+  const svgW = width + extPadLeft + extPadRight;
+  const svgH = height + svgPadding * 2 + shadowOffsetY;
+
+  const d = buildBubblePath({
+    width,
+    height,
+    cr: cornerRadius,
+    ext: tailExt,
+    hookH: tailHook,
+    tailScaleX,
+    tailSide,
+    originX: extPadLeft,
+    originY: svgPadding,
+  });
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width,
+        height,
+      }}
+    >
+      <svg
+        width={svgW}
+        height={svgH}
+        viewBox={`0 0 ${svgW} ${svgH}`}
+        style={{
+          position: "absolute",
+          left: -extPadLeft,
+          top: -svgPadding,
+          overflow: "visible",
+          pointerEvents: "none",
+        }}
+      >
+        <defs>
+          <filter
+            id={filterId}
+            x="-20%"
+            y="-20%"
+            width="140%"
+            height="140%"
+          >
+            <feDropShadow
+              dx="0"
+              dy={shadowOffsetY}
+              stdDeviation={shadowBlur / 2}
+              floodColor="#000"
+              floodOpacity={shadowOpacity}
+            />
+          </filter>
+        </defs>
+        <path
+          d={d}
+          fill={bubbleColor}
+          filter={shadowOpacity > 0 ? `url(#${filterId})` : undefined}
+        />
+      </svg>
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width,
+          height,
+          display: "flex",
+          alignItems: "center",
+          paddingLeft: paddingX,
+          paddingRight: paddingX,
+          fontFamily: FONT_STACK,
+          fontSize,
+          color: textColor,
+          fontWeight: 500,
+          letterSpacing,
+          whiteSpace: "nowrap",
+          pointerEvents: "none",
+        }}
+      >
+        <span>{text}</span>
+        {cursor && (
+          <span
+            style={{
+              display: "inline-block",
+              width: cursor.widthPx,
+              height: fontSize * 1.05,
+              marginLeft: 4,
+              background: cursor.color,
+              opacity: cursor.visible ? 1 : 0,
+              transform: "translateY(2px)",
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
 };
 
 // Scene 1 — 0s–2s: "In your messages"
@@ -816,267 +1138,189 @@ const Scene3: React.FC<Scene3Props> = ({
   // Apply the pop only at/after morph end (during morph, scale stays at 1).
   const bubbleScale = local < morphEnd ? 1 : bubblePop;
 
-  // Bubble shape — rendered as a SINGLE SVG path (rounded rect whose
-  // bottom-right "corner" smoothly morphs into a hooked tail as
-  // tailRevealRaw ramps 0→1). One fill, one drop-shadow, one anti-
-  // aliased outline — the bubble and tail are literally the same shape,
-  // so there's no seam to chase.
+  // Sent-bubble geometry, derived from the morph progress. The
+  // MessageBubble component does the actual path generation.
+  const sentCornerRadius = interpolate(
+    morphP,
+    [0, 1],
+    [inputHeight / 2, animatedHeight * 0.42],
+  );
+  const sentTailExtFull = sentCornerRadius * 0.5;
+  const sentTailExt = sentTailExtFull * tailScaleX;
+  const sentTailHook = sentCornerRadius * 0.2 * tailScaleY;
+
+  // ── Received-message flow ────────────────────────────────────────
+  // After the sent bubble settles + "Delivered" appears, we crossfade
+  // "Delivered" → "Read", then a second bubble pops in from below as
+  // an incoming reply. The whole stack shifts up to make room.
   //
-  // Geometry inputs:
-  //   W  = field width (animated, input → bubble)
-  //   H  = field height (animated)
-  //   cr = corner radius (animated, full-pill → bubble-pill)
-  //   ext = visible tail extrusion past the bubble's right edge,
-  //         scaled by the reveal progress.
-  //   hook = how far the concave inside-hook of the tail dips
-  //         downward + leftward, also scaled by reveal progress.
-  const bubbleW = fieldWidth;
-  const bubbleH = animatedHeight;
-  const cr = interpolate(morphP, [0, 1], [inputHeight / 2, animatedHeight * 0.42]);
-  // Tail extrusion: lerps from 0 (no tail) to its full size, with the
-  // pop-impulse multiplier baked in so the tail overshoots and settles.
-  const tailExtFull = cr * 0.5;
-  const ext = tailExtFull * tailScaleX;
-  const hookHeightFull = cr * 0.2;
-  const hookH = hookHeightFull * tailScaleY;
+  // Timeline (local seconds inside Scene3):
+  //   2.7s   morph completes (sent bubble settled)
+  //   2.8s   "Delivered" begins fading in
+  //   3.05s  "Delivered" fully visible
+  //   3.40s  "Delivered" begins fading OUT
+  //   3.55s  "Delivered" fully gone (~6 frames @ 30fps, ~9 @ 60fps)
+  //   3.62s  "Read" begins fading IN — sequential, not crossfaded.
+  //          A small (~70ms) gap between out-end and in-start avoids
+  //          the two labels overlapping mid-opacity, which renders as
+  //          a smudgy double-text artifact (visible especially at 60fps).
+  //   3.78s  "Read" fully visible
+  //   3.95s  sent bubble starts shifting up; received bubble begins
+  //          popping in
+  //   4.45s  received bubble settled
+  const deliveredOutStart = sec(3.4, fps);
+  const deliveredOutEnd = sec(3.55, fps);
+  const readInStart = sec(3.62, fps);
+  const readInEnd = sec(3.78, fps);
+  const receivedStart = sec(3.95, fps);
+  const receivedEnd = sec(4.45, fps);
 
-  // The SVG's bounding box must include the visible tail past the
-  // bubble's right edge AND the drop-shadow blur radius (otherwise the
-  // shadow would be clipped at the SVG edge).
-  const shadowBlur = 20 * scale;
-  const shadowOffsetY = 4 * scale;
-  const svgPadding = shadowBlur * 1.5; // safety margin for shadow
-  const svgW = bubbleW + ext + svgPadding * 2;
-  const svgH = bubbleH + svgPadding * 2 + shadowOffsetY;
-  // Bubble's top-left in SVG coords (offset for the padding).
-  const bx = svgPadding;
-  const by = svgPadding;
-  // Bubble's right and bottom in SVG coords.
-  const bRight = bx + bubbleW;
-  const bBottom = by + bubbleH;
+  // "Delivered" fade-out — sequential, completes before "Read" starts.
+  const deliveredOut = interpolate(
+    local,
+    [deliveredOutStart, deliveredOutEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const deliveredFinalOpacity = deliveredOpacity * deliveredOut;
 
-  // Build the path. Walk clockwise from top-left:
-  // 1. Top-left arc (corner)
-  // 2. Top edge
-  // 3. Top-right arc
-  // 4. Right edge (down to where the bottom-right corner / tail starts)
-  // 5. Bottom-right "corner" — this is where the tail lives. When
-  //    ext == 0 it's a simple quarter-circle arc (a normal rounded
-  //    corner). As ext grows, it morphs into a hooked extrusion that
-  //    bulges past the bubble's right edge, has a pointed tip, and
-  //    curves back to the bubble's bottom.
-  // 6. Bottom edge
-  // 7. Bottom-left arc
-  // 8. Left edge
-  // 9. Top-left arc closure
-  //
-  // For the bottom-right corner-or-tail, we control three anchor
-  // points: A (top of the corner / where the right edge starts curving
-  // in), T (the midpoint that becomes the tail tip when extruded), and
-  // B (bottom of the corner / where the bottom edge starts curving up
-  // from).
-  //
-  // When ext = 0 (no tail), T sits at the arc midpoint of a normal
-  // rounded corner. When ext > 0, T moves outward and slightly upward,
-  // pulling A→T into a convex bulge and T→B into a concave hook —
-  // producing the iMessage "tear-drop" tail silhouette.
-  //
-  // We compute T by linearly blending between:
-  //   - cornerMid: the midpoint of a normal quarter-circle corner, at
-  //     (bRight - cr*(1 - cos(45°)), bBottom - cr*(1 - sin(45°)))
-  //   - tailTip:   the extruded tip at (bRight + ext, bBottom - small)
-  // by `tailScaleX` (which is 0 when collapsed, 1 when fully extruded).
-  const K = 0.5523; // standard cubic-bezier circle-approximation factor
-  const cornerMidInset = cr * (1 - Math.SQRT1_2); // ~0.293 * cr
-  const aX = bRight;
-  const aY = bBottom - cr;
-  const bX2 = bRight - cr;
-  const bY2 = bBottom;
+  // "Read" fade-in — starts after "Delivered" has fully faded.
+  const readOpacity = interpolate(local, [readInStart, readInEnd], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.out(Easing.cubic),
+  });
 
-  const cornerMidX = bRight - cornerMidInset;
-  const cornerMidY = bBottom - cornerMidInset;
-  // Tail tip: extends past the bubble's right edge AND slightly below
-  // the bubble's bottom. The "hook" comes from the tip dipping below
-  // baseline and the inner edge curving back UP and inward.
-  const tailTipX = bRight + ext;
-  const tailTipY = bBottom + hookH * 0.08;
-  // Blend T smoothly between arc midpoint (no tail) and extruded tip
-  // (full tail), driven by the same scale that determines extrusion.
-  const blend = tailScaleX;
-  const tX = cornerMidX * (1 - blend) + tailTipX * blend;
-  const tY = cornerMidY * (1 - blend) + tailTipY * blend;
+  // Vertical gap between sent (outbound) and received (inbound)
+  // bubbles. Real iMessage uses a generous gap when the sender
+  // changes — closer to the height of the receipt indicator + a
+  // line-height of breathing room — so both bubbles feel like
+  // distinct moments in the conversation rather than touching.
+  const receivedGap = 36 * scale;
 
-  // A→T cubic. For a clean morph between "arc segment" (no tail) and
-  // "convex hook outer edge" (full tail), interpolate the control
-  // points between the standard quarter-arc-half control points and
-  // the tail-bulge control points using the same blend factor.
-  //
-  // Standard half-arc A→cornerMid control points (from circle
-  // approximation): ctrl1 = (aX, aY + cr*K*0.5), ctrl2 = (cornerMidX +
-  // cr*K*0.5*sin(45°), cornerMidY - cr*K*0.5*cos(45°)).
-  // Tail-bulge A→tailTip control points: ctrl1 nudged outward + down,
-  // ctrl2 just up-left from the tip.
-  const arcA1x = aX;
-  const arcA1y = aY + cr * K * 0.55;
-  const arcA2x = cornerMidX + cr * K * 0.4;
-  const arcA2y = cornerMidY - cr * K * 0.4;
+  // Conversation shift: as the received bubble approaches, the sent
+  // bubble drifts upward so the pair (sent + gap + received) ends up
+  // centered around the screen midline rather than bottom-heavy. We
+  // offset by half the received bubble's height (assumed equal to the
+  // sent bubble's settled height) plus half the gap.
+  const conversationShiftEnd = -(bubbleHeight / 2 + receivedGap / 2);
+  const conversationShift = interpolate(
+    local,
+    [receivedStart, receivedEnd],
+    [0, conversationShiftEnd],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
 
-  const tailA1x = aX + ext * 0.05;
-  const tailA1y = aY + cr * 0.55;
-  const tailA2x = tailTipX - ext * 0.3;
-  const tailA2y = tailTipY - hookH * 0.45;
+  // Received-bubble pop-in: spring-driven scale + opacity. Starts at
+  // 0.85x scale and 0 opacity, settles to 1.0 with a small bounce.
+  const receivedSpring = spring({
+    frame: local - receivedStart,
+    fps,
+    config: { damping: 14, stiffness: 180, mass: 0.55 },
+  });
+  const receivedScale = interpolate(receivedSpring, [0, 1], [0.85, 1]);
+  const receivedOpacity = interpolate(
+    local,
+    [receivedStart, receivedStart + sec(0.18, fps)],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    },
+  );
 
-  const a1x = arcA1x * (1 - blend) + tailA1x * blend;
-  const a1y = arcA1y * (1 - blend) + tailA1y * blend;
-  const a2x = arcA2x * (1 - blend) + tailA2x * blend;
-  const a2y = arcA2y * (1 - blend) + tailA2y * blend;
+  // Received-bubble dimensions (settled — no morph for this one).
+  const receivedPhrase = "added to calendar + invited her";
+  const receivedFontSize = bubbleFontSize;
+  const receivedTextWidth = receivedPhrase.length * receivedFontSize * charWidthEm;
+  const receivedPadX = bubblePadX;
+  const receivedWidth = receivedTextWidth + receivedPadX * 2;
+  const receivedHeight = bubbleHeight;
+  const receivedCornerRadius = receivedHeight * 0.42;
+  const receivedTailExt = receivedCornerRadius * 0.5;
+  const receivedTailHook = receivedCornerRadius * 0.2;
 
-  // T→B cubic. Same interpolation pattern: standard half-arc control
-  // points (cornerMid → B) blended with the concave-hook control
-  // points (tailTip → B).
-  const arcB1x = cornerMidX - cr * K * 0.4;
-  const arcB1y = cornerMidY + cr * K * 0.4;
-  const arcB2x = bX2 + cr * K * 0.55;
-  const arcB2y = bY2;
+  // Distance between bubble CENTERS (used in absolute positioning).
+  // Add half of each bubble's height plus the gap.
+  const receivedYOffset = bubbleHeight / 2 + receivedGap + receivedHeight / 2;
 
-  // T→B for the tail state: from the tip (which sits slightly below
-  // the bubble's baseline), the curve sweeps up-and-left, hooks
-  // inward toward the bubble, then eases down to B at the bubble's
-  // bottom-left of the corner area. ctrl1 above-and-left of the tip
-  // makes the inside edge concave (the "hook"); ctrl2 sits at the
-  // bubble's baseline near B so the curve joins the bottom edge with
-  // a tangent close to horizontal.
-  const tailB1x = tailTipX - ext * 0.5;
-  const tailB1y = tailTipY - hookH * 0.55;
-  const tailB2x = bX2 + cr * 0.6;
-  const tailB2y = bY2;
+  // Anchor for the entire conversation, so receipt indicators and the
+  // received bubble all move with the sent bubble when it scrolls up.
+  const sentBubbleX = width / 2 + rowXOffset;
+  const sentBubbleY = height * 0.5 + rowYOffset + conversationShift;
+  // Right edge of the settled sent bubble, in screen coords. Used to
+  // right-align the receipt indicators ("Delivered" / "Read") and to
+  // derive the received bubble's matching left-edge margin.
+  const sentBubbleRight = sentBubbleX + bubbleWidth / 2;
+  const sentBubbleBottom = sentBubbleY + bubbleHeight / 2;
 
-  const b1x = arcB1x * (1 - blend) + tailB1x * blend;
-  const b1y = arcB1y * (1 - blend) + tailB1y * blend;
-  const b2x = arcB2x * (1 - blend) + tailB2x * blend;
-  const b2y = arcB2y * (1 - blend) + tailB2y * blend;
-
-  const bubbleD = [
-    `M ${bx + cr} ${by}`,
-    `L ${bRight - cr} ${by}`,
-    `A ${cr} ${cr} 0 0 1 ${bRight} ${by + cr}`,
-    `L ${aX} ${aY}`,
-    `C ${a1x} ${a1y} ${a2x} ${a2y} ${tX} ${tY}`,
-    `C ${b1x} ${b1y} ${b2x} ${b2y} ${bX2} ${bY2}`,
-    `L ${bx + cr} ${bBottom}`,
-    `A ${cr} ${cr} 0 0 1 ${bx} ${bBottom - cr}`,
-    `L ${bx} ${by + cr}`,
-    `A ${cr} ${cr} 0 0 1 ${bx + cr} ${by}`,
-    `Z`,
-  ].join(" ");
-
-  // Stable filter ID so React doesn't churn it across renders.
-  const filterId = `bubbleShadow-scene3`;
+  // Mirror the sent bubble's right-edge inset on the left side, so
+  // the gray (received) bubble's left edge sits the same distance
+  // from the screen's left edge as the blue (sent) bubble's right
+  // edge sits from the screen's right edge. This makes the
+  // conversation feel symmetric — both bubbles tucked the same
+  // amount inward from their respective sides.
+  const chatEdgeMargin = width - sentBubbleRight;
+  const receiptIndicatorX = sentBubbleRight - 50 * scale;
+  const receiptIndicatorY = sentBubbleBottom + 3 * scale;
+  const receiptStyle: React.CSSProperties = {
+    position: "absolute",
+    left: receiptIndicatorX,
+    top: receiptIndicatorY,
+    transform: "translateX(-100%)",
+    fontFamily: FONT_STACK,
+    fontSize: 22 * scale,
+    color: "rgba(60, 60, 67, 0.6)",
+    fontWeight: 500,
+    letterSpacing: 0.3,
+  };
 
   return (
     <AbsoluteFill style={{ opacity: envOpacity }}>
+      {/* Sent message row (input → bubble morph + send button). */}
       <div
         style={{
           position: "absolute",
-          left: width / 2 + rowXOffset,
-          top: height * 0.5 + rowYOffset,
+          left: sentBubbleX,
+          top: sentBubbleY,
           transform: `translate(-50%, -50%) scale(${scaleEnv * bubbleScale})`,
           display: "flex",
           alignItems: "center",
           gap: 16 * scale * (1 - morphP),
         }}
       >
-        {/* The chat field morphs into the iMessage bubble in place.
-            The bubble + tail are drawn as a SINGLE SVG <path>, so they
-            share one fill, one drop-shadow, and one anti-aliased outline
-            — no seam between bubble and tail at any frame. Text and
-            cursor are absolutely positioned overlays on top of the SVG. */}
-        <div
-          style={{
-            position: "relative",
-            // The bubble's logical width (used by flex/row layout). The
-            // SVG itself is wider than this — it has internal padding
-            // for the visible tail extrusion + drop-shadow blur — but
-            // we want flex to size the row using the bubble's width,
-            // not the SVG's, so that the row stays centered and the
-            // send button sits next to the bubble proper (not next to
-            // the tail tip).
-            width: fieldWidth,
-            height: animatedHeight,
+        <MessageBubble
+          width={fieldWidth}
+          height={animatedHeight}
+          cornerRadius={sentCornerRadius}
+          tailExt={sentTailExt}
+          tailHook={sentTailHook}
+          tailScaleX={tailScaleX}
+          tailSide="right"
+          bubbleColor={fieldBg}
+          textColor={textColor}
+          fontSize={animatedFontSize}
+          paddingX={fieldPadX}
+          letterSpacing={-0.3 * scale}
+          text={visible}
+          cursor={{
+            visible: cursorVisible && morphP === 0,
+            color: IMESSAGE_BLUE,
+            widthPx: 2 * scale,
           }}
-        >
-          <svg
-            width={svgW}
-            height={svgH}
-            viewBox={`0 0 ${svgW} ${svgH}`}
-            style={{
-              position: "absolute",
-              left: -svgPadding,
-              top: -svgPadding,
-              overflow: "visible",
-              pointerEvents: "none",
-            }}
-          >
-            <defs>
-              <filter
-                id={filterId}
-                // Filter region: extend past the bounding box so the
-                // shadow's blur isn't clipped at the filter edges.
-                x="-20%"
-                y="-20%"
-                width="140%"
-                height="140%"
-              >
-                <feDropShadow
-                  dx="0"
-                  dy={shadowOffsetY}
-                  stdDeviation={shadowBlur / 2}
-                  floodColor="#000"
-                  floodOpacity={bubbleShadow}
-                />
-              </filter>
-            </defs>
-            <path d={bubbleD} fill={fieldBg} filter={`url(#${filterId})`} />
-          </svg>
-
-          {/* Text overlay — absolutely positioned over the SVG bubble.
-              We use a flex container that mirrors the bubble's interior
-              padding so the text lands in the correct spot regardless
-              of bubble width. */}
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              width: fieldWidth,
-              height: animatedHeight,
-              display: "flex",
-              alignItems: "center",
-              paddingLeft: fieldPadX,
-              paddingRight: fieldPadX,
-              fontFamily: FONT_STACK,
-              fontSize: animatedFontSize,
-              color: textColor,
-              fontWeight: 500,
-              letterSpacing: -0.3 * scale,
-              whiteSpace: "nowrap",
-              pointerEvents: "none",
-            }}
-          >
-            <span>{visible}</span>
-            <span
-              style={{
-                display: "inline-block",
-                width: 2 * scale,
-                height: animatedFontSize * 1.05,
-                marginLeft: 4 * scale,
-                background: IMESSAGE_BLUE,
-                opacity: cursorVisible && morphP === 0 ? 1 : 0,
-                transform: "translateY(2px)",
-              }}
-            />
-          </div>
-        </div>
+          shadowOpacity={bubbleShadow}
+          shadowBlur={20 * scale}
+          shadowOffsetY={4 * scale}
+          filterId="bubbleShadow-sent"
+        />
         <div
           style={{
             width: sendButtonSize,
@@ -1109,24 +1353,54 @@ const Scene3: React.FC<Scene3Props> = ({
         </div>
       </div>
 
-      {/* "Delivered" indicator — sits below the settled bubble, right-aligned
-          to the bubble's right edge to feel like a real iMessage timestamp. */}
-      {deliveredOpacity > 0 && (
+      {/* "Delivered" — fades in after settle, then fades out into "Read". */}
+      {deliveredFinalOpacity > 0 && (
+        <div style={{ ...receiptStyle, opacity: deliveredFinalOpacity }}>
+          Delivered
+        </div>
+      )}
+      {/* "Read" — fades in as "Delivered" fades out. */}
+      {readOpacity > 0 && (
+        <div style={{ ...receiptStyle, opacity: readOpacity }}>Read</div>
+      )}
+
+      {/* Received reply bubble — pops in below the sent bubble, with a
+          left-side tail. Conversation shifts upward to make room.
+          Horizontally pinned to the chat's LEFT edge with a small
+          margin — mirroring how iMessage anchors incoming bubbles to
+          the screen edge rather than to the previous bubble. */}
+      {receivedOpacity > 0 && (
         <div
           style={{
             position: "absolute",
-            left: width / 2 + rowXOffset + bubbleWidth / 2 - 50 * scale,
-            top: height * 0.5 + rowYOffset + bubbleHeight / 2 + 3 * scale,
-            transform: "translateX(-100%)",
-            fontFamily: FONT_STACK,
-            fontSize: 22 * scale,
-            color: "rgba(60, 60, 67, 0.6)",
-            fontWeight: 500,
-            letterSpacing: 0.3,
-            opacity: deliveredOpacity,
+            // `translate(-50%, -50%)` centers the bubble at (left, top),
+            // so we add receivedWidth/2 to push the LEFT edge to
+            // chatEdgeMargin.
+            left: chatEdgeMargin + receivedWidth / 2,
+            top: sentBubbleY + receivedYOffset,
+            transform: `translate(-50%, -50%) scale(${receivedScale})`,
+            opacity: receivedOpacity,
           }}
         >
-          Delivered
+          <MessageBubble
+            width={receivedWidth}
+            height={receivedHeight}
+            cornerRadius={receivedCornerRadius}
+            tailExt={receivedTailExt}
+            tailHook={receivedTailHook}
+            tailScaleX={1}
+            tailSide="left"
+            bubbleColor={RECEIVED_GRAY}
+            textColor={RECEIVED_TEXT}
+            fontSize={receivedFontSize}
+            paddingX={receivedPadX}
+            letterSpacing={-0.3 * scale}
+            text={receivedPhrase}
+            shadowOpacity={0.08}
+            shadowBlur={16 * scale}
+            shadowOffsetY={3 * scale}
+            filterId="bubbleShadow-received"
+          />
         </div>
       )}
     </AbsoluteFill>
@@ -1204,8 +1478,10 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
       </Sequence>
 
       {/* Scene 3 — starts at 5s (after Scene 2's button has fully faded out)
-          for the same reason as Scene 2: avoid stacked send buttons. */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(3, fps)}>
+          for the same reason as Scene 2: avoid stacked send buttons.
+          Extended to 5s to accommodate Delivered→Read swap and an
+          incoming reply bubble. */}
+      <Sequence from={sec(5, fps)} durationInFrames={sec(5, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
@@ -1213,10 +1489,11 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
         />
       </Sequence>
 
-      {/* Caption 3 — overlaps with Caption 2 (text-only crossfade is fine) */}
+      {/* Caption 3 — overlaps with Caption 2 (text-only crossfade is fine).
+          Holds for Scene 3's full duration. */}
       <Sequence
         from={sec(5 - xfade, fps)}
-        durationInFrames={sec(3 + xfade, fps)}
+        durationInFrames={sec(5 + xfade, fps)}
       >
         <Caption
           text="schedule a date with my crush"
