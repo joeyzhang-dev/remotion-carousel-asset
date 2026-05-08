@@ -3005,7 +3005,13 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
               </span>
             Apple Card
           </div>
-          {/* Active Sapphire card */}
+          {/* Active card — titanium iridescent. Layered:
+              1) base titanium gradient (deep platinum graphite)
+              2) iridescent prismatic conic-gradient shimmer (low alpha)
+              3) holographic diagonal sheen
+              4) specular glass highlight up top-left
+              5) inner stroke (engraved metal edge)
+              6) outer drop shadow + ambient bloom */}
           <div
             style={{
               position: "absolute",
@@ -3015,172 +3021,189 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
               height: cardHeight,
               borderRadius: 36 * scale,
               background:
-                "linear-gradient(160deg, #0A1A38 0%, #122B5A 45%, #1E3F7A 100%)",
-              boxShadow: `0 ${20 * scale}px ${48 * scale}px rgba(0,0,0,0.28)`,
+                "linear-gradient(135deg, #1F2228 0%, #3A3F47 28%, #6E7682 52%, #2D3138 78%, #14161A 100%)",
+              boxShadow: `
+                0 ${24 * scale}px ${56 * scale}px rgba(0,0,0,0.42),
+                0 ${4 * scale}px ${10 * scale}px rgba(0,0,0,0.25),
+                inset 0 ${1 * scale}px 0 rgba(255,255,255,0.18),
+                inset 0 ${-1 * scale}px 0 rgba(0,0,0,0.4)
+              `,
               overflow: "hidden",
               fontFamily: FONT_STACK,
-              color: "#FFFFFF",
+              color: "#F5F5F7",
             }}
           >
-            {/* Copper-gold ribbon (top of Sapphire Reserve) */}
+            {/* L1 — iridescent prismatic conic shimmer */}
             <div
               style={{
                 position: "absolute",
-                left: 0,
-                right: 0,
-                top: 0,
-                height: 32 * scale,
+                inset: 0,
                 background:
-                  "linear-gradient(90deg, #8E5E2C 0%, #C9974D 30%, #E8C896 50%, #C9974D 70%, #8E5E2C 100%)",
+                  "conic-gradient(from 210deg at 30% 40%, rgba(122, 200, 255, 0.22) 0deg, rgba(255, 180, 220, 0.18) 60deg, rgba(255, 230, 160, 0.20) 120deg, rgba(160, 255, 200, 0.18) 180deg, rgba(180, 170, 255, 0.20) 240deg, rgba(122, 200, 255, 0.22) 360deg)",
+                mixBlendMode: "screen",
+                opacity: 0.85,
               }}
             />
-            {/* Top-left brand */}
+            {/* L2 — holographic diagonal sheen */}
             <div
               style={{
                 position: "absolute",
-                left: 36 * scale,
-                top: 60 * scale,
+                inset: 0,
+                background:
+                  "linear-gradient(115deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.18) 46%, rgba(255,255,255,0.30) 50%, rgba(255,255,255,0.18) 54%, rgba(255,255,255,0) 70%)",
+                mixBlendMode: "soft-light",
+              }}
+            />
+            {/* L3 — specular glass highlight, top-left */}
+            <div
+              style={{
+                position: "absolute",
+                left: -cardWidth * 0.1,
+                top: -cardHeight * 0.5,
+                width: cardWidth * 0.85,
+                height: cardHeight * 0.95,
+                background:
+                  "radial-gradient(ellipse at center, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.12) 40%, rgba(255,255,255,0) 70%)",
+                filter: `blur(${10 * scale}px)`,
+                opacity: 0.9,
+              }}
+            />
+            {/* L4 — soft bottom-right vignette for depth */}
+            <div
+              style={{
+                position: "absolute",
+                right: -cardWidth * 0.2,
+                bottom: -cardHeight * 0.3,
+                width: cardWidth * 0.9,
+                height: cardHeight * 0.9,
+                background:
+                  "radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.20) 40%, rgba(0,0,0,0) 70%)",
+                filter: `blur(${20 * scale}px)`,
+              }}
+            />
+            {/* L5 — inner stroke / engraved edge */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: 36 * scale,
+                pointerEvents: "none",
+                boxShadow: `
+                  inset 0 0 0 ${1 * scale}px rgba(255,255,255,0.10),
+                  inset 0 ${2 * scale}px ${2 * scale}px rgba(255,255,255,0.18),
+                  inset 0 ${-2 * scale}px ${4 * scale}px rgba(0,0,0,0.35)
+                `,
+              }}
+            />
+
+            {/* ── Foreground content ──────────────────────────── */}
+
+            {/* Top-left — etched Apple wordmark + brand */}
+            <div
+              style={{
+                position: "absolute",
+                left: 44 * scale,
+                top: 52 * scale,
+                display: "flex",
+                flexDirection: "column",
+                gap: 14 * scale,
               }}
             >
+              {/* Apple glyph — etched chrome */}
+              <svg
+                width={42 * scale}
+                height={52 * scale}
+                viewBox="0 0 384 512"
+                style={{
+                  filter: `drop-shadow(0 ${1 * scale}px 0 rgba(255,255,255,0.35)) drop-shadow(0 ${-1 * scale}px 0 rgba(0,0,0,0.45))`,
+                }}
+              >
+                <path
+                  fill="rgba(245,245,247,0.88)"
+                  d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"
+                />
+              </svg>
               <div
                 style={{
-                  fontSize: 36 * scale,
+                  fontSize: 30 * scale,
                   fontWeight: 600,
-                  letterSpacing: -0.4 * scale,
+                  letterSpacing: -0.3 * scale,
                   lineHeight: 1.05,
+                  color: "rgba(245,245,247,0.95)",
+                  textShadow: `0 ${1 * scale}px 0 rgba(255,255,255,0.18), 0 ${-1 * scale}px 0 rgba(0,0,0,0.45)`,
                 }}
               >
                 Chase Sapphire
               </div>
-              <div
-                style={{
-                  fontSize: 22 * scale,
-                  fontWeight: 400,
-                  color: "rgba(255,255,255,0.72)",
-                  marginTop: 4 * scale,
-                }}
-              >
-                Reserve
-              </div>
             </div>
-            {/* Top-right VISA */}
+
+            {/* Top-right — Visa wordmark engraved */}
             <div
               style={{
                 position: "absolute",
-                right: 36 * scale,
-                top: 60 * scale,
-                fontSize: 42 * scale,
+                right: 44 * scale,
+                top: 52 * scale,
+                fontSize: 38 * scale,
                 fontWeight: 800,
                 fontStyle: "italic",
-                letterSpacing: 2 * scale,
-                color: "#F2F2F7",
+                letterSpacing: 1.5 * scale,
+                color: "rgba(245,245,247,0.92)",
+                textShadow: `0 ${1 * scale}px 0 rgba(255,255,255,0.20), 0 ${-1 * scale}px 0 rgba(0,0,0,0.45)`,
               }}
             >
               VISA
             </div>
-            {/* EMV chip */}
+
+            {/* Big embossed cardholder name — Steve Jobs energy:
+                hero typography front and center, no labels */}
             <div
               style={{
                 position: "absolute",
-                left: 36 * scale,
-                top: 200 * scale,
-                width: 64 * scale,
-                height: 50 * scale,
-                borderRadius: 8 * scale,
-                background:
-                  "linear-gradient(135deg, #D4AF6A 0%, #8B6F3D 100%)",
-                boxShadow: `inset 0 ${1 * scale}px ${1 * scale}px rgba(255,255,255,0.3)`,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-around",
-                paddingTop: 10 * scale,
-                paddingBottom: 10 * scale,
+                left: 44 * scale,
+                bottom: 44 * scale,
+                fontSize: 36 * scale,
+                fontWeight: 600,
+                letterSpacing: 2 * scale,
+                color: "rgba(245,245,247,0.96)",
+                textShadow: `0 ${1 * scale}px 0 rgba(255,255,255,0.22), 0 ${-1 * scale}px 0 rgba(0,0,0,0.50)`,
               }}
             >
-              <div style={{ height: 1, background: "rgba(0,0,0,0.18)" }} />
-              <div style={{ height: 1, background: "rgba(0,0,0,0.18)" }} />
+              {cardholderName}
             </div>
-            {/* Masked digits */}
+
+            {/* Last 4 digits — small monospace, low key */}
             <div
               style={{
                 position: "absolute",
-                left: 36 * scale,
-                bottom: 132 * scale,
-                fontSize: 48 * scale,
+                right: 44 * scale,
+                bottom: 50 * scale,
+                fontSize: 22 * scale,
                 fontWeight: 500,
-                letterSpacing: 6 * scale,
-                color: "#FFFFFF",
+                letterSpacing: 4 * scale,
+                color: "rgba(245,245,247,0.55)",
                 fontFamily: "monospace",
               }}
             >
-              ····  ····  ····  4829
+              ··· 4829
             </div>
-            {/* Cardholder block bottom-left */}
-            <div
+
+            {/* Apple Pay contactless arc — tiny, top-edge mid */}
+            <svg
+              width={28 * scale}
+              height={32 * scale}
+              viewBox="0 0 36 40"
+              fill="none"
               style={{
                 position: "absolute",
-                left: 36 * scale,
-                bottom: 36 * scale,
+                right: 44 * scale,
+                bottom: 92 * scale,
+                opacity: 0.55,
               }}
             >
-              <div
-                style={{
-                  fontSize: 14 * scale,
-                  fontWeight: 600,
-                  letterSpacing: 2 * scale,
-                  color: "rgba(255,255,255,0.55)",
-                }}
-              >
-                CARDHOLDER
-              </div>
-              <div
-                style={{
-                  fontSize: 24 * scale,
-                  fontWeight: 500,
-                  letterSpacing: 1 * scale,
-                  marginTop: 4 * scale,
-                }}
-              >
-                {cardholderName}
-              </div>
-            </div>
-            {/* Bottom-right Apple Pay + VISA logo cluster */}
-            <div
-              style={{
-                position: "absolute",
-                right: 36 * scale,
-                bottom: 36 * scale,
-                display: "flex",
-                alignItems: "center",
-                gap: 14 * scale,
-              }}
-            >
-              {/* Apple Pay contactless arc */}
-              <svg width={36 * scale} height={40 * scale} viewBox="0 0 36 40" fill="none">
-                <path d="M14 8 Q22 20 14 32" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" fill="none" />
-                <path d="M20 4 Q30 20 20 36" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-                <path d="M26 0 Q38 20 26 40" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" fill="none" />
-              </svg>
-              {/* VISA flag */}
-              <div
-                style={{
-                  width: 64 * scale,
-                  height: 40 * scale,
-                  borderRadius: 4 * scale,
-                  background: "#FFFFFF",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 18 * scale,
-                  fontWeight: 800,
-                  fontStyle: "italic",
-                  color: "#1A1F71",
-                  letterSpacing: 1 * scale,
-                }}
-              >
-                VISA
-              </div>
-            </div>
+              <path d="M14 8 Q22 20 14 32" stroke="#F5F5F7" strokeWidth="2" strokeLinecap="round" fill="none" />
+              <path d="M20 4 Q30 20 20 36" stroke="#F5F5F7" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M26 0 Q38 20 26 40" stroke="#F5F5F7" strokeWidth="3" strokeLinecap="round" fill="none" />
+            </svg>
           </div>
         </div>
         {/* Stat tiles: Card Balance (with Past-due pill) + Upcoming Payment */}
