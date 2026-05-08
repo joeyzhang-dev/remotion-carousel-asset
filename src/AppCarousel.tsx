@@ -60,7 +60,7 @@ export const AppCarousel: React.FC = () => {
   return (
     <AbsoluteFill
       style={{
-        background: 'transparent',
+        background: '#00FF00',  // chroma-key green — keyed out in CapCut
         perspective: 1800,
         perspectiveOrigin: '50% 50%',
         overflow: 'hidden',
