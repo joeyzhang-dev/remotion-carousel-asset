@@ -4789,12 +4789,12 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
           >
             By Student · 5 pages · 1,247 words
           </div>
-          {/* Body paragraphs — real essay prose with a blur filter
-              applied so it reads as "actual text on a doc" rather
-              than legible content. Pinned to a fixed-height box
-              with overflow:hidden so the Turn in bar's layout-Y is
-              deterministic (otherwise text wrapping varies and the
-              page over-scrolls past the button). */}
+          {/* Body paragraphs — real essay prose with a blur filter.
+              The paragraph array is repeated 3× inside a fixed-
+              height clipping box so there's always enough content
+              to fill the visible viewport at every scroll position
+              (otherwise the box runs out and the area below the
+              text shows up as blank doc canvas). */}
           <div
             style={{
               marginTop: 30 * scale,
@@ -4808,16 +4808,18 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
               textAlign: "justify",
             }}
           >
-            {paragraphs.map((para, pi) => (
-              <div
-                key={pi}
-                style={{
-                  marginBottom: paragraphGap,
-                }}
-              >
-                {para}
-              </div>
-            ))}
+            {[0, 1, 2].flatMap((rep) =>
+              paragraphs.map((para, pi) => (
+                <div
+                  key={`${rep}-${pi}`}
+                  style={{
+                    marginBottom: paragraphGap,
+                  }}
+                >
+                  {para}
+                </div>
+              )),
+            )}
           </div>
         </div>
         {/* Turn in bar (bottom of doc) */}
