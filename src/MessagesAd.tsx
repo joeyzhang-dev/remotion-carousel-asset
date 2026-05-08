@@ -2831,11 +2831,16 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
 
   // ── Scroll model ────────────────────────────────────────────────
   const driveSec = driveFrame / fps;
-  const txnRowH = 100 * scale;
+  const txnRowH = 124 * scale;
+  const statTilesH = 220 * scale;
+  const transactionsHeaderH = 36 * scale + 18 * scale + 24 * scale;
   const totalContentH =
     cardStackTop +
     cardStackH +
-    420 * scale + // balance + past-due + actions row
+    32 * scale + // gap above tiles
+    statTilesH +
+    36 * scale + // gap below tiles
+    transactionsHeaderH +
     txnRowH * 6 +
     240 * scale;
   const maxScroll = Math.max(0, totalContentH - height);
@@ -3178,56 +3183,114 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
             </div>
           </div>
         </div>
-        {/* Balance + Past-due / Paid pill */}
+        {/* Stat tiles: Card Balance (with Past-due pill) + Upcoming Payment */}
         <div
           style={{
             paddingLeft: padX,
             paddingRight: padX,
-            paddingTop: 36 * scale,
-            paddingBottom: 12 * scale,
+            paddingTop: 32 * scale,
             display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 12 * scale,
+            gap: 18 * scale,
             fontFamily: FONT_STACK,
           }}
         >
+          {/* Left tile — Card Balance */}
           <div
             style={{
-              fontSize: 18 * scale,
-              fontWeight: 500,
-              color: W_LIGHT,
-              letterSpacing: 0.3 * scale,
+              flex: 1,
+              minHeight: 220 * scale,
+              padding: `${28 * scale}px ${28 * scale}px`,
+              borderRadius: 28 * scale,
+              background: "#F2F2F7",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8 * scale,
+              position: "relative",
             }}
           >
-            Statement balance · Due May 22
+            <div
+              style={{
+                fontSize: 26 * scale,
+                fontWeight: 500,
+                color: W_LIGHT,
+                letterSpacing: 0.2 * scale,
+              }}
+            >
+              Card Balance
+            </div>
+            <div
+              style={{
+                fontSize: 56 * scale,
+                fontWeight: 700,
+                color: W_TEXT,
+                letterSpacing: -1.5 * scale,
+                fontVariantNumeric: "tabular-nums",
+                lineHeight: 1,
+              }}
+            >
+              {balanceText}
+            </div>
+            <div
+              style={{
+                marginTop: 6 * scale,
+                fontSize: 22 * scale,
+                fontWeight: 500,
+                color: W_LIGHT,
+                letterSpacing: 0.2 * scale,
+              }}
+            >
+              $5,000.00 Available
+            </div>
+            <div
+              style={{
+                marginTop: 14 * scale,
+                alignSelf: "flex-start",
+                padding: `${8 * scale}px ${16 * scale}px`,
+                borderRadius: 999,
+                background: isPaid ? "#E6F4EA" : "#FEE7E5",
+                color: isPaid ? "#1B6E2C" : "#B91C1C",
+                fontSize: 20 * scale,
+                fontWeight: 600,
+                letterSpacing: 0.2 * scale,
+              }}
+            >
+              {isPaid ? "✓ Paid" : "● Past due"}
+            </div>
           </div>
+          {/* Right tile — Upcoming Payment */}
           <div
             style={{
-              fontSize: 64 * scale,
-              fontWeight: 700,
-              color: W_TEXT,
-              letterSpacing: -1.5 * scale,
-              fontVariantNumeric: "tabular-nums",
-              lineHeight: 1,
+              flex: 1,
+              minHeight: 220 * scale,
+              padding: `${28 * scale}px ${28 * scale}px`,
+              borderRadius: 28 * scale,
+              background: "#F2F2F7",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10 * scale,
             }}
           >
-            {balanceText}
-          </div>
-          {/* Past due → Paid pill */}
-          <div
-            style={{
-              marginTop: 8 * scale,
-              padding: `${8 * scale}px ${16 * scale}px`,
-              borderRadius: 999,
-              background: isPaid ? "#E6F4EA" : "#FEE7E5",
-              color: isPaid ? "#1B6E2C" : "#B91C1C",
-              fontSize: 18 * scale,
-              fontWeight: 600,
-              letterSpacing: 0.3 * scale,
-            }}
-          >
-            {isPaid ? "✓ Paid" : "● Past due"}
+            <div
+              style={{
+                fontSize: 26 * scale,
+                fontWeight: 600,
+                color: W_TEXT,
+                letterSpacing: -0.2 * scale,
+              }}
+            >
+              Upcoming Payment
+            </div>
+            <div
+              style={{
+                fontSize: 22 * scale,
+                fontWeight: 400,
+                color: W_LIGHT,
+                lineHeight: 1.35,
+                letterSpacing: 0.1 * scale,
+              }}
+            >
+              A payment of $2,847.13 is scheduled for May 22.
+            </div>
           </div>
         </div>
         {/* Latest transactions */}
@@ -3235,108 +3298,256 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
           style={{
             paddingLeft: padX,
             paddingRight: padX,
-            paddingTop: 28 * scale,
+            paddingTop: 36 * scale,
           }}
         >
           <div
             style={{
               display: "flex",
-              alignItems: "baseline",
+              alignItems: "center",
               justifyContent: "space-between",
               fontFamily: FONT_STACK,
-              marginBottom: 16 * scale,
+              marginBottom: 18 * scale,
             }}
           >
             <div
               style={{
-                fontSize: 28 * scale,
+                fontSize: 36 * scale,
                 fontWeight: 700,
                 color: W_TEXT,
-                letterSpacing: -0.3 * scale,
+                letterSpacing: -0.5 * scale,
               }}
             >
-              Latest Transactions
+              Latest Card Transactions
             </div>
+            {/* Filter glyph */}
             <div
               style={{
-                fontSize: 20 * scale,
-                fontWeight: 500,
-                color: W_BLUE,
+                width: 44 * scale,
+                height: 44 * scale,
+                borderRadius: "50%",
+                background: "#F2F2F7",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              See All
+              <svg width={22 * scale} height={22 * scale} viewBox="0 0 24 24" fill="none">
+                <path d="M3 6 H21 M6 12 H18 M9 18 H15" stroke={W_TEXT} strokeWidth="2" strokeLinecap="round" />
+              </svg>
             </div>
           </div>
-          <div
-            style={{
-              background: "#FFFFFF",
-              borderRadius: 24 * scale,
-              boxShadow: `0 ${2 * scale}px ${8 * scale}px rgba(0,0,0,0.04)`,
-              overflow: "hidden",
-            }}
-          >
-            {[
-              { name: "Whole Foods", date: "May 7", amount: "$42.18" },
-              { name: "Uber", date: "May 6", amount: "$14.50" },
-              { name: "Spotify", date: "May 5", amount: "$9.99" },
-              { name: "Trader Joe's", date: "May 4", amount: "$67.34" },
-              { name: "Starbucks", date: "May 4", amount: "$6.45" },
-              { name: "Amazon", date: "May 3", amount: "$129.00" },
-            ].map((tx, i, arr) => (
+          {(() => {
+            const txns: {
+              name: string;
+              meta: string;
+              amount: string;
+              cashback: string;
+              icon: React.ReactNode;
+              iconBg: string;
+            }[] = [
+              {
+                name: "Whole Foods",
+                meta: "Card Number Used",
+                amount: "$42.18",
+                cashback: "1%",
+                iconBg: "#FFFFFF",
+                icon: (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%", background: "#00674B", color: "#FFFFFF", fontSize: 32 * scale, fontWeight: 700, fontFamily: FONT_STACK }}>
+                    WF
+                  </div>
+                ),
+              },
+              {
+                name: "Uber",
+                meta: "Card Number Used",
+                amount: "$14.50",
+                cashback: "1%",
+                iconBg: "#000000",
+                icon: (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%", color: "#FFFFFF", fontSize: 26 * scale, fontWeight: 800, fontFamily: FONT_STACK, letterSpacing: -0.5 * scale }}>
+                    Uber
+                  </div>
+                ),
+              },
+              {
+                name: "Spotify",
+                meta: "Subscription",
+                amount: "$9.99",
+                cashback: "1%",
+                iconBg: "#1ED760",
+                icon: (
+                  <svg width={50 * scale} height={50 * scale} viewBox="0 0 24 24" fill="#000000">
+                    <path d="M12 2 C6.5 2 2 6.5 2 12 C2 17.5 6.5 22 12 22 C17.5 22 22 17.5 22 12 C22 6.5 17.5 2 12 2 Z M16.6 16.2 C16.4 16.5 16 16.6 15.7 16.4 C13.3 14.9 10.3 14.6 6.7 15.4 C6.4 15.5 6 15.3 5.9 14.9 C5.8 14.6 6 14.2 6.4 14.1 C10.3 13.2 13.7 13.6 16.4 15.3 C16.7 15.5 16.8 15.9 16.6 16.2 Z M17.8 13.5 C17.6 13.9 17.1 14 16.7 13.8 C14 12.1 9.9 11.6 6.7 12.6 C6.3 12.7 5.8 12.5 5.7 12.1 C5.6 11.7 5.8 11.2 6.2 11.1 C9.9 10 14.4 10.5 17.5 12.4 C17.9 12.6 18 13.1 17.8 13.5 Z M17.9 10.7 C14.7 8.8 9.4 8.6 6.3 9.6 C5.8 9.7 5.3 9.5 5.2 9 C5 8.5 5.3 8 5.8 7.9 C9.3 6.8 15.2 7 18.9 9.2 C19.4 9.5 19.5 10.1 19.3 10.5 C19 11 18.4 11.1 17.9 10.7 Z" />
+                  </svg>
+                ),
+              },
+              {
+                name: "LA Fitness",
+                meta: "Card Number Used",
+                amount: "$39.99",
+                cashback: "1%",
+                iconBg: "#E5413A",
+                icon: (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%", color: "#FFFFFF", fontSize: 36 * scale, fontWeight: 800, fontFamily: FONT_STACK, letterSpacing: -1 * scale }}>
+                    LA
+                  </div>
+                ),
+              },
+              {
+                name: "Apple Store",
+                meta: "Monthly Installment (5 of 6)",
+                amount: "$29.83",
+                cashback: "",
+                iconBg: "#000000",
+                icon: (
+                  <svg width={40 * scale} height={48 * scale} viewBox="0 0 384 512" fill="#FFFFFF">
+                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+                  </svg>
+                ),
+              },
+              {
+                name: "Amazon",
+                meta: "Card Number Used",
+                amount: "$129.00",
+                cashback: "1%",
+                iconBg: "#232F3E",
+                icon: (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%", color: "#FF9900", fontSize: 26 * scale, fontWeight: 800, fontFamily: FONT_STACK, letterSpacing: -1 * scale }}>
+                    a
+                  </div>
+                ),
+              },
+            ];
+            return (
               <div
-                key={i}
                 style={{
-                  height: txnRowH,
-                  paddingLeft: 24 * scale,
-                  paddingRight: 24 * scale,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16 * scale,
-                  borderBottom:
-                    i < arr.length - 1
-                      ? `${0.5 * scale}px solid ${W_BORDER}`
-                      : "none",
-                  fontFamily: FONT_STACK,
+                  background: "#F2F2F7",
+                  borderRadius: 28 * scale,
+                  overflow: "hidden",
                 }}
               >
-                <div
-                  style={{
-                    width: 48 * scale,
-                    height: 48 * scale,
-                    borderRadius: "50%",
-                    background: "#F2F2F7",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 20 * scale,
-                    fontWeight: 600,
-                    color: W_TEXT,
-                    flexShrink: 0,
-                  }}
-                >
-                  {tx.name[0]}
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 4 * scale,
-                  }}
-                >
-                  <div style={{ fontSize: 22 * scale, fontWeight: 500, color: W_TEXT }}>
-                    {tx.name}
+                {txns.map((tx, i, arr) => (
+                  <div
+                    key={i}
+                    style={{
+                      height: txnRowH,
+                      paddingLeft: 24 * scale,
+                      paddingRight: 28 * scale,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 22 * scale,
+                      borderBottom:
+                        i < arr.length - 1
+                          ? `${1 * scale}px solid ${W_BORDER}`
+                          : "none",
+                      fontFamily: FONT_STACK,
+                    }}
+                  >
+                    {/* Brand icon — full color, square with rounded corners */}
+                    <div
+                      style={{
+                        width: 64 * scale,
+                        height: 64 * scale,
+                        borderRadius: 16 * scale,
+                        background: tx.iconBg,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        overflow: "hidden",
+                        boxShadow: tx.iconBg === "#FFFFFF" ? `inset 0 0 0 ${1 * scale}px ${W_BORDER}` : "none",
+                      }}
+                    >
+                      {tx.icon}
+                    </div>
+                    {/* Name + meta */}
+                    <div
+                      style={{
+                        flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4 * scale,
+                        minWidth: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 30 * scale,
+                          fontWeight: 600,
+                          color: W_TEXT,
+                          letterSpacing: -0.3 * scale,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {tx.name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 22 * scale,
+                          fontWeight: 400,
+                          color: W_LIGHT,
+                          letterSpacing: 0.1 * scale,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {tx.meta}
+                      </div>
+                    </div>
+                    {/* Right side — amount + cashback + chevron */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14 * scale,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "flex-end",
+                          gap: 4 * scale,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 28 * scale,
+                            fontWeight: 600,
+                            color: W_TEXT,
+                            letterSpacing: -0.2 * scale,
+                            fontVariantNumeric: "tabular-nums",
+                          }}
+                        >
+                          {tx.amount}
+                        </div>
+                        {tx.cashback ? (
+                          <div
+                            style={{
+                              fontSize: 20 * scale,
+                              fontWeight: 500,
+                              color: W_LIGHT,
+                            }}
+                          >
+                            {tx.cashback}
+                          </div>
+                        ) : null}
+                      </div>
+                      {/* Chevron */}
+                      <svg width={16 * scale} height={26 * scale} viewBox="0 0 16 26" fill="none">
+                        <path d="M2 2 L13 13 L2 24" stroke={W_LIGHT} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 18 * scale, color: W_LIGHT }}>
-                    {tx.date}
-                  </div>
-                </div>
-                <div style={{ fontSize: 22 * scale, fontWeight: 500, color: W_TEXT }}>
-                  {tx.amount}
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -3428,14 +3639,14 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
               style={{
                 display: "flex",
                 justifyContent: "center",
-                paddingTop: 12 * scale,
-                paddingBottom: 22 * scale,
+                paddingTop: 18 * scale,
+                paddingBottom: 28 * scale,
               }}
             >
               <div
                 style={{
-                  width: 50 * scale,
-                  height: 6 * scale,
+                  width: 90 * scale,
+                  height: 8 * scale,
                   borderRadius: 999,
                   background: "#C7C7CC",
                 }}
@@ -3444,9 +3655,9 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
             {/* Apple Pay title */}
             <div
               style={{
-                paddingLeft: 28 * scale,
-                paddingRight: 28 * scale,
-                paddingBottom: 14 * scale,
+                paddingLeft: 36 * scale,
+                paddingRight: 36 * scale,
+                paddingBottom: 24 * scale,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -3454,10 +3665,10 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
             >
               <div
                 style={{
-                  fontSize: 30 * scale,
-                  fontWeight: 600,
+                  fontSize: 50 * scale,
+                  fontWeight: 700,
                   color: "#000000",
-                  letterSpacing: -0.3 * scale,
+                  letterSpacing: -0.6 * scale,
                 }}
               >
                 Apple Pay
@@ -3466,58 +3677,65 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
             {/* Card thumbnail row */}
             <div
               style={{
-                margin: `${4 * scale}px ${20 * scale}px ${16 * scale}px`,
-                padding: `${18 * scale}px ${20 * scale}px`,
-                borderRadius: 18 * scale,
+                margin: `${4 * scale}px ${28 * scale}px ${20 * scale}px`,
+                padding: `${28 * scale}px ${28 * scale}px`,
+                borderRadius: 24 * scale,
                 background: "#FFFFFF",
                 display: "flex",
                 alignItems: "center",
-                gap: 18 * scale,
+                gap: 24 * scale,
               }}
             >
               <div
                 style={{
-                  width: 90 * scale,
-                  height: 58 * scale,
-                  borderRadius: 8 * scale,
+                  width: 156 * scale,
+                  height: 100 * scale,
+                  borderRadius: 14 * scale,
                   background:
                     "linear-gradient(160deg, #0A1A38 0%, #1E3F7A 100%)",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  padding: `${6 * scale}px ${8 * scale}px`,
+                  padding: `${12 * scale}px ${14 * scale}px`,
                   flexShrink: 0,
-                  boxShadow: `0 ${2 * scale}px ${8 * scale}px rgba(0,0,0,0.15)`,
+                  boxShadow: `0 ${2 * scale}px ${10 * scale}px rgba(0,0,0,0.18)`,
                   position: "relative",
                   overflow: "hidden",
                 }}
               >
                 <div
                   style={{
-                    width: 14 * scale,
-                    height: 11 * scale,
-                    borderRadius: 2 * scale,
+                    width: 24 * scale,
+                    height: 18 * scale,
+                    borderRadius: 4 * scale,
                     background:
-                      "linear-gradient(135deg, #C9A95C 0%, #8C7038 100%)",
+                      "linear-gradient(135deg, #D4AF6A 0%, #8B6F3D 100%)",
                   }}
                 />
                 <div
                   style={{
-                    fontSize: 9 * scale,
+                    fontSize: 16 * scale,
                     color: "#FFFFFF",
                     fontFamily: "monospace",
-                    letterSpacing: 0.5 * scale,
+                    letterSpacing: 1 * scale,
                     fontWeight: 500,
                   }}
                 >
                   ···· 4829
                 </div>
               </div>
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 * scale }}>
-                <div style={{ fontSize: 20 * scale, fontWeight: 600, color: "#000000" }}>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 * scale }}>
+                <div
+                  style={{
+                    fontSize: 32 * scale,
+                    fontWeight: 600,
+                    color: "#000000",
+                    letterSpacing: -0.3 * scale,
+                  }}
+                >
                   Chase Sapphire
                 </div>
-                <div style={{ fontSize: 14 * scale, color: "#8E8E93" }}>
+                <div style={{ fontSize: 22 * scale, color: "#8E8E93" }}>
                   Visa Credit · 4829
                 </div>
               </div>
@@ -3525,13 +3743,13 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
             {/* Pay TO row */}
             <div
               style={{
-                margin: `0 ${20 * scale}px ${16 * scale}px`,
-                padding: `${18 * scale}px ${20 * scale}px`,
-                borderRadius: 18 * scale,
+                margin: `0 ${28 * scale}px ${20 * scale}px`,
+                padding: `${26 * scale}px ${28 * scale}px`,
+                borderRadius: 24 * scale,
                 background: "#FFFFFF",
                 display: "flex",
                 flexDirection: "column",
-                gap: 14 * scale,
+                gap: 22 * scale,
               }}
             >
               <div
@@ -3541,8 +3759,8 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                   justifyContent: "space-between",
                 }}
               >
-                <div style={{ fontSize: 18 * scale, color: "#8E8E93" }}>Pay</div>
-                <div style={{ fontSize: 18 * scale, color: "#000000", fontWeight: 500 }}>
+                <div style={{ fontSize: 26 * scale, color: "#8E8E93", fontWeight: 500 }}>Pay</div>
+                <div style={{ fontSize: 28 * scale, color: "#000000", fontWeight: 600, letterSpacing: -0.2 * scale }}>
                   Chase Statement
                 </div>
               </div>
@@ -3550,8 +3768,8 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 style={{
                   height: 1 * scale,
                   background: "#E5E5EA",
-                  marginLeft: -20 * scale,
-                  marginRight: -20 * scale,
+                  marginLeft: -28 * scale,
+                  marginRight: -28 * scale,
                 }}
               />
               <div
@@ -3561,13 +3779,14 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                   justifyContent: "space-between",
                 }}
               >
-                <div style={{ fontSize: 18 * scale, color: "#8E8E93" }}>Total</div>
+                <div style={{ fontSize: 26 * scale, color: "#8E8E93", fontWeight: 500 }}>Total</div>
                 <div
                   style={{
-                    fontSize: 32 * scale,
+                    fontSize: 48 * scale,
                     color: "#000000",
                     fontWeight: 700,
-                    letterSpacing: -0.3 * scale,
+                    letterSpacing: -0.5 * scale,
+                    fontVariantNumeric: "tabular-nums",
                   }}
                 >
                   $2,847.13
@@ -3577,29 +3796,29 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
             {/* Big green DONE check moment */}
             <div
               style={{
-                margin: `${8 * scale}px ${20 * scale}px ${20 * scale}px`,
-                padding: `${28 * scale}px ${20 * scale}px`,
-                borderRadius: 18 * scale,
+                margin: `${16 * scale}px ${28 * scale}px ${28 * scale}px`,
+                padding: `${44 * scale}px ${28 * scale}px`,
+                borderRadius: 24 * scale,
                 background: "#FFFFFF",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: 16 * scale,
+                gap: 24 * scale,
               }}
             >
               <div
                 style={{
-                  width: 96 * scale,
-                  height: 96 * scale,
+                  width: 156 * scale,
+                  height: 156 * scale,
                   borderRadius: "50%",
                   background: W_GREEN,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: `0 ${4 * scale}px ${16 * scale}px rgba(52, 199, 89, 0.35), 0 0 0 ${8 * scale}px rgba(52, 199, 89, 0.12)`,
+                  boxShadow: `0 ${6 * scale}px ${22 * scale}px rgba(52, 199, 89, 0.35), 0 0 0 ${14 * scale}px rgba(52, 199, 89, 0.12)`,
                 }}
               >
-                <svg width={56 * scale} height={56 * scale} viewBox="0 0 24 24" fill="none">
+                <svg width={92 * scale} height={92 * scale} viewBox="0 0 24 24" fill="none">
                   <path
                     d="M4 12 L10 18 L20 6"
                     stroke="#FFFFFF"
@@ -3611,10 +3830,10 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
               </div>
               <div
                 style={{
-                  fontSize: 36 * scale,
+                  fontSize: 56 * scale,
                   fontWeight: 700,
                   color: W_GREEN,
-                  letterSpacing: -0.3 * scale,
+                  letterSpacing: -0.4 * scale,
                 }}
               >
                 Done
@@ -3623,17 +3842,19 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
             {/* Face ID hint pill */}
             <div
               style={{
-                paddingLeft: 28 * scale,
-                paddingRight: 28 * scale,
+                paddingLeft: 36 * scale,
+                paddingRight: 36 * scale,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 10 * scale,
-                fontSize: 16 * scale,
+                gap: 14 * scale,
+                fontSize: 24 * scale,
+                fontWeight: 500,
                 color: "#8E8E93",
+                letterSpacing: 0.1 * scale,
               }}
             >
-              <svg width={20 * scale} height={20 * scale} viewBox="0 0 24 24" fill="none">
+              <svg width={28 * scale} height={28 * scale} viewBox="0 0 24 24" fill="none">
                 <path d="M4 8 V5 C4 4 5 3 6 3 H9" stroke="#8E8E93" strokeWidth="1.8" strokeLinecap="round" fill="none" />
                 <path d="M20 8 V5 C20 4 19 3 18 3 H15" stroke="#8E8E93" strokeWidth="1.8" strokeLinecap="round" fill="none" />
                 <path d="M4 16 V19 C4 20 5 21 6 21 H9" stroke="#8E8E93" strokeWidth="1.8" strokeLinecap="round" fill="none" />
