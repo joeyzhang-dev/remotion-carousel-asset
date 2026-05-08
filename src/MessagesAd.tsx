@@ -740,29 +740,61 @@ const Scene3: React.FC<Scene3Props> = ({
   ]);
   // Bubble shadow lifts as it forms.
   const bubbleShadow = interpolate(morphP, [0, 1], [0, 0.18]);
-  // Tail "extrudes" from the bubble's right edge as the morph progresses.
-  // We don't fade the tail's opacity — that would make it look semi-
-  // transparent against the bubble's solid fill while they're different
-  // colors. Instead we (a) animate a horizontal scale on the SVG with the
-  // origin at the bubble's right edge, so the tail grows outward like
-  // it's being pulled out of the bubble, and (b) tie the tail's fill
-  // color to the bubble's animated background, so they're always the same
-  // shade and read as one shape.
+  // Tail extrude. The tail is animated to look like it physically grows
+  // out of the bubble's bottom-right corner as the bubble morphs.
   //
-  // Easing: a slight back-overshoot on the reveal gives the tail a
-  // physical "pop out" feel matching iMessage's send animation.
-  const tailRevealStart = 0.72;
+  // Three combined animations sell the effect:
+  //   1. scaleX  (0 → 1):  width of the visible tail past the bubble.
+  //   2. scaleY  (0.35 → 1): tail's height grows with it, so it doesn't
+  //      slide out as a thin sliver — it bulges out, more like a soft
+  //      object squeezed through the bubble's corner.
+  //   3. We track the actual bubble's morph progress on a *separate*
+  //      ramp from a small back-overshoot at the end, so the tail keeps
+  //      pushing outward (overshoots ~6%) and then settles — that final
+  //      pop is what makes it feel like a physical extrusion finishing,
+  //      matching iMessage's send animation.
+  //
+  // The reveal starts at morphP=0.45 (well before the morph completes,
+  // so the tail grows alongside the bubble's shape change rather than
+  // appearing after) and finishes at morphP=1.0.
+  //
+  // The tail's fill color is also tied to the bubble's animated
+  // background (`fieldBg`), so during the gray→blue color morph the
+  // tail tracks the bubble exactly — they always read as one shape.
+  const tailRevealStart = 0.45;
   const tailRevealEnd = 1.0;
-  const tailRevealP = interpolate(
+  const tailRevealRaw = interpolate(
     morphP,
     [tailRevealStart, tailRevealEnd],
     [0, 1],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
-      easing: Easing.out(Easing.back(1.6)),
+      easing: Easing.out(Easing.cubic),
     },
   );
+  // Final-stage pop: a transient overshoot that fires as the reveal
+  // completes. Implemented as a half-sine impulse centered on the morph
+  // end, so the tail briefly grows ~6% beyond its settled size and then
+  // returns. This is what makes the extrusion feel like it "lands" with
+  // weight rather than just stopping.
+  const popCenter = sec(2.7, fps); // morphEnd
+  const popHalfWidth = sec(0.18, fps);
+  const popFromStart = local - (popCenter - popHalfWidth);
+  const popFromEnd = popCenter + popHalfWidth - local;
+  const popInWindow = popFromStart > 0 && popFromEnd > 0;
+  const popPhase = popInWindow
+    ? popFromStart / (2 * popHalfWidth) // 0 → 1 across the window
+    : 0;
+  const popImpulse = popInWindow ? Math.sin(popPhase * Math.PI) : 0; // 0→1→0
+  const tailPop = 1 + popImpulse * 0.06;
+
+  const tailScaleX = tailRevealRaw * tailPop;
+  // scaleY starts at 0.35 (not 0) so even at the beginning of the
+  // reveal the tail has visible "mass" — a small bulge growing rather
+  // than a knife-thin sliver sliding out.
+  const tailScaleY =
+    interpolate(tailRevealRaw, [0, 1], [0.35, 1]) * tailPop;
   // "Delivered" indicator fades in slightly after the bubble settles.
   const deliveredOpacity = interpolate(
     local,
@@ -784,22 +816,162 @@ const Scene3: React.FC<Scene3Props> = ({
   // Apply the pop only at/after morph end (during morph, scale stays at 1).
   const bubbleScale = local < morphEnd ? 1 : bubblePop;
 
-  // Tail proportions — the iMessage outbound tail is a hooked nub at the
-  // bubble's bottom-right corner. We render the tail as an SVG that
-  // *overlaps* the bubble both horizontally (extending into the bubble by
-  // 1.4× corner-radius) and vertically (extending up into the straight
-  // portion of the bubble's right edge by 0.4× corner-radius). The deep
-  // overlap (a) hides the seam between the bubble's rounded corner and
-  // the tail's edge — sub-pixel rounding differences won't show because
-  // we're well inside the bubble — and (b) lets the top of the tail's
-  // concave hook merge smoothly into the bubble's straight right edge
-  // instead of kinking at the corner-curve start point.
-  const bubbleCornerRadius = animatedHeight * 0.42;
-  const visibleTailW = bubbleCornerRadius * 0.85;
-  const tailOverlapX = bubbleCornerRadius * 1.4;
-  const tailOverlapY = bubbleCornerRadius * 0.4;
-  const tailSvgW = tailOverlapX + visibleTailW;
-  const tailH = bubbleCornerRadius + tailOverlapY;
+  // Bubble shape — rendered as a SINGLE SVG path (rounded rect whose
+  // bottom-right "corner" smoothly morphs into a hooked tail as
+  // tailRevealRaw ramps 0→1). One fill, one drop-shadow, one anti-
+  // aliased outline — the bubble and tail are literally the same shape,
+  // so there's no seam to chase.
+  //
+  // Geometry inputs:
+  //   W  = field width (animated, input → bubble)
+  //   H  = field height (animated)
+  //   cr = corner radius (animated, full-pill → bubble-pill)
+  //   ext = visible tail extrusion past the bubble's right edge,
+  //         scaled by the reveal progress.
+  //   hook = how far the concave inside-hook of the tail dips
+  //         downward + leftward, also scaled by reveal progress.
+  const bubbleW = fieldWidth;
+  const bubbleH = animatedHeight;
+  const cr = interpolate(morphP, [0, 1], [inputHeight / 2, animatedHeight * 0.42]);
+  // Tail extrusion: lerps from 0 (no tail) to its full size, with the
+  // pop-impulse multiplier baked in so the tail overshoots and settles.
+  const tailExtFull = cr * 0.5;
+  const ext = tailExtFull * tailScaleX;
+  const hookHeightFull = cr * 0.2;
+  const hookH = hookHeightFull * tailScaleY;
+
+  // The SVG's bounding box must include the visible tail past the
+  // bubble's right edge AND the drop-shadow blur radius (otherwise the
+  // shadow would be clipped at the SVG edge).
+  const shadowBlur = 20 * scale;
+  const shadowOffsetY = 4 * scale;
+  const svgPadding = shadowBlur * 1.5; // safety margin for shadow
+  const svgW = bubbleW + ext + svgPadding * 2;
+  const svgH = bubbleH + svgPadding * 2 + shadowOffsetY;
+  // Bubble's top-left in SVG coords (offset for the padding).
+  const bx = svgPadding;
+  const by = svgPadding;
+  // Bubble's right and bottom in SVG coords.
+  const bRight = bx + bubbleW;
+  const bBottom = by + bubbleH;
+
+  // Build the path. Walk clockwise from top-left:
+  // 1. Top-left arc (corner)
+  // 2. Top edge
+  // 3. Top-right arc
+  // 4. Right edge (down to where the bottom-right corner / tail starts)
+  // 5. Bottom-right "corner" — this is where the tail lives. When
+  //    ext == 0 it's a simple quarter-circle arc (a normal rounded
+  //    corner). As ext grows, it morphs into a hooked extrusion that
+  //    bulges past the bubble's right edge, has a pointed tip, and
+  //    curves back to the bubble's bottom.
+  // 6. Bottom edge
+  // 7. Bottom-left arc
+  // 8. Left edge
+  // 9. Top-left arc closure
+  //
+  // For the bottom-right corner-or-tail, we control three anchor
+  // points: A (top of the corner / where the right edge starts curving
+  // in), T (the midpoint that becomes the tail tip when extruded), and
+  // B (bottom of the corner / where the bottom edge starts curving up
+  // from).
+  //
+  // When ext = 0 (no tail), T sits at the arc midpoint of a normal
+  // rounded corner. When ext > 0, T moves outward and slightly upward,
+  // pulling A→T into a convex bulge and T→B into a concave hook —
+  // producing the iMessage "tear-drop" tail silhouette.
+  //
+  // We compute T by linearly blending between:
+  //   - cornerMid: the midpoint of a normal quarter-circle corner, at
+  //     (bRight - cr*(1 - cos(45°)), bBottom - cr*(1 - sin(45°)))
+  //   - tailTip:   the extruded tip at (bRight + ext, bBottom - small)
+  // by `tailScaleX` (which is 0 when collapsed, 1 when fully extruded).
+  const K = 0.5523; // standard cubic-bezier circle-approximation factor
+  const cornerMidInset = cr * (1 - Math.SQRT1_2); // ~0.293 * cr
+  const aX = bRight;
+  const aY = bBottom - cr;
+  const bX2 = bRight - cr;
+  const bY2 = bBottom;
+
+  const cornerMidX = bRight - cornerMidInset;
+  const cornerMidY = bBottom - cornerMidInset;
+  // Tail tip: extends past the bubble's right edge AND slightly below
+  // the bubble's bottom. The "hook" comes from the tip dipping below
+  // baseline and the inner edge curving back UP and inward.
+  const tailTipX = bRight + ext;
+  const tailTipY = bBottom + hookH * 0.08;
+  // Blend T smoothly between arc midpoint (no tail) and extruded tip
+  // (full tail), driven by the same scale that determines extrusion.
+  const blend = tailScaleX;
+  const tX = cornerMidX * (1 - blend) + tailTipX * blend;
+  const tY = cornerMidY * (1 - blend) + tailTipY * blend;
+
+  // A→T cubic. For a clean morph between "arc segment" (no tail) and
+  // "convex hook outer edge" (full tail), interpolate the control
+  // points between the standard quarter-arc-half control points and
+  // the tail-bulge control points using the same blend factor.
+  //
+  // Standard half-arc A→cornerMid control points (from circle
+  // approximation): ctrl1 = (aX, aY + cr*K*0.5), ctrl2 = (cornerMidX +
+  // cr*K*0.5*sin(45°), cornerMidY - cr*K*0.5*cos(45°)).
+  // Tail-bulge A→tailTip control points: ctrl1 nudged outward + down,
+  // ctrl2 just up-left from the tip.
+  const arcA1x = aX;
+  const arcA1y = aY + cr * K * 0.55;
+  const arcA2x = cornerMidX + cr * K * 0.4;
+  const arcA2y = cornerMidY - cr * K * 0.4;
+
+  const tailA1x = aX + ext * 0.05;
+  const tailA1y = aY + cr * 0.55;
+  const tailA2x = tailTipX - ext * 0.3;
+  const tailA2y = tailTipY - hookH * 0.45;
+
+  const a1x = arcA1x * (1 - blend) + tailA1x * blend;
+  const a1y = arcA1y * (1 - blend) + tailA1y * blend;
+  const a2x = arcA2x * (1 - blend) + tailA2x * blend;
+  const a2y = arcA2y * (1 - blend) + tailA2y * blend;
+
+  // T→B cubic. Same interpolation pattern: standard half-arc control
+  // points (cornerMid → B) blended with the concave-hook control
+  // points (tailTip → B).
+  const arcB1x = cornerMidX - cr * K * 0.4;
+  const arcB1y = cornerMidY + cr * K * 0.4;
+  const arcB2x = bX2 + cr * K * 0.55;
+  const arcB2y = bY2;
+
+  // T→B for the tail state: from the tip (which sits slightly below
+  // the bubble's baseline), the curve sweeps up-and-left, hooks
+  // inward toward the bubble, then eases down to B at the bubble's
+  // bottom-left of the corner area. ctrl1 above-and-left of the tip
+  // makes the inside edge concave (the "hook"); ctrl2 sits at the
+  // bubble's baseline near B so the curve joins the bottom edge with
+  // a tangent close to horizontal.
+  const tailB1x = tailTipX - ext * 0.5;
+  const tailB1y = tailTipY - hookH * 0.55;
+  const tailB2x = bX2 + cr * 0.6;
+  const tailB2y = bY2;
+
+  const b1x = arcB1x * (1 - blend) + tailB1x * blend;
+  const b1y = arcB1y * (1 - blend) + tailB1y * blend;
+  const b2x = arcB2x * (1 - blend) + tailB2x * blend;
+  const b2y = arcB2y * (1 - blend) + tailB2y * blend;
+
+  const bubbleD = [
+    `M ${bx + cr} ${by}`,
+    `L ${bRight - cr} ${by}`,
+    `A ${cr} ${cr} 0 0 1 ${bRight} ${by + cr}`,
+    `L ${aX} ${aY}`,
+    `C ${a1x} ${a1y} ${a2x} ${a2y} ${tX} ${tY}`,
+    `C ${b1x} ${b1y} ${b2x} ${b2y} ${bX2} ${bY2}`,
+    `L ${bx + cr} ${bBottom}`,
+    `A ${cr} ${cr} 0 0 1 ${bx} ${bBottom - cr}`,
+    `L ${bx} ${by + cr}`,
+    `A ${cr} ${cr} 0 0 1 ${bx + cr} ${by}`,
+    `Z`,
+  ].join(" ");
+
+  // Stable filter ID so React doesn't churn it across renders.
+  const filterId = `bubbleShadow-scene3`;
 
   return (
     <AbsoluteFill style={{ opacity: envOpacity }}>
@@ -814,102 +986,96 @@ const Scene3: React.FC<Scene3Props> = ({
           gap: 16 * scale * (1 - morphP),
         }}
       >
-        {/* The chat field morphs into the iMessage bubble in place. */}
+        {/* The chat field morphs into the iMessage bubble in place.
+            The bubble + tail are drawn as a SINGLE SVG <path>, so they
+            share one fill, one drop-shadow, and one anti-aliased outline
+            — no seam between bubble and tail at any frame. Text and
+            cursor are absolutely positioned overlays on top of the SVG. */}
         <div
           style={{
             position: "relative",
+            // The bubble's logical width (used by flex/row layout). The
+            // SVG itself is wider than this — it has internal padding
+            // for the visible tail extrusion + drop-shadow blur — but
+            // we want flex to size the row using the bubble's width,
+            // not the SVG's, so that the row stays centered and the
+            // send button sits next to the bubble proper (not next to
+            // the tail tip).
             width: fieldWidth,
             height: animatedHeight,
-            // borderRadius shrinks slightly during morph: the input is a full
-            // pill (radius = height/2), but the iMessage bubble has a tighter
-            // radius so the right edge has a flat section for the tail to
-            // attach to.
-            borderRadius: interpolate(
-              morphP,
-              [0, 1],
-              [inputHeight / 2, animatedHeight * 0.42],
-            ),
-            background: fieldBg,
-            display: "flex",
-            alignItems: "center",
-            paddingLeft: fieldPadX,
-            paddingRight: fieldPadX,
-            fontFamily: FONT_STACK,
-            fontSize: animatedFontSize,
-            color: textColor,
-            fontWeight: 500,
-            letterSpacing: -0.3 * scale,
-            whiteSpace: "nowrap",
-            boxShadow: `0 ${4 * scale}px ${20 * scale}px rgba(0,0,0,${bubbleShadow})`,
           }}
         >
-          {/* iMessage outbound tail.
-
-              Rendered FIRST in DOM order (before the text spans) so the
-              text paints ON TOP of any tail pixels that overlap the
-              bubble interior. Without this ordering, the tail's left
-              edge — which extends `tailOverlapX` into the bubble — could
-              cover characters near the right edge of the text.
-
-              The SVG overlaps the bubble both horizontally (`tailOverlapX`
-              into the bubble) and vertically (`tailOverlapY` above the
-              corner-curve start), so the tail and bubble merge into a
-              single visual blob with no visible seam.
-
-              Path coords are in screen-pixel units (viewBox matches SVG
-              size). Origin (0,0) = top-left of SVG (inside the bubble).
-              Bubble's right edge in SVG coords is at x = tailOverlapX.
-              Bubble's bottom is at y = tailH. */}
           <svg
-            width={tailSvgW}
-            height={tailH}
-            viewBox={`0 0 ${tailSvgW} ${tailH}`}
+            width={svgW}
+            height={svgH}
+            viewBox={`0 0 ${svgW} ${svgH}`}
             style={{
               position: "absolute",
-              right: -visibleTailW,
-              bottom: 0,
+              left: -svgPadding,
+              top: -svgPadding,
               overflow: "visible",
-              // Reveal the tail by extruding it from the bubble's right edge.
-              // transform-origin is placed exactly at the bubble's right
-              // edge (in SVG-local coords at x = tailOverlapX), so scaleX
-              // grows the visible tail outward while keeping the overlap
-              // region (left of the origin) hidden behind the bubble.
-              transform: `scaleX(${tailRevealP})`,
-              transformOrigin: `${(tailOverlapX / tailSvgW) * 100}% center`,
+              pointerEvents: "none",
             }}
           >
-            <path
-              d={`
-                M 0 0
-                L 0 ${tailH}
-                L ${tailOverlapX + visibleTailW * 0.85} ${tailH}
-                C ${tailOverlapX + visibleTailW * 0.5} ${tailH - bubbleCornerRadius * 0.2}
-                  ${tailOverlapX} ${tailOverlapY + bubbleCornerRadius * 0.55}
-                  ${tailOverlapX} ${tailOverlapY * 0.4}
-                L ${tailOverlapX} 0
-                Z
-              `}
-              fill={fieldBg}
-            />
+            <defs>
+              <filter
+                id={filterId}
+                // Filter region: extend past the bounding box so the
+                // shadow's blur isn't clipped at the filter edges.
+                x="-20%"
+                y="-20%"
+                width="140%"
+                height="140%"
+              >
+                <feDropShadow
+                  dx="0"
+                  dy={shadowOffsetY}
+                  stdDeviation={shadowBlur / 2}
+                  floodColor="#000"
+                  floodOpacity={bubbleShadow}
+                />
+              </filter>
+            </defs>
+            <path d={bubbleD} fill={fieldBg} filter={`url(#${filterId})`} />
           </svg>
-          {/* Text spans render AFTER the tail SVG so they paint on top.
-              `position: relative` is required for `zIndex` to take effect
-              and creates an explicit stacking context as a safety belt
-              in case future siblings introduce stacking surprises. */}
-          <span style={{ position: "relative", zIndex: 1 }}>{visible}</span>
-          <span
+
+          {/* Text overlay — absolutely positioned over the SVG bubble.
+              We use a flex container that mirrors the bubble's interior
+              padding so the text lands in the correct spot regardless
+              of bubble width. */}
+          <div
             style={{
-              display: "inline-block",
-              width: 2 * scale,
-              height: animatedFontSize * 1.05,
-              marginLeft: 4 * scale,
-              background: IMESSAGE_BLUE,
-              opacity: cursorVisible && morphP === 0 ? 1 : 0,
-              transform: "translateY(2px)",
-              position: "relative",
-              zIndex: 1,
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: fieldWidth,
+              height: animatedHeight,
+              display: "flex",
+              alignItems: "center",
+              paddingLeft: fieldPadX,
+              paddingRight: fieldPadX,
+              fontFamily: FONT_STACK,
+              fontSize: animatedFontSize,
+              color: textColor,
+              fontWeight: 500,
+              letterSpacing: -0.3 * scale,
+              whiteSpace: "nowrap",
+              pointerEvents: "none",
             }}
-          />
+          >
+            <span>{visible}</span>
+            <span
+              style={{
+                display: "inline-block",
+                width: 2 * scale,
+                height: animatedFontSize * 1.05,
+                marginLeft: 4 * scale,
+                background: IMESSAGE_BLUE,
+                opacity: cursorVisible && morphP === 0 ? 1 : 0,
+                transform: "translateY(2px)",
+              }}
+            />
+          </div>
         </div>
         <div
           style={{
