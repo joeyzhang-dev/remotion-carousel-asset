@@ -955,7 +955,7 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
         opacity,
         // Subtle dim + small blur so the bubbles stay the focal
         // point. Tune `brightness` if real images come in too dark.
-        filter: `blur(${3 * scale}px) brightness(0.94) saturate(0.92)`,
+        filter: `blur(${1.2 * scale}px) brightness(0.98) saturate(0.98)`,
         pointerEvents: "none",
         background: "#FFFFFF", // IG light-mode background
       }}
@@ -1348,7 +1348,7 @@ const AmazonProduct: React.FC<AmazonProductProps> = ({
         height,
         overflow: "hidden",
         opacity,
-        filter: `blur(${3 * scale}px) brightness(0.94) saturate(0.92)`,
+        filter: `blur(${1.2 * scale}px) brightness(0.98) saturate(0.98)`,
         pointerEvents: "none",
         background: AMAZON_BG,
       }}
@@ -2218,7 +2218,7 @@ const FlightSearch: React.FC<FlightSearchProps> = ({
         height,
         overflow: "hidden",
         opacity,
-        filter: `blur(${3 * scale}px) brightness(0.94) saturate(0.92)`,
+        filter: `blur(${1.2 * scale}px) brightness(0.98) saturate(0.98)`,
         pointerEvents: "none",
         background: G_BG,
       }}
@@ -2910,7 +2910,7 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
         height,
         overflow: "hidden",
         opacity,
-        filter: `blur(${3 * scale}px) brightness(0.94) saturate(0.92)`,
+        filter: `blur(${1.2 * scale}px) brightness(0.98) saturate(0.98)`,
         pointerEvents: "none",
         background: W_BG,
       }}
@@ -4406,7 +4406,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
         height,
         overflow: "hidden",
         opacity,
-        filter: `blur(${3 * scale}px) brightness(0.94) saturate(0.92)`,
+        filter: `blur(${1.2 * scale}px) brightness(0.98) saturate(0.98)`,
         pointerEvents: "none",
         background: G_BG,
       }}
@@ -5170,7 +5170,7 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
         height,
         overflow: "hidden",
         opacity,
-        filter: `blur(${3 * scale}px) brightness(0.94) saturate(0.92)`,
+        filter: `blur(${1.2 * scale}px) brightness(0.98) saturate(0.98)`,
         pointerEvents: "none",
         background: D_BG,
       }}
@@ -6708,7 +6708,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const igFeedFadeIn = interpolate(
     local,
     [igFeedFadeStart, igFeedFadeStart + sec(0.18, fps)],
-    [0, 0.85],
+    [0, 0.95],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -7054,7 +7054,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const amazonFadeIn = interpolate(
     local,
     [amazonFadeStart, amazonFadeStart + sec(0.18, fps)],
-    [0, 0.85],
+    [0, 0.95],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -7140,7 +7140,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const flightFadeIn = interpolate(
     local,
     [flightFadeStart, flightFadeStart + sec(0.18, fps)],
-    [0, 0.85],
+    [0, 0.95],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -7255,7 +7255,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const walletFadeIn = interpolate(
     local,
     [walletFadeStart, walletFadeStart + sec(0.18, fps)],
-    [0, 0.85],
+    [0, 0.95],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -7359,7 +7359,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const gmailFadeIn = interpolate(
     local,
     [gmailFadeStart, gmailFadeStart + sec(0.18, fps)],
-    [0, 0.85],
+    [0, 0.95],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -7463,7 +7463,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const docsFadeIn = interpolate(
     local,
     [docsFadeStart, docsFadeStart + sec(0.18, fps)],
-    [0, 0.85],
+    [0, 0.95],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
