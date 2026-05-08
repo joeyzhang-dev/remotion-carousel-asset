@@ -3792,6 +3792,431 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
   );
 };
 
+/**
+ * Google-Docs-style mobile editor background. The agent "does the
+ * homework" — a doc with a typed essay opens, the user scrolls
+ * through it, taps Turn in, and a Google Classroom-style submission
+ * confirmation appears.
+ */
+type GoogleDocsProps = {
+  driveFrame: number;
+  fps: number;
+  width: number;
+  height: number;
+  scale: number;
+  opacity: number;
+  /** Tap-pulse on the Turn in button. */
+  turnInScale?: number;
+  /** Opacity for the homework-submitted confirmation overlay. */
+  submitConfirmOpacity?: number;
+};
+
+const GoogleDocs: React.FC<GoogleDocsProps> = ({
+  driveFrame,
+  fps,
+  width,
+  height,
+  scale,
+  opacity,
+  turnInScale = 1,
+  submitConfirmOpacity = 0,
+}) => {
+  const padX = 28 * scale;
+  const navH = 100 * scale;
+  const toolbarH = 70 * scale;
+  const docMarginX = 36 * scale;
+
+  // Generate paragraph blocks (placeholder text bars representing
+  // body paragraphs of the essay).
+  const paragraphs: number[][] = [
+    // Each paragraph is a list of line-widths as fractions of canvas
+    // width — produces the realistic "uneven last line" look.
+    [0.78, 0.86, 0.74, 0.81, 0.55],
+    [0.82, 0.79, 0.84, 0.73, 0.66, 0.42],
+    [0.76, 0.83, 0.79, 0.61],
+    [0.85, 0.78, 0.82, 0.74, 0.79, 0.53],
+    [0.81, 0.86, 0.74, 0.79, 0.6],
+    [0.73, 0.82, 0.78, 0.84, 0.76, 0.31],
+    [0.85, 0.79, 0.74, 0.49],
+    [0.78, 0.83, 0.81, 0.74, 0.86, 0.62],
+  ];
+  const lineH = 28 * scale;
+  const lineGap = 14 * scale;
+  const paragraphGap = 28 * scale;
+  const docTitleH = 70 * scale;
+  const docAuthorH = 50 * scale;
+  const docHeaderTotalH = docTitleH + docAuthorH + 30 * scale;
+  const paragraphsH = paragraphs.reduce(
+    (sum, p) =>
+      sum + p.length * lineH + (p.length - 1) * lineGap + paragraphGap,
+    0,
+  );
+  const totalContentH =
+    navH + toolbarH + docHeaderTotalH + paragraphsH + 200 * scale;
+  const maxScroll = Math.max(0, totalContentH - height);
+
+  const driveSec = driveFrame / fps;
+  let baseScroll = 0;
+  if (driveSec < 0.4) {
+    baseScroll = 0;
+  } else if (driveSec < 1.2) {
+    baseScroll = interpolate(driveSec, [0.4, 1.2], [0, maxScroll * 0.55], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    });
+  } else {
+    baseScroll = maxScroll * 0.55;
+  }
+  const wobble =
+    driveSec > 0.4
+      ? 4 * scale * Math.sin(2 * Math.PI * 2.5 * (driveSec - 0.4))
+      : 0;
+  const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll + wobble));
+  const pageY = -scrollPx;
+
+  const D_BG = "#FFFFFF";
+  const D_TEXT = "#202124";
+  const D_LIGHT = "#5F6368";
+  const D_BORDER = "#DADCE0";
+  const D_BLUE = "#1A73E8";
+  const D_TOOLBAR_BG = "#F8F9FA";
+  const D_PAGE_BG = "#FFFFFF";
+  const D_TEXT_BAR = "#3C4043";
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        overflow: "hidden",
+        opacity,
+        filter: `blur(${3 * scale}px) brightness(0.94) saturate(0.92)`,
+        pointerEvents: "none",
+        background: D_BG,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width,
+          transform: `translateY(${pageY}px)`,
+        }}
+      >
+        {/* Doc nav bar */}
+        <div
+          style={{
+            height: navH,
+            paddingLeft: padX,
+            paddingRight: padX,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: D_BG,
+            borderBottom: `${1 * scale}px solid ${D_BORDER}`,
+            fontFamily: FONT_STACK,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 18 * scale,
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <div style={{ fontSize: 36 * scale, color: D_TEXT, fontWeight: 300 }}>
+              ←
+            </div>
+            <div
+              style={{
+                fontSize: 22 * scale,
+                color: D_TEXT,
+                fontWeight: 500,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              World History Essay - Final.docx
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 22 * scale, fontSize: 26 * scale, color: D_LIGHT }}>
+            <span>👥</span>
+            <span>⋯</span>
+          </div>
+        </div>
+        {/* Toolbar */}
+        <div
+          style={{
+            height: toolbarH,
+            paddingLeft: padX,
+            paddingRight: padX,
+            background: D_TOOLBAR_BG,
+            borderBottom: `${1 * scale}px solid ${D_BORDER}`,
+            display: "flex",
+            alignItems: "center",
+            gap: 22 * scale,
+            fontFamily: FONT_STACK,
+            fontSize: 22 * scale,
+            color: D_LIGHT,
+          }}
+        >
+          <span style={{ fontSize: 26 * scale }}>↶</span>
+          <span style={{ fontSize: 26 * scale }}>↷</span>
+          <div
+            style={{
+              padding: `${6 * scale}px ${14 * scale}px`,
+              borderRadius: 6 * scale,
+              border: `${1 * scale}px solid ${D_BORDER}`,
+              background: D_BG,
+              fontSize: 18 * scale,
+            }}
+          >
+            Heading 1 ▾
+          </div>
+          <span style={{ fontWeight: 700, color: D_TEXT }}>B</span>
+          <span style={{ fontStyle: "italic", color: D_TEXT }}>I</span>
+          <span style={{ textDecoration: "underline", color: D_TEXT }}>U</span>
+          <div style={{ flex: 1 }} />
+          <span style={{ fontSize: 26 * scale }}>＋</span>
+        </div>
+        {/* Doc canvas */}
+        <div
+          style={{
+            background: D_PAGE_BG,
+            paddingTop: 36 * scale,
+            paddingBottom: 60 * scale,
+            paddingLeft: docMarginX,
+            paddingRight: docMarginX,
+            fontFamily: FONT_STACK,
+          }}
+        >
+          {/* Title */}
+          <div
+            style={{
+              height: docTitleH,
+              fontSize: 36 * scale,
+              fontWeight: 700,
+              color: D_TEXT,
+              textAlign: "center",
+              letterSpacing: -0.3 * scale,
+              lineHeight: 1.2,
+            }}
+          >
+            World War II: Causes and Consequences
+          </div>
+          <div
+            style={{
+              height: docAuthorH,
+              fontSize: 20 * scale,
+              color: D_LIGHT,
+              textAlign: "center",
+              marginTop: 8 * scale,
+            }}
+          >
+            By Student · 5 pages · 1,247 words
+          </div>
+          {/* Body paragraphs (rendered as line bars) */}
+          <div style={{ marginTop: 30 * scale }}>
+            {paragraphs.map((para, pi) => (
+              <div
+                key={pi}
+                style={{
+                  marginBottom: paragraphGap,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: lineGap,
+                }}
+              >
+                {para.map((wfrac, li) => (
+                  <div
+                    key={li}
+                    style={{
+                      width: `${wfrac * 100}%`,
+                      height: lineH,
+                      background: D_TEXT_BAR,
+                      borderRadius: 3 * scale,
+                      opacity: 0.88,
+                    }}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Turn in bar (bottom of doc) */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 18 * scale,
+            paddingBottom: 24 * scale,
+            background: D_BG,
+            borderTop: `${1 * scale}px solid ${D_BORDER}`,
+          }}
+        >
+          <div
+            style={{
+              height: 90 * scale,
+              borderRadius: 14 * scale,
+              background: D_BLUE,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_STACK,
+              fontSize: 28 * scale,
+              fontWeight: 600,
+              color: "#fff",
+              transform: `scale(${turnInScale})`,
+              transformOrigin: "center",
+              boxShadow: `0 ${4 * scale}px ${16 * scale}px rgba(26, 115, 232, 0.35)`,
+            }}
+          >
+            Turn in
+          </div>
+        </div>
+      </div>
+
+      {/* Homework submitted confirmation */}
+      {submitConfirmOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: submitConfirmOpacity,
+            pointerEvents: "none",
+            background: "rgba(0,0,0,0.35)",
+          }}
+        >
+          <div
+            style={{
+              width: width * 0.84,
+              padding: `${48 * scale}px ${36 * scale}px`,
+              borderRadius: 24 * scale,
+              background: "#FFFFFF",
+              fontFamily: FONT_STACK,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 18 * scale,
+              boxShadow: `0 ${20 * scale}px ${60 * scale}px rgba(0,0,0,0.35)`,
+            }}
+          >
+            <div
+              style={{
+                width: 130 * scale,
+                height: 130 * scale,
+                borderRadius: "50%",
+                background: D_BLUE,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 80 * scale,
+                color: "#FFFFFF",
+                fontWeight: 700,
+                boxShadow: `0 ${6 * scale}px ${20 * scale}px rgba(26, 115, 232, 0.35)`,
+              }}
+            >
+              ✓
+            </div>
+            <div
+              style={{
+                fontSize: 44 * scale,
+                fontWeight: 700,
+                color: D_TEXT,
+                letterSpacing: -0.5 * scale,
+                marginTop: 8 * scale,
+                textAlign: "center",
+              }}
+            >
+              Homework submitted
+            </div>
+            <div
+              style={{
+                fontSize: 22 * scale,
+                color: D_LIGHT,
+                textAlign: "center",
+              }}
+            >
+              Mr. Anderson · World History · Period 4
+            </div>
+            <div
+              style={{
+                width: "100%",
+                height: 1 * scale,
+                background: D_BORDER,
+                marginTop: 4 * scale,
+                marginBottom: 4 * scale,
+              }}
+            />
+            {[
+              { label: "Pages", value: "5" },
+              { label: "Word count", value: "1,247" },
+              { label: "Plagiarism check", value: "✓ Pass", green: true },
+            ].map((r) => (
+              <div
+                key={r.label}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontFamily: FONT_STACK,
+                }}
+              >
+                <div style={{ fontSize: 22 * scale, color: D_LIGHT }}>
+                  {r.label}
+                </div>
+                <div
+                  style={{
+                    fontSize: 22 * scale,
+                    color: r.green ? "#34A853" : D_TEXT,
+                    fontWeight: 600,
+                  }}
+                >
+                  {r.value}
+                </div>
+              </div>
+            ))}
+            <div
+              style={{
+                width: "100%",
+                marginTop: 12 * scale,
+                padding: `${18 * scale}px ${22 * scale}px`,
+                borderRadius: 14 * scale,
+                background: "#E8F0FE",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ fontSize: 22 * scale, color: D_LIGHT }}>
+                Status
+              </div>
+              <div style={{ fontSize: 26 * scale, fontWeight: 700, color: D_BLUE }}>
+                🎓 Submitted on time
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Scene 1 — 0s–2s: "In your messages"
 // Folk logo spins, then continuously morphs (size + color + glyph) into the
 // iMessage send button. Single shared circular container so the transition
@@ -4998,6 +5423,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const sent3PhraseEdited = "book my flight and hotel";
   const sent3PhraseEdited2 = "pay off my credit card";
   const sent3PhraseEdited3 = "respond to all my emails";
+  const sent3PhraseEdited4 = "do my homework plz";
   const sent3FontSize = bubbleFontSize;
   const sent3PadX = bubblePadX;
   const sent3Height = bubbleHeight;
@@ -5068,6 +5494,12 @@ const Scene3: React.FC<Scene3Props> = ({
       backspaceStart: sec(24.3, fps),
       fromPhrase: sent3PhraseEdited2,
       toPhrase: sent3PhraseEdited3,
+    },
+    {
+      // Edit 4 — happens during Google Docs' open.
+      backspaceStart: sec(29.2, fps),
+      fromPhrase: sent3PhraseEdited3,
+      toPhrase: sent3PhraseEdited4,
     },
   ];
 
@@ -5585,6 +6017,110 @@ const Scene3: React.FC<Scene3Props> = ({
   );
   const gmailOpacity = gmailFadeIn * gmailExitFadeMul;
 
+  // ── Google Docs (edit 5: "do my homework plz") ─────────────────
+  // Opens after Gmail exits. iOS app-open zoom anchored to the
+  // UPPER-CENTER (the 6th and final unique home-screen origin).
+  const docsFadeStart = gmailExitEnd + sec(0.05, fps);
+  const docsOpenSpring = spring({
+    frame: local - docsFadeStart,
+    fps,
+    config: { damping: 16, stiffness: 110, mass: 0.65 },
+  });
+  const docsOpenScale = interpolate(docsOpenSpring, [0, 1], [0.15, 1]);
+  const docsOpenRadius = interpolate(
+    docsOpenSpring,
+    [0, 1],
+    [80 * scale, 0],
+  );
+  const docsFadeIn = interpolate(
+    local,
+    [docsFadeStart, docsFadeStart + sec(0.18, fps)],
+    [0, 0.45],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+
+  // Turn in button tap.
+  const turnInTapStart = sec(31.1, fps);
+  const turnInTapEnd = sec(31.3, fps);
+  const turnInTapHalf = (turnInTapEnd - turnInTapStart) / 2;
+  const turnInTapDown = interpolate(
+    local,
+    [turnInTapStart, turnInTapStart + turnInTapHalf],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  const turnInTapUp = interpolate(
+    local,
+    [turnInTapStart + turnInTapHalf, turnInTapEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  const turnInScale = 1 - turnInTapDown * 0.06 + turnInTapUp * 0.06;
+
+  // Homework submitted confirmation toast.
+  const submitToastInStart = turnInTapEnd;
+  const submitToastInEnd = submitToastInStart + sec(0.25, fps);
+  const submitToastOutStart = submitToastInStart + sec(1.3, fps);
+  const submitToastOutEnd = submitToastOutStart + sec(0.35, fps);
+  const submitToastIn = interpolate(
+    local,
+    [submitToastInStart, submitToastInEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  const submitToastOut = interpolate(
+    local,
+    [submitToastOutStart, submitToastOutEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const submitConfirmOpacity = submitToastIn * submitToastOut;
+
+  // Docs page exit.
+  const docsExitStart = submitToastOutEnd;
+  const docsExitEnd = docsExitStart + sec(0.5, fps);
+  const docsExitFadeMul = interpolate(
+    local,
+    [docsExitStart, docsExitEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const docsExitDriftY = interpolate(
+    local,
+    [docsExitStart, docsExitEnd],
+    [0, -50 * scale],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const docsOpacity = docsFadeIn * docsExitFadeMul;
+
   // ── Received bubbles #2 and #3 ──────────────────────────────────
   // Real conversations come in as multiple short messages, not one
   // long wrapped one. Split the reply into two consecutive gray
@@ -6003,6 +6539,38 @@ const Scene3: React.FC<Scene3Props> = ({
             opacity={gmailOpacity}
             replyAllScale={replyAllScale}
             replySentOpacity={replySentOpacity}
+          />
+        </div>
+      )}
+
+      {/* Google Docs — opens after Gmail exits. iOS app-open zoom
+          anchored to the UPPER-CENTER (final unique home-screen
+          origin). Tap-pulse on Turn in + "Homework submitted"
+          confirmation. */}
+      {docsOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            transformOrigin: `${width * 0.5}px ${height * 0.18}px`,
+            transform: `translateY(${docsExitDriftY}px) scale(${docsOpenScale})`,
+            borderRadius: docsOpenRadius,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <GoogleDocs
+            driveFrame={local - docsFadeStart}
+            fps={fps}
+            width={width}
+            height={height}
+            scale={scale}
+            opacity={docsOpacity}
+            turnInScale={turnInScale}
+            submitConfirmOpacity={submitConfirmOpacity}
           />
         </div>
       )}
@@ -6651,7 +7219,7 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           closing-punchline edit animation + the flight search
           background, tap on a flight, "Booking confirmed" toast,
           and the page exit. */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(29, fps)}>
+      <Sequence from={sec(5, fps)} durationInFrames={sec(34, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
@@ -6665,7 +7233,7 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           sent #3 sits alone on screen as the focal point. */}
       <Sequence
         from={sec(5 - xfade, fps)}
-        durationInFrames={sec(29 + xfade, fps)}
+        durationInFrames={sec(34 + xfade, fps)}
       >
         <Caption
           text="schedule a date with my crush"
