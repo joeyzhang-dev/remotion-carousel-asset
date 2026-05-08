@@ -8661,6 +8661,25 @@ const Scene3: React.FC<Scene3Props> = ({
           );
         })()
       )}
+
+      {/* Top fade overlay — a vertical gradient (white → transparent)
+          covering the upper third of the canvas. Older bubbles ride
+          up into this band as the conversation shifts, producing the
+          "messages fade as they scroll up" feel. Sits above every
+          background and bubble layer, but with a generous falloff so
+          the active background's status bar isn't fully hidden. */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width,
+          height: height * 0.3,
+          pointerEvents: "none",
+          background:
+            "linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 30%, rgba(255,255,255,0.6) 65%, rgba(255,255,255,0) 100%)",
+        }}
+      />
     </AbsoluteFill>
   );
 };
