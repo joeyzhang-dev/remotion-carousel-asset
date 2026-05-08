@@ -1224,6 +1224,563 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
   );
 };
 
+/**
+ * Amazon-style product page background. Mirrors `InstagramProfile`'s
+ * role — sits behind the chat as ambient context — but redesigned to
+ * read as an e-commerce listing for the closing punchline ("bet,
+ * order some protection"): top nav, big product image, title +
+ * brand + rating, price, buy buttons, "frequently bought together"
+ * row, and a couple of additional rows below the fold.
+ *
+ * Same scroll model as the IG profile: hold briefly, scroll down at
+ * a comfortable pace, with a small finger-jitter wobble. No
+ * interactive tap (this just sits as background).
+ */
+type AmazonProductProps = {
+  driveFrame: number;
+  fps: number;
+  width: number;
+  height: number;
+  scale: number;
+  /** Master opacity for the whole background (0..1). */
+  opacity: number;
+};
+
+const AmazonProduct: React.FC<AmazonProductProps> = ({
+  driveFrame,
+  fps,
+  width,
+  height,
+  scale,
+  opacity,
+}) => {
+  // Layout dimensions
+  const padX = 28 * scale;
+  const navHeight = 110 * scale;
+  // Big product image area — wide and tall, like the hero photo on
+  // an Amazon product listing.
+  const heroImageH = width * 0.95;
+  const titleSectionH = 220 * scale;
+  const ratingRowH = 60 * scale;
+  const priceSectionH = 140 * scale;
+  const buyButtonsH = 200 * scale;
+  const fboRowH = 280 * scale; // "Frequently bought together"
+  const detailsRowH = 220 * scale;
+  const headerTotalH =
+    navHeight +
+    heroImageH +
+    titleSectionH +
+    ratingRowH +
+    priceSectionH +
+    buyButtonsH +
+    fboRowH +
+    detailsRowH;
+
+  const totalContentH = headerTotalH + 400 * scale; // a bit extra so we have room to scroll
+  const maxScroll = Math.max(0, totalContentH - height);
+
+  // Scroll model — same shape as the IG profile but tuned slightly
+  // shorter since this background is on screen for less time.
+  const driveSec = driveFrame / fps;
+  const t = {
+    holdEnd: 0.5,
+    flickEnd: 1.2,
+    settleEnd: 1.6,
+    cruiseEnd: 3.5,
+  };
+  let baseScroll: number;
+  if (driveSec < t.holdEnd) {
+    baseScroll = 0;
+  } else if (driveSec < t.flickEnd) {
+    baseScroll = interpolate(
+      driveSec,
+      [t.holdEnd, t.flickEnd],
+      [0, maxScroll * 0.55],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.out(Easing.cubic),
+      },
+    );
+  } else if (driveSec < t.settleEnd) {
+    baseScroll = maxScroll * 0.55;
+  } else {
+    baseScroll = interpolate(
+      driveSec,
+      [t.settleEnd, t.cruiseEnd],
+      [maxScroll * 0.55, maxScroll],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.inOut(Easing.cubic),
+      },
+    );
+  }
+  // Wobble.
+  const wobbleAmp = 4 * scale;
+  const wobbleHz = 2.5;
+  const wobbleEnabled = driveSec > t.holdEnd ? 1 : 0;
+  const wobble =
+    wobbleEnabled *
+    wobbleAmp *
+    Math.sin(2 * Math.PI * wobbleHz * (driveSec - t.holdEnd));
+  const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll + wobble));
+  const pageY = -scrollPx;
+
+  // Amazon's signature warm-yellow buy button + dark navy nav.
+  const AMAZON_NAV = "#131A22";
+  const AMAZON_YELLOW = "#FFD814";
+  const AMAZON_ORANGE = "#FFA41C";
+  const AMAZON_LINK = "#007185";
+  const AMAZON_BG = "#FFFFFF";
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        overflow: "hidden",
+        opacity,
+        filter: `blur(${3 * scale}px) brightness(0.94) saturate(0.92)`,
+        pointerEvents: "none",
+        background: AMAZON_BG,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width,
+          transform: `translateY(${pageY}px)`,
+        }}
+      >
+        {/* ── Nav bar (back + search + cart) ───────────────────── */}
+        <div
+          style={{
+            height: navHeight,
+            background: AMAZON_NAV,
+            display: "flex",
+            alignItems: "center",
+            paddingLeft: padX,
+            paddingRight: padX,
+            gap: 14 * scale,
+          }}
+        >
+          {/* back chevron */}
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 36 * scale,
+              color: "#fff",
+              fontWeight: 300,
+            }}
+          >
+            ‹
+          </div>
+          {/* search bar */}
+          <div
+            style={{
+              flex: 1,
+              height: 56 * scale,
+              borderRadius: 8 * scale,
+              background: "#fff",
+              display: "flex",
+              alignItems: "center",
+              paddingLeft: 14 * scale,
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              color: "#888",
+            }}
+          >
+            search amazon
+          </div>
+          {/* cart icon placeholder */}
+          <div
+            style={{
+              width: 38 * scale,
+              height: 38 * scale,
+              borderRadius: 6 * scale,
+              background: "rgba(255,255,255,0.85)",
+            }}
+          />
+        </div>
+
+        {/* ── Hero product image ───────────────────────────────── */}
+        <div
+          style={{
+            width,
+            height: heroImageH,
+            background: "#F0F0EB",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {/* simple "product" placeholder block */}
+          <div
+            style={{
+              width: heroImageH * 0.55,
+              height: heroImageH * 0.7,
+              background: "#D4A04F",
+              borderRadius: 8 * scale,
+              boxShadow: `0 ${8 * scale}px ${24 * scale}px rgba(0,0,0,0.1)`,
+            }}
+          />
+        </div>
+
+        {/* ── Title + brand ───────────────────────────────────── */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 18 * scale,
+            paddingBottom: 18 * scale,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              color: AMAZON_LINK,
+              marginBottom: 8 * scale,
+            }}
+          >
+            Visit the Trojan Store
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 28 * scale,
+              fontWeight: 500,
+              color: "#0F1111",
+              lineHeight: 1.25,
+            }}
+          >
+            Trojan Magnum Lubricated Latex Condoms — 12 Count
+          </div>
+        </div>
+
+        {/* ── Rating row (stars + count) ──────────────────────── */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            height: ratingRowH,
+            display: "flex",
+            alignItems: "center",
+            gap: 12 * scale,
+            borderBottom: `${1 * scale}px solid #E7E7E7`,
+          }}
+        >
+          {/* 5 stars */}
+          <div style={{ display: "flex", gap: 2 * scale }}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                style={{
+                  width: 24 * scale,
+                  height: 24 * scale,
+                  background: AMAZON_ORANGE,
+                  clipPath:
+                    "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)",
+                }}
+              />
+            ))}
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 20 * scale,
+              color: AMAZON_LINK,
+            }}
+          >
+            8,427 ratings
+          </div>
+        </div>
+
+        {/* ── Price section ───────────────────────────────────── */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 16 * scale,
+            paddingBottom: 16 * scale,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              color: "#565959",
+            }}
+          >
+            Price:{" "}
+            <span style={{ textDecoration: "line-through" }}>$24.99</span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: 8 * scale,
+              marginTop: 4 * scale,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: FONT_STACK,
+                fontSize: 18 * scale,
+                color: "#B12704",
+              }}
+            >
+              $
+            </span>
+            <span
+              style={{
+                fontFamily: FONT_STACK,
+                fontSize: 48 * scale,
+                fontWeight: 400,
+                color: "#B12704",
+                lineHeight: 1,
+              }}
+            >
+              17
+            </span>
+            <span
+              style={{
+                fontFamily: FONT_STACK,
+                fontSize: 22 * scale,
+                color: "#B12704",
+              }}
+            >
+              .49
+            </span>
+            <span
+              style={{
+                fontFamily: FONT_STACK,
+                fontSize: 18 * scale,
+                color: "#565959",
+                marginLeft: 8 * scale,
+              }}
+            >
+              FREE delivery
+            </span>
+          </div>
+        </div>
+
+        {/* ── Buy buttons ─────────────────────────────────────── */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10 * scale,
+          }}
+        >
+          <div
+            style={{
+              height: 70 * scale,
+              borderRadius: 999,
+              background: AMAZON_YELLOW,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              fontWeight: 500,
+              color: "#0F1111",
+              border: `${1 * scale}px solid #FCD200`,
+            }}
+          >
+            Add to Cart
+          </div>
+          <div
+            style={{
+              height: 70 * scale,
+              borderRadius: 999,
+              background: AMAZON_ORANGE,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              fontWeight: 500,
+              color: "#0F1111",
+              border: `${1 * scale}px solid #FF8F00`,
+            }}
+          >
+            Buy Now
+          </div>
+        </div>
+
+        {/* ── Frequently bought together ──────────────────────── */}
+        <div
+          style={{
+            marginTop: 24 * scale,
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 16 * scale,
+            paddingBottom: 16 * scale,
+            borderTop: `${1 * scale}px solid #E7E7E7`,
+            height: fboRowH,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 24 * scale,
+              fontWeight: 700,
+              color: "#0F1111",
+              marginBottom: 14 * scale,
+            }}
+          >
+            Frequently bought together
+          </div>
+          <div style={{ display: "flex", gap: 14 * scale, alignItems: "center" }}>
+            {[0, 1, 2].map((i) => (
+              <React.Fragment key={i}>
+                <div
+                  style={{
+                    width: 130 * scale,
+                    height: 130 * scale,
+                    background: ["#D4A04F", "#C8B6A6", "#A8C0BE"][i],
+                    borderRadius: 6 * scale,
+                  }}
+                />
+                {i < 2 && (
+                  <div
+                    style={{
+                      fontFamily: FONT_STACK,
+                      fontSize: 36 * scale,
+                      color: "#565959",
+                      fontWeight: 300,
+                    }}
+                  >
+                    +
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Product details placeholder ─────────────────────── */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 18 * scale,
+            paddingBottom: 18 * scale,
+            borderTop: `${1 * scale}px solid #E7E7E7`,
+            height: detailsRowH,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 24 * scale,
+              fontWeight: 700,
+              color: "#0F1111",
+              marginBottom: 14 * scale,
+            }}
+          >
+            Product details
+          </div>
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              style={{
+                width: width * (0.5 + Math.random() * 0.3),
+                height: 14 * scale,
+                background: "#E0E0E0",
+                borderRadius: 4 * scale,
+                marginBottom: 10 * scale,
+                opacity: 0.7,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* ── Ratings histogram (a fake "customer reviews") ─── */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 18 * scale,
+            paddingBottom: 18 * scale,
+            borderTop: `${1 * scale}px solid #E7E7E7`,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 24 * scale,
+              fontWeight: 700,
+              color: "#0F1111",
+              marginBottom: 14 * scale,
+            }}
+          >
+            Customer reviews
+          </div>
+          {[5, 4, 3, 2, 1].map((star, i) => (
+            <div
+              key={star}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12 * scale,
+                marginBottom: 8 * scale,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: FONT_STACK,
+                  fontSize: 20 * scale,
+                  color: AMAZON_LINK,
+                }}
+              >
+                {star} star
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  height: 22 * scale,
+                  background: "#F0F0F0",
+                  borderRadius: 4 * scale,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${[68, 22, 6, 2, 2][i]}%`,
+                    background: AMAZON_ORANGE,
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_STACK,
+                  fontSize: 20 * scale,
+                  color: "#0F1111",
+                  width: 50 * scale,
+                  textAlign: "right",
+                }}
+              >
+                {[68, 22, 6, 2, 2][i]}%
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Scene 1 — 0s–2s: "In your messages"
 // Folk logo spins, then continuously morphs (size + color + glyph) into the
 // iMessage send button. Single shared circular container so the transition
@@ -2476,6 +3033,40 @@ const Scene3: React.FC<Scene3Props> = ({
     },
   );
 
+  // ── Amazon product page background (closing punchline context) ──
+  // While sent #3 ("bet, order some protection") is alone on screen,
+  // an Amazon product listing slides in behind it with the same
+  // iOS-style "open app" zoom we used for the IG profile. Reads as
+  // "the agent is checking out a product page right now."
+  // Origin point is the LOWER-LEFT of the canvas this time (the IG
+  // entry was lower-right) so the two app-open animations don't feel
+  // identical when stitched in the same scene.
+  const amazonFadeStart = sent3Start; // arrives as sent #3 enters
+  const amazonOpenSpring = spring({
+    frame: local - amazonFadeStart,
+    fps,
+    config: { damping: 16, stiffness: 110, mass: 0.65 },
+  });
+  const amazonOpenScale = interpolate(amazonOpenSpring, [0, 1], [0.15, 1]);
+  const amazonOpenRadius = interpolate(
+    amazonOpenSpring,
+    [0, 1],
+    [80 * scale, 0],
+  );
+  const amazonFadeIn = interpolate(
+    local,
+    [amazonFadeStart, amazonFadeStart + sec(0.18, fps)],
+    [0, 0.45],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  // No fade-out — Amazon stays through scene end. (If a follow-up
+  // beat needs it dismissed, layer a fade-out driver here.)
+  const amazonOpacity = amazonFadeIn;
+
   // ── Received bubbles #2 and #3 ──────────────────────────────────
   // Real conversations come in as multiple short messages, not one
   // long wrapped one. Split the reply into two consecutive gray
@@ -2759,6 +3350,37 @@ const Scene3: React.FC<Scene3Props> = ({
             // over. dwelledCellSourceOpacity ramps 1→0 during the
             // flight, so the cell fades out as the clone flies away.
             tappedCellOpacity={dwelledCellSourceOpacity}
+          />
+        </div>
+      )}
+
+      {/* Amazon product page background — appears as sent #3 enters,
+          with the same iOS "open app" zoom we used for IG (but
+          anchored to the LOWER-LEFT of the canvas this time, so the
+          two app-open animations don't feel identical). Sits behind
+          the closing punchline bubble. */}
+      {amazonOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            transformOrigin: `${width * 0.22}px ${height * 0.82}px`,
+            transform: `scale(${amazonOpenScale})`,
+            borderRadius: amazonOpenRadius,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <AmazonProduct
+            driveFrame={local - amazonFadeStart}
+            fps={fps}
+            width={width}
+            height={height}
+            scale={scale}
+            opacity={amazonOpacity}
           />
         </div>
       )}
