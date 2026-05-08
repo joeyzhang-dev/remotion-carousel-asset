@@ -4345,7 +4345,10 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
         </div>
       </div>
 
-      {/* Homework submitted confirmation */}
+      {/* Homework submitted — Google Classroom-style submission card.
+          Green status banner at the top, assignment card with subject
+          chip + teacher row + Docs attachment, rubric preview with
+          mini progress bars, and a circular grade-prediction ring. */}
       {submitConfirmOpacity > 0 && (
         <div
           style={{
@@ -4365,110 +4368,254 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
           <div
             style={{
               width: width * 0.84,
-              padding: `${48 * scale}px ${36 * scale}px`,
-              borderRadius: 24 * scale,
+              borderRadius: 18 * scale,
               background: "#FFFFFF",
               fontFamily: FONT_STACK,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 18 * scale,
               boxShadow: `0 ${20 * scale}px ${60 * scale}px rgba(0,0,0,0.35)`,
+              overflow: "hidden",
             }}
           >
+            {/* Green status banner */}
             <div
               style={{
-                width: 130 * scale,
-                height: 130 * scale,
-                borderRadius: "50%",
-                background: D_BLUE,
+                background: "#0F9D58",
+                padding: `${22 * scale}px ${28 * scale}px`,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                fontSize: 80 * scale,
-                color: "#FFFFFF",
-                fontWeight: 700,
-                boxShadow: `0 ${6 * scale}px ${20 * scale}px rgba(26, 115, 232, 0.35)`,
+                gap: 16 * scale,
               }}
             >
-              ✓
-            </div>
-            <div
-              style={{
-                fontSize: 44 * scale,
-                fontWeight: 700,
-                color: D_TEXT,
-                letterSpacing: -0.5 * scale,
-                marginTop: 8 * scale,
-                textAlign: "center",
-              }}
-            >
-              Homework submitted
-            </div>
-            <div
-              style={{
-                fontSize: 22 * scale,
-                color: D_LIGHT,
-                textAlign: "center",
-              }}
-            >
-              Mr. Anderson · World History · Period 4
-            </div>
-            <div
-              style={{
-                width: "100%",
-                height: 1 * scale,
-                background: D_BORDER,
-                marginTop: 4 * scale,
-                marginBottom: 4 * scale,
-              }}
-            />
-            {[
-              { label: "Pages", value: "5" },
-              { label: "Word count", value: "1,247" },
-              { label: "Plagiarism check", value: "✓ Pass", green: true },
-            ].map((r) => (
-              <div
-                key={r.label}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  fontFamily: FONT_STACK,
-                }}
-              >
-                <div style={{ fontSize: 22 * scale, color: D_LIGHT }}>
-                  {r.label}
+              {/* Graduation cap SVG */}
+              <svg width={48 * scale} height={48 * scale} viewBox="0 0 48 48" fill="none">
+                <path d="M24 6 L4 16 L24 26 L44 16 Z" fill="#FFFFFF" />
+                <path d="M12 22 L12 32 C12 32 16 36 24 36 C32 36 36 32 36 32 L36 22" fill="#FFFFFF" />
+                <line x1="44" y1="16" x2="44" y2="28" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
+                <circle cx="44" cy="30" r="2.5" fill="#FFFFFF" />
+              </svg>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 28 * scale, fontWeight: 700, color: "#FFFFFF", letterSpacing: -0.3 * scale }}>
+                  Turned in
                 </div>
-                <div
-                  style={{
-                    fontSize: 22 * scale,
-                    color: r.green ? "#34A853" : D_TEXT,
-                    fontWeight: 600,
-                  }}
-                >
-                  {r.value}
+                <div style={{ fontSize: 16 * scale, color: "rgba(255,255,255,0.85)", marginTop: 2 * scale }}>
+                  Submitted 3h 42m before deadline
                 </div>
               </div>
-            ))}
+              <div
+                style={{
+                  padding: `${6 * scale}px ${12 * scale}px`,
+                  borderRadius: 999,
+                  background: "#5BB974",
+                  color: "#FFFFFF",
+                  fontSize: 16 * scale,
+                  fontWeight: 600,
+                }}
+              >
+                On time
+              </div>
+            </div>
+            {/* Assignment card */}
             <div
               style={{
-                width: "100%",
-                marginTop: 12 * scale,
-                padding: `${18 * scale}px ${22 * scale}px`,
-                borderRadius: 14 * scale,
-                background: "#E8F0FE",
+                padding: `${24 * scale}px ${28 * scale}px`,
+                paddingBottom: 16 * scale,
+                display: "flex",
+                flexDirection: "column",
+                gap: 14 * scale,
+              }}
+            >
+              {/* Subject chip */}
+              <div
+                style={{
+                  alignSelf: "flex-start",
+                  padding: `${5 * scale}px ${12 * scale}px`,
+                  borderRadius: 999,
+                  background: "#E6F4EA",
+                  color: "#0F9D58",
+                  fontSize: 16 * scale,
+                  fontWeight: 600,
+                }}
+              >
+                World History
+              </div>
+              {/* Title */}
+              <div
+                style={{
+                  fontSize: 28 * scale,
+                  fontWeight: 600,
+                  color: "#202124",
+                  letterSpacing: -0.3 * scale,
+                  lineHeight: 1.25,
+                }}
+              >
+                The Industrial Revolution: Causes and Consequences
+              </div>
+              {/* Teacher row */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12 * scale,
+                }}
+              >
+                <div
+                  style={{
+                    width: 44 * scale,
+                    height: 44 * scale,
+                    borderRadius: "50%",
+                    background: "#1A73E8",
+                    color: "#FFFFFF",
+                    fontSize: 18 * scale,
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  MA
+                </div>
+                <div style={{ fontSize: 18 * scale, color: "#5F6368" }}>
+                  Mr. Anderson · Period 4
+                </div>
+              </div>
+              {/* Document attachment row */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14 * scale,
+                  padding: `${12 * scale}px ${16 * scale}px`,
+                  borderRadius: 8 * scale,
+                  border: `${1 * scale}px solid #DADCE0`,
+                  marginTop: 4 * scale,
+                }}
+              >
+                {/* Docs file icon */}
+                <svg width={42 * scale} height={42 * scale} viewBox="0 0 42 42" fill="none">
+                  <path d="M28 4 H10 C8 4 6 6 6 8 V34 C6 36 8 38 10 38 H32 C34 38 36 36 36 34 V12 Z" fill="#4285F4" />
+                  <path d="M28 4 V12 H36 Z" fill="#1967D2" />
+                  <line x1="13" y1="20" x2="29" y2="20" stroke="#FFFFFF" strokeWidth="1.5" />
+                  <line x1="13" y1="25" x2="29" y2="25" stroke="#FFFFFF" strokeWidth="1.5" />
+                  <line x1="13" y1="30" x2="23" y2="30" stroke="#FFFFFF" strokeWidth="1.5" />
+                </svg>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 19 * scale, fontWeight: 500, color: "#202124" }}>
+                    essay-final.gdoc
+                  </div>
+                  <div style={{ fontSize: 15 * scale, color: "#5F6368", marginTop: 2 * scale }}>
+                    5 pages · 1,247 words · Last edit 2m ago
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Rubric preview */}
+            <div
+              style={{
+                padding: `${20 * scale}px ${28 * scale}px`,
+                paddingTop: 12 * scale,
+                paddingBottom: 12 * scale,
+                background: "#F8F9FA",
+                display: "flex",
+                gap: 22 * scale,
+                alignItems: "center",
+              }}
+            >
+              {/* Grade ring */}
+              <div style={{ position: "relative", width: 100 * scale, height: 100 * scale, flexShrink: 0 }}>
+                <svg width={100 * scale} height={100 * scale} viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="42" stroke="#E0E0E0" strokeWidth="8" fill="none" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    stroke="#0F9D58"
+                    strokeWidth="8"
+                    fill="none"
+                    strokeDasharray="232 264"
+                    strokeDashoffset="0"
+                    strokeLinecap="round"
+                    transform="rotate(-90 50 50)"
+                  />
+                </svg>
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <div style={{ fontSize: 28 * scale, fontWeight: 700, color: "#0F9D58", lineHeight: 1 }}>
+                    A−
+                  </div>
+                  <div style={{ fontSize: 11 * scale, color: "#5F6368", marginTop: 2 * scale }}>
+                    Est. 88%
+                  </div>
+                </div>
+              </div>
+              {/* Rubric bars */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 * scale }}>
+                {[
+                  { label: "Thesis", pct: 95, color: "#34A853" },
+                  { label: "Evidence", pct: 88, color: "#34A853" },
+                  { label: "Analysis", pct: 78, color: "#FBBC04" },
+                  { label: "Mechanics", pct: 92, color: "#34A853" },
+                ].map((r) => (
+                  <div key={r.label} style={{ display: "flex", alignItems: "center", gap: 8 * scale }}>
+                    <div style={{ width: 80 * scale, fontSize: 14 * scale, color: "#5F6368", fontWeight: 500 }}>
+                      {r.label}
+                    </div>
+                    <div
+                      style={{
+                        flex: 1,
+                        height: 8 * scale,
+                        borderRadius: 4 * scale,
+                        background: "#F1F3F4",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${r.pct}%`,
+                          height: "100%",
+                          background: r.color,
+                          borderRadius: 4 * scale,
+                        }}
+                      />
+                    </div>
+                    <div style={{ width: 32 * scale, fontSize: 13 * scale, color: "#202124", fontWeight: 600, textAlign: "right" }}>
+                      {r.pct}%
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Footer */}
+            <div
+              style={{
+                padding: `${16 * scale}px ${28 * scale}px`,
+                background: "#E6F4EA",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
+                fontSize: 18 * scale,
               }}
             >
-              <div style={{ fontSize: 22 * scale, color: D_LIGHT }}>
-                Status
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8 * scale,
+                  color: "#0F9D58",
+                  fontWeight: 600,
+                }}
+              >
+                <span>🛡</span>
+                Originality: 100% original
               </div>
-              <div style={{ fontSize: 26 * scale, fontWeight: 700, color: D_BLUE }}>
-                🎓 Submitted on time
+              <div style={{ color: "#0F9D58", fontWeight: 600 }}>
+                View in Classroom →
               </div>
             </div>
           </div>
