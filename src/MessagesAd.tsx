@@ -3793,7 +3793,7 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 </div>
               </div>
             </div>
-            {/* Big green DONE check moment */}
+            {/* Apple-spec DONE moment — blue ring, blue check, black label */}
             <div
               style={{
                 margin: `${16 * scale}px ${28 * scale}px ${28 * scale}px`,
@@ -3803,37 +3803,33 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: 24 * scale,
+                gap: 18 * scale,
               }}
             >
+              <svg width={140 * scale} height={140 * scale} viewBox="0 0 100 100" fill="none">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="44"
+                  stroke="#0A84FF"
+                  strokeWidth="4.5"
+                  fill="none"
+                />
+                <path
+                  d="M30 52 L44 66 L72 36"
+                  stroke="#0A84FF"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+              </svg>
               <div
                 style={{
-                  width: 156 * scale,
-                  height: 156 * scale,
-                  borderRadius: "50%",
-                  background: W_GREEN,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: `0 ${6 * scale}px ${22 * scale}px rgba(52, 199, 89, 0.35), 0 0 0 ${14 * scale}px rgba(52, 199, 89, 0.12)`,
-                }}
-              >
-                <svg width={92 * scale} height={92 * scale} viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M4 12 L10 18 L20 6"
-                    stroke="#FFFFFF"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <div
-                style={{
-                  fontSize: 56 * scale,
-                  fontWeight: 700,
-                  color: W_GREEN,
-                  letterSpacing: -0.4 * scale,
+                  fontSize: 32 * scale,
+                  fontWeight: 500,
+                  color: "#000000",
+                  letterSpacing: -0.2 * scale,
                 }}
               >
                 Done
