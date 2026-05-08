@@ -2837,10 +2837,18 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
   } else {
     baseScroll = maxScroll * 0.5;
   }
+  // Wobble only during the active scroll motion; fades out once the
+  // scroll has reached its target so the page doesn't bounce
+  // forever at the bottom.
+  const wobbleEnvelope = interpolate(driveSec, [0.4, 1.05, 1.25], [0, 1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
   const wobble =
-    driveSec > 0.4
-      ? 4 * scale * Math.sin(2 * Math.PI * 2.5 * (driveSec - 0.4))
-      : 0;
+    wobbleEnvelope *
+    4 *
+    scale *
+    Math.sin(2 * Math.PI * 2.5 * (driveSec - 0.4));
   const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll + wobble));
   const pageY = -scrollPx;
 
@@ -3491,10 +3499,16 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
   } else {
     baseScroll = maxScroll * 0.35;
   }
+  // Wobble only during scroll motion; fades out at rest.
+  const wobbleEnvelope = interpolate(driveSec, [0.4, 0.95, 1.15], [0, 1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
   const wobble =
-    driveSec > 0.4
-      ? 4 * scale * Math.sin(2 * Math.PI * 2.5 * (driveSec - 0.4))
-      : 0;
+    wobbleEnvelope *
+    4 *
+    scale *
+    Math.sin(2 * Math.PI * 2.5 * (driveSec - 0.4));
   const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll + wobble));
   const pageY = -scrollPx;
 
@@ -4632,10 +4646,18 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
   } else {
     baseScroll = scrollTargetPx;
   }
+  // Wobble only during the active scroll motion. Once we hit the
+  // target at driveSec=1.4, the wobble fades out so the doc doesn't
+  // bounce forever at the bottom.
+  const wobbleEnvelope = interpolate(driveSec, [0.4, 1.35, 1.55], [0, 1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
   const wobble =
-    driveSec > 0.4
-      ? 4 * scale * Math.sin(2 * Math.PI * 2.5 * (driveSec - 0.4))
-      : 0;
+    wobbleEnvelope *
+    4 *
+    scale *
+    Math.sin(2 * Math.PI * 2.5 * (driveSec - 0.4));
   const scrollPx = Math.min(
     scrollTargetPx,
     Math.max(0, baseScroll + wobble),
