@@ -1244,6 +1244,9 @@ type AmazonProductProps = {
   scale: number;
   /** Master opacity for the whole background (0..1). */
   opacity: number;
+  /** Optional scale to apply to the Buy Now button (for the
+   * "agent taps Buy Now" feedback animation). Defaults to 1. */
+  buyButtonScale?: number;
 };
 
 const AmazonProduct: React.FC<AmazonProductProps> = ({
@@ -1253,6 +1256,7 @@ const AmazonProduct: React.FC<AmazonProductProps> = ({
   height,
   scale,
   opacity,
+  buyButtonScale = 1,
 }) => {
   // Layout dimensions
   const padX = 28 * scale;
@@ -1610,6 +1614,8 @@ const AmazonProduct: React.FC<AmazonProductProps> = ({
               fontWeight: 500,
               color: "#0F1111",
               border: `${1 * scale}px solid #FF8F00`,
+              transform: `scale(${buyButtonScale})`,
+              transformOrigin: "center",
             }}
           >
             Buy Now
@@ -3062,9 +3068,63 @@ const Scene3: React.FC<Scene3Props> = ({
       easing: Easing.out(Easing.cubic),
     },
   );
-  // No fade-out — Amazon stays through scene end. (If a follow-up
-  // beat needs it dismissed, layer a fade-out driver here.)
-  const amazonOpacity = amazonFadeIn;
+
+  // ── Buy-Now button tap + Amazon exit ──────────────────────────
+  // Once the Amazon page has settled, the agent "taps" the Buy Now
+  // button (small scale-down/up pulse), then the page fades and
+  // lifts away — same exit pattern as the IG profile. The "bet,
+  // order some protection" bubble stays put through all of this.
+  const buyTapStart = sec(14.5, fps);
+  const buyTapEnd = sec(14.7, fps);
+  const tapHalf = (buyTapEnd - buyTapStart) / 2;
+  const buyTapDown = interpolate(
+    local,
+    [buyTapStart, buyTapStart + tapHalf],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  const buyTapUp = interpolate(
+    local,
+    [buyTapStart + tapHalf, buyTapEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
+  // 1 → 0.94 → 1 across the tap window.
+  const buyButtonTapScale = 1 - buyTapDown * 0.06 + buyTapUp * 0.06;
+
+  // Amazon exit: fade + drift up. Starts right after the tap
+  // releases ("button pressed → page dismisses").
+  const amazonExitStart = buyTapEnd;
+  const amazonExitEnd = amazonExitStart + sec(0.5, fps);
+  const amazonExitFadeMul = interpolate(
+    local,
+    [amazonExitStart, amazonExitEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const amazonExitDriftY = interpolate(
+    local,
+    [amazonExitStart, amazonExitEnd],
+    [0, -50 * scale],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const amazonOpacity = amazonFadeIn * amazonExitFadeMul;
 
   // ── Received bubbles #2 and #3 ──────────────────────────────────
   // Real conversations come in as multiple short messages, not one
@@ -3367,7 +3427,7 @@ const Scene3: React.FC<Scene3Props> = ({
             width,
             height,
             transformOrigin: `${width * 0.22}px ${height * 0.82}px`,
-            transform: `scale(${amazonOpenScale})`,
+            transform: `translateY(${amazonExitDriftY}px) scale(${amazonOpenScale})`,
             borderRadius: amazonOpenRadius,
             overflow: "hidden",
             pointerEvents: "none",
@@ -3380,6 +3440,7 @@ const Scene3: React.FC<Scene3Props> = ({
             height={height}
             scale={scale}
             opacity={amazonOpacity}
+            buyButtonScale={buyButtonTapScale}
           />
         </div>
       )}
@@ -4010,10 +4071,10 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
         />
       </Sequence>
 
-      {/* Scene 3 — starts at 5s. Extended to 15.4s to give received
-          #3 a 0.4s hold before the closing punchline ("bet, order
-          some protection") starts entering. */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(15.4, fps)}>
+      {/* Scene 3 — starts at 5s. Extended to 15.7s to fit the
+          Amazon Buy Now tap + page exit after the closing punchline
+          appears. */}
+      <Sequence from={sec(5, fps)} durationInFrames={sec(15.7, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
@@ -4027,7 +4088,7 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           sent #3 sits alone on screen as the focal point. */}
       <Sequence
         from={sec(5 - xfade, fps)}
-        durationInFrames={sec(15.4 + xfade, fps)}
+        durationInFrames={sec(15.7 + xfade, fps)}
       >
         <Caption
           text="schedule a date with my crush"
