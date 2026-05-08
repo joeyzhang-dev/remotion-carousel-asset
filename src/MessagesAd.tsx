@@ -2814,32 +2814,43 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
   payButtonScale = 1,
   paymentConfirmOpacity = 0,
 }) => {
-  const padX = 28 * scale;
-  const titleH = 110 * scale;
-  const cardStackH = width * 0.62; // tall card stack
-  const balanceH = 200 * scale;
-  const payButtonH = 100 * scale;
-  const txnRowH = 90 * scale;
-  const totalContentH =
-    titleH + cardStackH + balanceH + payButtonH + txnRowH * 6 + 200 * scale;
-  const maxScroll = Math.max(0, totalContentH - height);
+  // ── Layout constants ────────────────────────────────────────────
+  const padX = 32 * scale;
+  const titleBarH = 96 * scale;
+  // Card sizing — ISO/IEC 7810 ID-1 ratio 1.586:1.
+  const cardWidth = width * 0.85; // 918 * scale
+  const cardHeight = cardWidth / 1.586; // ~579 * scale
+  const peekHeight = 78 * scale;
+  // Card-stack container: active card + visible peek slice from
+  // the Apple Card behind it.
+  const cardStackH = cardHeight + 28 * scale; // ~28px of peek visible
+  const cardStackTop = 60 * scale + titleBarH + 16 * scale;
+  // Pay-button bar (bottom-anchored).
+  const payBarH = 88 * scale;
+  const payBarBottom = 60 * scale;
 
+  // ── Scroll model ────────────────────────────────────────────────
   const driveSec = driveFrame / fps;
+  const txnRowH = 100 * scale;
+  const totalContentH =
+    cardStackTop +
+    cardStackH +
+    420 * scale + // balance + past-due + actions row
+    txnRowH * 6 +
+    240 * scale;
+  const maxScroll = Math.max(0, totalContentH - height);
   let baseScroll = 0;
   if (driveSec < 0.4) {
     baseScroll = 0;
   } else if (driveSec < 1.1) {
-    baseScroll = interpolate(driveSec, [0.4, 1.1], [0, maxScroll * 0.5], {
+    baseScroll = interpolate(driveSec, [0.4, 1.1], [0, maxScroll * 0.45], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
       easing: Easing.out(Easing.cubic),
     });
   } else {
-    baseScroll = maxScroll * 0.5;
+    baseScroll = maxScroll * 0.45;
   }
-  // Wobble only during the active scroll motion; fades out once the
-  // scroll has reached its target so the page doesn't bounce
-  // forever at the bottom.
   const wobbleEnvelope = interpolate(driveSec, [0.4, 1.05, 1.25], [0, 1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
@@ -2852,11 +2863,37 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
   const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll + wobble));
   const pageY = -scrollPx;
 
+  // ── Pay tap → balance counts down + Face ID glyph appears ──────
+  // payButtonScale ramps 1 → 0.94 → 1 across the tap window. We
+  // can derive a "tap progress" from how depressed the button is.
+  const tapDepth = (1 - payButtonScale) / 0.06; // 0..1..0
+  // Once the tap fires, transition the button label from
+  // "Pay $2,847.13" to a Face ID glyph, then to a green check.
+  // Use payment confirm opacity as a proxy for "post-tap state."
+  const showFaceID = tapDepth > 0.3 && paymentConfirmOpacity < 0.5;
+  // Balance counts down 2847.13 → 0.00 once the confirmation card
+  // begins appearing.
+  const balanceCountdown = interpolate(
+    paymentConfirmOpacity,
+    [0, 0.6],
+    [2847.13, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+  );
+  const balanceText = `$${balanceCountdown
+    .toFixed(2)
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+  // Past-due pill softens to "Paid" once the payment lands.
+  const isPaid = paymentConfirmOpacity > 0.4;
+
+  // ── Palette ─────────────────────────────────────────────────────
   const W_BG = "#FFFFFF";
   const W_TEXT = "#1C1C1E";
   const W_LIGHT = "#8E8E93";
-  const W_BORDER = "#E5E5EA";
-  const W_RED = "#FF3B30";
+  const W_BORDER = "rgba(60,60,67,0.12)";
+  const W_BLUE = "#007AFF";
+  const W_GREEN = "#34C759";
+
+  const cardholderName = "JOEY ZHANG";
 
   return (
     <div
@@ -2882,10 +2919,12 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
           transform: `translateY(${pageY}px)`,
         }}
       >
-        {/* Title */}
+        {/* Status bar spacer */}
+        <div style={{ height: 60 * scale }} />
+        {/* Title bar: Wallet + add button */}
         <div
           style={{
-            height: titleH,
+            height: titleBarH,
             paddingLeft: padX,
             paddingRight: padX,
             display: "flex",
@@ -2896,25 +2935,28 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
         >
           <div
             style={{
-              fontSize: 44 * scale,
+              fontSize: 52 * scale,
               fontWeight: 700,
               color: W_TEXT,
-              letterSpacing: -0.5 * scale,
+              letterSpacing: -1 * scale,
             }}
           >
             Wallet
           </div>
           <div
             style={{
-              width: 44 * scale,
-              height: 44 * scale,
+              width: 64 * scale,
+              height: 64 * scale,
               borderRadius: "50%",
               background: "#F2F2F7",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 28 * scale,
-              color: W_LIGHT,
+              fontSize: 36 * scale,
+              fontWeight: 400,
+              color: W_BLUE,
+              lineHeight: 1,
+              paddingBottom: 4 * scale,
             }}
           >
             +
@@ -2923,227 +2965,428 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
         {/* Card stack */}
         <div
           style={{
-            paddingLeft: padX,
-            paddingRight: padX,
             position: "relative",
+            marginLeft: (width - cardWidth) / 2,
+            marginRight: (width - cardWidth) / 2,
+            width: cardWidth,
             height: cardStackH,
+            marginTop: 16 * scale,
           }}
         >
-          {/* Bottom card (Apple Card, peeking) */}
+          {/* Apple Card peek slice — sits BEHIND, only top 78px shown */}
           <div
             style={{
               position: "absolute",
-              left: padX + 20 * scale,
-              right: padX + 20 * scale,
-              top: 16 * scale,
-              height: cardStackH * 0.55,
-              borderRadius: 22 * scale,
+              left: 12 * scale,
+              right: 12 * scale,
+              top: cardHeight - 50 * scale,
+              height: peekHeight,
+              borderRadius: 36 * scale,
               background:
-                "linear-gradient(135deg, #E8E8EC 0%, #C8C8CD 100%)",
-              boxShadow: `0 ${8 * scale}px ${20 * scale}px rgba(0,0,0,0.12)`,
-              padding: 22 * scale,
+                "linear-gradient(135deg, #F4F4F6 0%, #DEDEE3 50%, #BFBFC6 100%)",
+              boxShadow: `0 ${6 * scale}px ${14 * scale}px rgba(0,0,0,0.10)`,
+              overflow: "hidden",
+              paddingLeft: 28 * scale,
+              paddingTop: 22 * scale,
               fontFamily: FONT_STACK,
-              color: W_TEXT,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
+              fontSize: 16 * scale,
+              fontWeight: 600,
+              color: "#1C1C1E",
+              boxSizing: "border-box",
             }}
           >
-            <div style={{ fontSize: 22 * scale, fontWeight: 600 }}>
-              Apple Card
-            </div>
-            <div style={{ fontSize: 18 * scale, color: W_LIGHT }}>
-              ···· 2841
-            </div>
+            <span style={{ display: "inline-block", marginRight: 8 * scale }}>
+              {/* Apple wordmark glyph */}
+              </span>
+            Apple Card
           </div>
-          {/* Top card (Sapphire-ish, primary) */}
+          {/* Active Sapphire card */}
           <div
             style={{
               position: "absolute",
-              left: padX,
-              right: padX,
-              top: cardStackH * 0.32,
-              height: cardStackH * 0.62,
-              borderRadius: 22 * scale,
+              left: 0,
+              top: 0,
+              width: cardWidth,
+              height: cardHeight,
+              borderRadius: 36 * scale,
               background:
-                "linear-gradient(135deg, #0F1F3D 0%, #1A2F5C 60%, #2C4373 100%)",
-              boxShadow: `0 ${10 * scale}px ${28 * scale}px rgba(0,0,0,0.25)`,
-              padding: 22 * scale,
+                "linear-gradient(160deg, #0A1A38 0%, #122B5A 45%, #1E3F7A 100%)",
+              boxShadow: `0 ${20 * scale}px ${48 * scale}px rgba(0,0,0,0.28)`,
+              overflow: "hidden",
               fontFamily: FONT_STACK,
-              color: "#fff",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
+              color: "#FFFFFF",
             }}
           >
+            {/* Copper-gold ribbon (top of Sapphire Reserve) */}
             <div
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: 0,
+                height: 32 * scale,
+                background:
+                  "linear-gradient(90deg, #8E5E2C 0%, #C9974D 30%, #E8C896 50%, #C9974D 70%, #8E5E2C 100%)",
+              }}
+            />
+            {/* Top-left brand */}
+            <div
+              style={{
+                position: "absolute",
+                left: 36 * scale,
+                top: 60 * scale,
               }}
             >
-              <div style={{ fontSize: 24 * scale, fontWeight: 600 }}>
+              <div
+                style={{
+                  fontSize: 36 * scale,
+                  fontWeight: 600,
+                  letterSpacing: -0.4 * scale,
+                  lineHeight: 1.05,
+                }}
+              >
                 Chase Sapphire
               </div>
               <div
                 style={{
+                  fontSize: 22 * scale,
+                  fontWeight: 400,
+                  color: "rgba(255,255,255,0.72)",
+                  marginTop: 4 * scale,
+                }}
+              >
+                Reserve
+              </div>
+            </div>
+            {/* Top-right VISA */}
+            <div
+              style={{
+                position: "absolute",
+                right: 36 * scale,
+                top: 60 * scale,
+                fontSize: 42 * scale,
+                fontWeight: 800,
+                fontStyle: "italic",
+                letterSpacing: 2 * scale,
+                color: "#F2F2F7",
+              }}
+            >
+              VISA
+            </div>
+            {/* EMV chip */}
+            <div
+              style={{
+                position: "absolute",
+                left: 36 * scale,
+                top: 200 * scale,
+                width: 64 * scale,
+                height: 50 * scale,
+                borderRadius: 8 * scale,
+                background:
+                  "linear-gradient(135deg, #D4AF6A 0%, #8B6F3D 100%)",
+                boxShadow: `inset 0 ${1 * scale}px ${1 * scale}px rgba(255,255,255,0.3)`,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-around",
+                paddingTop: 10 * scale,
+                paddingBottom: 10 * scale,
+              }}
+            >
+              <div style={{ height: 1, background: "rgba(0,0,0,0.18)" }} />
+              <div style={{ height: 1, background: "rgba(0,0,0,0.18)" }} />
+            </div>
+            {/* Masked digits */}
+            <div
+              style={{
+                position: "absolute",
+                left: 36 * scale,
+                bottom: 132 * scale,
+                fontSize: 48 * scale,
+                fontWeight: 500,
+                letterSpacing: 6 * scale,
+                color: "#FFFFFF",
+                fontFamily: "monospace",
+              }}
+            >
+              ····  ····  ····  4829
+            </div>
+            {/* Cardholder block bottom-left */}
+            <div
+              style={{
+                position: "absolute",
+                left: 36 * scale,
+                bottom: 36 * scale,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 14 * scale,
+                  fontWeight: 600,
+                  letterSpacing: 2 * scale,
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                CARDHOLDER
+              </div>
+              <div
+                style={{
                   fontSize: 24 * scale,
+                  fontWeight: 500,
+                  letterSpacing: 1 * scale,
+                  marginTop: 4 * scale,
+                }}
+              >
+                {cardholderName}
+              </div>
+            </div>
+            {/* Bottom-right Apple Pay + VISA logo cluster */}
+            <div
+              style={{
+                position: "absolute",
+                right: 36 * scale,
+                bottom: 36 * scale,
+                display: "flex",
+                alignItems: "center",
+                gap: 14 * scale,
+              }}
+            >
+              {/* Apple Pay contactless arc */}
+              <svg width={36 * scale} height={40 * scale} viewBox="0 0 36 40" fill="none">
+                <path d="M14 8 Q22 20 14 32" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" fill="none" />
+                <path d="M20 4 Q30 20 20 36" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                <path d="M26 0 Q38 20 26 40" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" fill="none" />
+              </svg>
+              {/* VISA flag */}
+              <div
+                style={{
+                  width: 64 * scale,
+                  height: 40 * scale,
+                  borderRadius: 4 * scale,
+                  background: "#FFFFFF",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 18 * scale,
+                  fontWeight: 800,
                   fontStyle: "italic",
-                  fontWeight: 700,
+                  color: "#1A1F71",
                   letterSpacing: 1 * scale,
                 }}
               >
                 VISA
               </div>
             </div>
-            <div>
-              <div
-                style={{
-                  fontSize: 24 * scale,
-                  letterSpacing: 4 * scale,
-                  fontFamily: "monospace",
-                }}
-              >
-                ···· ···· ···· 4829
-              </div>
-              <div
-                style={{
-                  fontSize: 16 * scale,
-                  color: "rgba(255,255,255,0.7)",
-                  marginTop: 8 * scale,
-                }}
-              >
-                CARDHOLDER
-              </div>
-            </div>
           </div>
         </div>
-        {/* Balance section */}
+        {/* Balance + Past-due / Paid pill */}
         <div
           style={{
             paddingLeft: padX,
             paddingRight: padX,
-            paddingTop: 24 * scale,
-            paddingBottom: 16 * scale,
+            paddingTop: 36 * scale,
+            paddingBottom: 12 * scale,
             display: "flex",
             flexDirection: "column",
-            gap: 8 * scale,
+            alignItems: "center",
+            gap: 12 * scale,
+            fontFamily: FONT_STACK,
           }}
         >
-          <div
-            style={{
-              fontSize: 20 * scale,
-              color: W_LIGHT,
-              fontFamily: FONT_STACK,
-            }}
-          >
-            Current balance
-          </div>
-          <div
-            style={{
-              fontSize: 56 * scale,
-              fontWeight: 700,
-              color: W_RED,
-              fontFamily: FONT_STACK,
-              letterSpacing: -1 * scale,
-            }}
-          >
-            $2,847.13
-          </div>
           <div
             style={{
               fontSize: 18 * scale,
+              fontWeight: 500,
               color: W_LIGHT,
-              fontFamily: FONT_STACK,
+              letterSpacing: 0.3 * scale,
             }}
           >
-            Statement balance · due May 22
+            Statement balance · Due May 22
           </div>
-        </div>
-        {/* Pay button */}
-        <div
-          style={{
-            paddingLeft: padX,
-            paddingRight: padX,
-            paddingTop: 12 * scale,
-            paddingBottom: 24 * scale,
-          }}
-        >
           <div
             style={{
-              height: payButtonH,
-              borderRadius: 999,
-              background: "#000000",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontFamily: FONT_STACK,
-              fontSize: 28 * scale,
-              fontWeight: 600,
-              color: "#fff",
-              transform: `scale(${payButtonScale})`,
-              transformOrigin: "center",
-              boxShadow: `0 ${4 * scale}px ${16 * scale}px rgba(0,0,0,0.2)`,
-            }}
-          >
-            Pay $2,847.13
-          </div>
-        </div>
-        {/* Recent transactions */}
-        <div
-          style={{
-            paddingLeft: padX,
-            paddingRight: padX,
-            paddingTop: 24 * scale,
-            paddingBottom: 12 * scale,
-            borderTop: `${1 * scale}px solid ${W_BORDER}`,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 24 * scale,
+              fontSize: 64 * scale,
               fontWeight: 700,
               color: W_TEXT,
+              letterSpacing: -1.5 * scale,
+              fontVariantNumeric: "tabular-nums",
+              lineHeight: 1,
+            }}
+          >
+            {balanceText}
+          </div>
+          {/* Past due → Paid pill */}
+          <div
+            style={{
+              marginTop: 8 * scale,
+              padding: `${8 * scale}px ${16 * scale}px`,
+              borderRadius: 999,
+              background: isPaid ? "#E6F4EA" : "#FEE7E5",
+              color: isPaid ? "#1B6E2C" : "#B91C1C",
+              fontSize: 18 * scale,
+              fontWeight: 600,
+              letterSpacing: 0.3 * scale,
+            }}
+          >
+            {isPaid ? "✓ Paid" : "● Past due"}
+          </div>
+        </div>
+        {/* Latest transactions */}
+        <div
+          style={{
+            paddingLeft: padX,
+            paddingRight: padX,
+            paddingTop: 28 * scale,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
               fontFamily: FONT_STACK,
               marginBottom: 16 * scale,
             }}
           >
-            Recent transactions
-          </div>
-          {[
-            { name: "Whole Foods", date: "May 7", amount: "−$42.18" },
-            { name: "Uber", date: "May 6", amount: "−$14.50" },
-            { name: "Spotify", date: "May 5", amount: "−$9.99" },
-            { name: "Trader Joe's", date: "May 4", amount: "−$67.34" },
-            { name: "Starbucks", date: "May 4", amount: "−$6.45" },
-            { name: "Amazon", date: "May 3", amount: "−$129.00" },
-          ].map((tx, i) => (
             <div
-              key={i}
               style={{
-                height: txnRowH,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                borderBottom: `${1 * scale}px solid ${W_BORDER}`,
-                fontFamily: FONT_STACK,
+                fontSize: 28 * scale,
+                fontWeight: 700,
+                color: W_TEXT,
+                letterSpacing: -0.3 * scale,
               }}
             >
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 * scale }}>
-                <div style={{ fontSize: 22 * scale, color: W_TEXT, fontWeight: 500 }}>
-                  {tx.name}
-                </div>
-                <div style={{ fontSize: 18 * scale, color: W_LIGHT }}>
-                  {tx.date}
-                </div>
-              </div>
-              <div style={{ fontSize: 22 * scale, color: W_TEXT }}>
-                {tx.amount}
-              </div>
+              Latest Transactions
             </div>
-          ))}
+            <div
+              style={{
+                fontSize: 20 * scale,
+                fontWeight: 500,
+                color: W_BLUE,
+              }}
+            >
+              See All
+            </div>
+          </div>
+          <div
+            style={{
+              background: "#FFFFFF",
+              borderRadius: 24 * scale,
+              boxShadow: `0 ${2 * scale}px ${8 * scale}px rgba(0,0,0,0.04)`,
+              overflow: "hidden",
+            }}
+          >
+            {[
+              { name: "Whole Foods", date: "May 7", amount: "$42.18" },
+              { name: "Uber", date: "May 6", amount: "$14.50" },
+              { name: "Spotify", date: "May 5", amount: "$9.99" },
+              { name: "Trader Joe's", date: "May 4", amount: "$67.34" },
+              { name: "Starbucks", date: "May 4", amount: "$6.45" },
+              { name: "Amazon", date: "May 3", amount: "$129.00" },
+            ].map((tx, i, arr) => (
+              <div
+                key={i}
+                style={{
+                  height: txnRowH,
+                  paddingLeft: 24 * scale,
+                  paddingRight: 24 * scale,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16 * scale,
+                  borderBottom:
+                    i < arr.length - 1
+                      ? `${0.5 * scale}px solid ${W_BORDER}`
+                      : "none",
+                  fontFamily: FONT_STACK,
+                }}
+              >
+                <div
+                  style={{
+                    width: 48 * scale,
+                    height: 48 * scale,
+                    borderRadius: "50%",
+                    background: "#F2F2F7",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 20 * scale,
+                    fontWeight: 600,
+                    color: W_TEXT,
+                    flexShrink: 0,
+                  }}
+                >
+                  {tx.name[0]}
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4 * scale,
+                  }}
+                >
+                  <div style={{ fontSize: 22 * scale, fontWeight: 500, color: W_TEXT }}>
+                    {tx.name}
+                  </div>
+                  <div style={{ fontSize: 18 * scale, color: W_LIGHT }}>
+                    {tx.date}
+                  </div>
+                </div>
+                <div style={{ fontSize: 22 * scale, fontWeight: 500, color: W_TEXT }}>
+                  {tx.amount}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
+
+      {/* Pay button — fixed-position bottom bar (NOT inside the
+          scrolling container). Its label morphs through three
+          states: "Pay $2,847.13" → Face ID glyph (mid-tap) →
+          "Paid" check (post-tap, while confirmation card slides up). */}
+      <div
+        style={{
+          position: "absolute",
+          left: padX,
+          right: padX,
+          bottom: payBarBottom,
+          height: payBarH,
+          borderRadius: 999,
+          background: isPaid ? W_GREEN : "#1C1C1E",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 14 * scale,
+          fontFamily: FONT_STACK,
+          fontSize: 26 * scale,
+          fontWeight: 600,
+          color: "#FFFFFF",
+          letterSpacing: -0.2 * scale,
+          transform: `scale(${payButtonScale})`,
+          transformOrigin: "center",
+          boxShadow: `0 ${10 * scale}px ${24 * scale}px rgba(0,0,0,0.2)`,
+        }}
+      >
+        {isPaid ? (
+          <>
+            <span style={{ fontSize: 28 * scale }}>✓</span>
+            <span>Paid</span>
+          </>
+        ) : showFaceID ? (
+          <svg width={36 * scale} height={36 * scale} viewBox="0 0 24 24" fill="none">
+            <path d="M4 8 V5 C4 4 5 3 6 3 H9" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+            <path d="M20 8 V5 C20 4 19 3 18 3 H15" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+            <path d="M4 16 V19 C4 20 5 21 6 21 H9" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+            <path d="M20 16 V19 C20 20 19 21 18 21 H15" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+            <circle cx="9" cy="11" r="0.8" fill="#FFFFFF" />
+            <circle cx="15" cy="11" r="0.8" fill="#FFFFFF" />
+            <path d="M9 16 Q12 18 15 16" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          </svg>
+        ) : (
+          <>
+            <span>Pay {balanceText}</span>
+          </>
+        )}
       </div>
 
       {/* Apple Pay bottom-sheet — mirrors the actual iOS Apple Pay
@@ -3198,8 +3441,7 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 }}
               />
             </div>
-            {/* Top header strip — Cancel / Title / Done lookalike but
-                we replace with the merchant identity row */}
+            {/* Apple Pay title */}
             <div
               style={{
                 paddingLeft: 28 * scale,
@@ -3208,7 +3450,6 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 8 * scale,
               }}
             >
               <div
@@ -3222,9 +3463,7 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 Apple Pay
               </div>
             </div>
-            {/* Card row — Sapphire credit card visual on the left,
-                merchant info on the right. This mirrors Apple Pay's
-                actual sheet where the active card is shown horizontally. */}
+            {/* Card thumbnail row */}
             <div
               style={{
                 margin: `${4 * scale}px ${20 * scale}px ${16 * scale}px`,
@@ -3236,14 +3475,13 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 gap: 18 * scale,
               }}
             >
-              {/* Compact card thumbnail */}
               <div
                 style={{
                   width: 90 * scale,
                   height: 58 * scale,
                   borderRadius: 8 * scale,
                   background:
-                    "linear-gradient(135deg, #1F3A5F 0%, #0A1F3D 100%)",
+                    "linear-gradient(160deg, #0A1A38 0%, #1E3F7A 100%)",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
@@ -3254,16 +3492,6 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                   overflow: "hidden",
                 }}
               >
-                {/* Sheen */}
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background:
-                      "linear-gradient(115deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 60%)",
-                  }}
-                />
-                {/* Chip */}
                 <div
                   style={{
                     width: 14 * scale,
@@ -3293,15 +3521,6 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                   Visa Credit · 4829
                 </div>
               </div>
-              <div
-                style={{
-                  fontSize: 16 * scale,
-                  color: "#007AFF",
-                  fontWeight: 500,
-                }}
-              >
-                ›
-              </div>
             </div>
             {/* Pay TO row */}
             <div
@@ -3322,9 +3541,7 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                   justifyContent: "space-between",
                 }}
               >
-                <div style={{ fontSize: 18 * scale, color: "#8E8E93" }}>
-                  Pay
-                </div>
+                <div style={{ fontSize: 18 * scale, color: "#8E8E93" }}>Pay</div>
                 <div style={{ fontSize: 18 * scale, color: "#000000", fontWeight: 500 }}>
                   Chase Statement
                 </div>
@@ -3344,9 +3561,7 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                   justifyContent: "space-between",
                 }}
               >
-                <div style={{ fontSize: 18 * scale, color: "#8E8E93" }}>
-                  Total
-                </div>
+                <div style={{ fontSize: 18 * scale, color: "#8E8E93" }}>Total</div>
                 <div
                   style={{
                     fontSize: 32 * scale,
@@ -3372,15 +3587,12 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 gap: 16 * scale,
               }}
             >
-              {/* Animated-ring style green check (no actual animation
-                  but the doubled stroke gives a "pulse just landed"
-                  feel) */}
               <div
                 style={{
                   width: 96 * scale,
                   height: 96 * scale,
                   borderRadius: "50%",
-                  background: "#34C759",
+                  background: W_GREEN,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -3401,14 +3613,14 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 style={{
                   fontSize: 36 * scale,
                   fontWeight: 700,
-                  color: "#34C759",
+                  color: W_GREEN,
                   letterSpacing: -0.3 * scale,
                 }}
               >
                 Done
               </div>
             </div>
-            {/* Face ID hint pill at the very bottom */}
+            {/* Face ID hint pill */}
             <div
               style={{
                 paddingLeft: 28 * scale,
@@ -3421,7 +3633,6 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 color: "#8E8E93",
               }}
             >
-              {/* Face ID glyph */}
               <svg width={20 * scale} height={20 * scale} viewBox="0 0 24 24" fill="none">
                 <path d="M4 8 V5 C4 4 5 3 6 3 H9" stroke="#8E8E93" strokeWidth="1.8" strokeLinecap="round" fill="none" />
                 <path d="M20 8 V5 C20 4 19 3 18 3 H15" stroke="#8E8E93" strokeWidth="1.8" strokeLinecap="round" fill="none" />
@@ -3439,6 +3650,7 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
     </div>
   );
 };
+
 
 /**
  * Gmail-style inbox + open-email background. The agent "responds to
