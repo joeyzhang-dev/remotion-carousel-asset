@@ -3459,7 +3459,6 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
   scale,
   opacity,
   replyAllScale = 1,
-  replySentOpacity = 0,
 }) => {
   // Mobile-native scale. The reference iPhone screenshots have ~22pt
   // sender, ~18pt subject, ~16pt snippet, ~44px avatars, and rows
@@ -3509,66 +3508,140 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
     initial: string;
     color: string;
     name: string;
+    senderEmail: string;
     subject: string;
-    body: string;
+    /** Greeting line, e.g. "Hi Joey," */
+    greeting: string;
+    /** Body paragraphs — rendered as separate blocks. */
+    paragraphs: string[];
+    /** Closing line, e.g. "Thanks," or "Best," */
+    signoff: string;
+    /** Signature block — name + title/company on subsequent lines. */
+    signature: string[];
     reply: string;
   };
   const speedupEmails: SpeedupEmail[] = [
     {
-      initial: "B",
+      initial: "M",
       color: "#5F6368",
-      name: "Boss",
-      subject: "Q4 review deck — needs your input",
-      body: "Hey, can you take a look at the deck before tomorrow? I need you to update slides 4-7 with the latest revenue numbers.",
-      reply: "On it — slides 4-7 updated and pushed.",
+      name: "Marcus Chen",
+      senderEmail: "marcus.chen@northwave.co",
+      subject: "Q4 review deck — needs your input by EOD",
+      greeting: "Hi Joey,",
+      paragraphs: [
+        "Hope you had a good weekend. Just looping back on the Q4 review deck — leadership wants to land it tomorrow morning, so I need your edits by end of day if at all possible.",
+        "Specifically, slides 4 through 7 are stale. Can you swap in the latest revenue numbers from the November close (Sarah said she'd confirm by 3pm), and add a short paragraph on Q1 outlook? I'd suggest framing it around the three new enterprise accounts we closed last week, but use your judgment on the narrative.",
+        "Also — if you have 15 minutes this afternoon, would love to jump on a quick call to align on the messaging before this goes to the board. Anytime between 2 and 5 works on my end.",
+        "Let me know if you have questions. Appreciate the quick turnaround.",
+      ],
+      signoff: "Thanks,",
+      signature: ["Marcus", "VP Strategy · Northwave"],
+      reply:
+        "On it — pushing the slide updates by 4pm and free at 2:30 for the call.",
     },
     {
       initial: "S",
       color: "#1A73E8",
-      name: "Sarah",
-      subject: "Re: expense reports",
-      body: "Got it, processing those now. Just need confirmation on the November totals before I close the books.",
-      reply: "Confirmed — November totals are correct.",
+      name: "Sarah Martinez",
+      senderEmail: "smartinez@northwave.co",
+      subject: "Re: expense reports — November totals",
+      greeting: "Hey Joey,",
+      paragraphs: [
+        "Thanks for sending those over yesterday. I've been processing them this morning and everything looks clean except for two flagged items I want to confirm with you before I close out the month.",
+        "First, the $1,847.22 from Oct 28 marked \"client dinner\" — there's no receipt attached. Can you forward whatever you have? Even a credit card screenshot would work for the file.",
+        "Second, the November totals are coming in slightly under what we projected ($24,108 vs $25,500 forecast). Not a huge variance but I want to flag it before sending to finance. Are there any pending reimbursements you haven't submitted yet?",
+        "Once those two are sorted I can close November on Friday.",
+      ],
+      signoff: "Best,",
+      signature: ["Sarah", "Senior Accountant · Northwave"],
+      reply:
+        "Receipt forwarded; nothing else outstanding. Good to close November.",
     },
     {
       initial: "M",
       color: "#EA4335",
       name: "Mom",
-      subject: "Sunday dinner?",
-      body: "Are you coming this Sunday? I'm making the lasagna you like, with garlic bread and that salad your father wants.",
-      reply: "Yes, see you Sunday at 6 ❤",
+      senderEmail: "lindahzhang@gmail.com",
+      subject: "Sunday dinner — and your aunt's news!",
+      greeting: "Hi sweetie,",
+      paragraphs: [
+        "Just checking — are you still coming for dinner this Sunday? I'm making the lasagna you like, plus garlic bread and that big salad with the candied walnuts your father always asks for. We'll eat around 6 if that works.",
+        "Also, big news — your Aunt Carol got into the doctorate program at Stanford!! She found out yesterday and she's over the moon. I told her you'd want to congratulate her, so when you have a sec maybe shoot her a text. I know it would mean a lot.",
+        "Oh, and dad finally got the leak in the basement fixed. He says hi and to tell you the Niners are looking better than they have in years. (His words, not mine.)",
+        "Drive safe if you're coming — they're saying maybe rain Saturday.",
+      ],
+      signoff: "Love,",
+      signature: ["Mom", "xoxo"],
+      reply:
+        "Yes, see you Sunday at 6! Will text Aunt Carol tonight ❤",
     },
     {
       initial: "G",
       color: "#1A73E8",
       name: "GitHub",
-      subject: "PR #2841 needs review",
-      body: "ben-w opened a pull request to acme/api. 12 files changed, +384 -127. Please review when you have a chance.",
-      reply: "Reviewed and approved. LGTM ✓",
+      senderEmail: "noreply@github.com",
+      subject: "[acme/api] Pull request #2841 needs your review",
+      greeting: "Hi @joey,",
+      paragraphs: [
+        "Ben Wallace (@ben-w) opened a pull request that requires review from your team:",
+        "feat(orders): add idempotency keys to checkout endpoint · 12 files changed, +384 −127 · branch feat/idempotent-checkout → main",
+        "This PR introduces idempotency keys on POST /api/v1/orders to prevent duplicate charges when the client retries on flaky network. Includes new middleware, DB migration for the idempotency_keys table, and updated integration tests.",
+        "@ben-w wrote: \"This is the fix for the duplicate-order bug from incident #4421. I'd love a second pair of eyes on the migration before we ship — happy to walk through it on a call if easier.\"",
+        "Required review from: @joey, @priya-l. CI status: ✓ all checks passed.",
+      ],
+      signoff: "—",
+      signature: ["GitHub", "github.com/acme/api/pull/2841"],
+      reply: "Reviewed and approved. Migration looks safe. LGTM ✓",
     },
     {
       initial: "K",
       color: "#1A73E8",
       name: "Kevin Lee",
-      subject: "Friday's design review",
-      body: "Can we move it to 3pm? I've got a conflict at noon and won't be able to make the original time.",
-      reply: "3pm works — calendar updated.",
+      senderEmail: "kevin@studiolab.design",
+      subject: "Friday's design review — moving to 3pm?",
+      greeting: "Hey Joey,",
+      paragraphs: [
+        "Quick ask — can we push Friday's design review to 3pm instead of noon? Something came up at my kid's school and I have to do pickup at 11:30, no way I'd make it back in time and I don't want to be the guy who joins from his car.",
+        "If 3pm doesn't work for you, I can also do Thursday afternoon or Monday morning of next week. Whatever's easiest. We've got the new flow mockups ready and I really want to get your feedback before we send them to the dev team.",
+        "Also pasting in the prototype link so you can poke around beforehand if you have a minute: figma.com/file/xQ8mRZ — feedback on the empty state and the onboarding tooltips would be super helpful.",
+        "Sorry for the reschedule. Let me know what works.",
+      ],
+      signoff: "Cheers,",
+      signature: ["Kevin", "Design Lead · Studio Lab"],
+      reply: "3pm works perfectly — calendar updated. Will review the flow beforehand.",
     },
     {
       initial: "J",
       color: "#0F9D58",
       name: "Jenna Park",
-      subject: "RE: dinner Friday?",
-      body: "yesss I'm in. 7:30 at Maialino works. let me know if you want me to book or you're handling it.",
-      reply: "Booked! Reservation under your name.",
+      senderEmail: "jenna.park@gmail.com",
+      subject: "RE: dinner Friday? + Becca's birthday plan",
+      greeting: "yo,",
+      paragraphs: [
+        "yessss I'm so in for Friday — 7:30 at Maialino works perfectly. you handling the reservation or want me to grab it? i can put it under my name if it's easier, just let me know in the next hour or two so we don't lose the slot.",
+        "also TOTALLY unrelated but Becca's birthday is in like 3 weeks and a few of us are trying to plan something. i'm thinking of doing a little dinner thing at my place + maybe karaoke after?? would you be down? she keeps mentioning that she misses our bigger group hangs so i wanna make it special.",
+        "if you're in i'm gonna start a thread with the usual suspects (sam, raj, mike, lisa). let me know!",
+      ],
+      signoff: "xx",
+      signature: ["jenna"],
+      reply: "I'll grab the res. Down for Becca's — count me in 🎉",
     },
     {
       initial: "T",
       color: "#1A73E8",
       name: "Thomas Kim",
-      subject: "Re: contract review",
-      body: "Thanks for sending this over. I have a few questions about clauses 4.2 and 7.1 — when can we chat?",
-      reply: "Free at 2pm — sending invite now.",
+      senderEmail: "tkim@chen-kim-legal.com",
+      subject: "Re: contract review — clauses 4.2 and 7.1",
+      greeting: "Joey,",
+      paragraphs: [
+        "Thanks for sending the redlined draft over. Mostly looks fine, but I have two material concerns I'd like to talk through before we sign.",
+        "Clause 4.2 (IP assignment): the language as written assigns ALL prior IP, including work product from before the effective date. That's broader than what we discussed. I'd push for narrowing this to work product created in connection with services performed under this agreement only.",
+        "Clause 7.1 (termination for convenience): the 30-day notice period feels short given the scope of the engagement. Industry standard for this size deal is 60-90 days. Worth pushing back on.",
+        "Couple of smaller items in the redlines too — I marked them as comments. Can we get on a 30-minute call this week to walk through the changes? I'm flexible Tuesday afternoon or Wednesday morning.",
+      ],
+      signoff: "Best,",
+      signature: ["Thomas Kim, Esq.", "Chen & Kim LLP"],
+      reply: "Tuesday at 2pm works — sending invite now. Agree on both points.",
     },
   ];
   // Montage timing in driveSec.
@@ -4268,7 +4341,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
                 textOverflow: "ellipsis",
               }}
             >
-              to Summer, William, khaledasad9... ▾
+              to me ▾ · {activeEmail.senderEmail}
             </div>
           </div>
           {/* Right cluster: smile, back-arrow, ⋯ — like the iOS ref */}
@@ -4285,7 +4358,8 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
             </div>
           </div>
         </div>
-        {/* Body */}
+        {/* Body — formatted like a real email: greeting, paragraphs,
+            sign-off, and signature block. */}
         <div
           style={{
             paddingLeft: padX,
@@ -4295,12 +4369,37 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
             fontFamily: FONT_STACK,
             fontSize: 26 * scale,
             color: G_TEXT,
-            lineHeight: 1.45,
+            lineHeight: 1.5,
             flex: 1,
+            overflow: "hidden",
           }}
         >
-          <div style={{ marginBottom: 22 * scale }}>{activeEmail.body}</div>
-          <div style={{ color: G_LIGHT, marginBottom: 22 * scale }}>—</div>
+          {/* Greeting */}
+          <div style={{ marginBottom: 22 * scale }}>{activeEmail.greeting}</div>
+          {/* Paragraphs */}
+          {activeEmail.paragraphs.map((p, i) => (
+            <div key={i} style={{ marginBottom: 22 * scale }}>
+              {p}
+            </div>
+          ))}
+          {/* Sign-off */}
+          <div style={{ marginBottom: 8 * scale, marginTop: 6 * scale }}>
+            {activeEmail.signoff}
+          </div>
+          {/* Signature lines */}
+          {activeEmail.signature.map((line, i) => (
+            <div
+              key={i}
+              style={{
+                color: i === 0 ? G_TEXT : G_LIGHT,
+                fontWeight: i === 0 ? 600 : 400,
+                fontSize: i === 0 ? 26 * scale : 22 * scale,
+                lineHeight: 1.4,
+              }}
+            >
+              {line}
+            </div>
+          ))}
         </div>
         {/* Inline reply preview — agent's typed-out response */}
         {replyPreviewVisible && (
@@ -4442,214 +4541,6 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
         </div>
       </div>
 
-      {/* Replied confirmation card */}
-      {replySentOpacity > 0 && (
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            width,
-            height,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: replySentOpacity,
-            pointerEvents: "none",
-            background: "rgba(0,0,0,0.35)",
-          }}
-        >
-          <div
-            style={{
-              width: width * 0.84,
-              borderRadius: 24 * scale,
-              background: "#FFFFFF",
-              fontFamily: FONT_STACK,
-              overflow: "hidden",
-              boxShadow: `0 ${20 * scale}px ${60 * scale}px rgba(0,0,0,0.35)`,
-              position: "relative",
-            }}
-          >
-            {/* Google 4-color top stripe */}
-            <div style={{ display: "flex", height: 6 * scale }}>
-              <div style={{ flex: 1, background: "#EA4335" }} />
-              <div style={{ flex: 1, background: "#FBBC04" }} />
-              <div style={{ flex: 1, background: "#34A853" }} />
-              <div style={{ flex: 1, background: "#4285F4" }} />
-            </div>
-            {/* Streak badge top-right */}
-            <div
-              style={{
-                position: "absolute",
-                top: 22 * scale,
-                right: 22 * scale,
-                padding: `${8 * scale}px ${14 * scale}px`,
-                borderRadius: 999,
-                background: "#FEF7E0",
-                display: "flex",
-                alignItems: "center",
-                gap: 6 * scale,
-                fontSize: 16 * scale,
-                fontWeight: 600,
-                color: "#B06000",
-              }}
-            >
-              🔥 Streak 3 days
-            </div>
-            {/* Hero illustration band — empty inbox */}
-            <div
-              style={{
-                background: "#E6F4EA",
-                height: 200 * scale,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                position: "relative",
-              }}
-            >
-              <svg
-                width={150 * scale}
-                height={130 * scale}
-                viewBox="0 0 150 130"
-                fill="none"
-              >
-                {/* whoosh lines */}
-                <path d="M5 40 L30 40" stroke="#34A853" strokeWidth="3" strokeLinecap="round" />
-                <path d="M10 55 L35 55" stroke="#34A853" strokeWidth="3" strokeLinecap="round" />
-                <path d="M0 70 L25 70" stroke="#34A853" strokeWidth="3" strokeLinecap="round" />
-                {/* Envelope */}
-                <rect x="40" y="35" width="100" height="70" rx="8" fill="#FFFFFF" stroke="#34A853" strokeWidth="3" />
-                <path d="M40 43 L90 80 L140 43" stroke="#34A853" strokeWidth="3" fill="none" />
-                {/* Check inside */}
-                <circle cx="115" cy="80" r="20" fill="#34A853" />
-                <path d="M105 80 L113 88 L126 73" stroke="#FFFFFF" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            {/* Title block */}
-            <div
-              style={{
-                paddingLeft: 36 * scale,
-                paddingRight: 36 * scale,
-                paddingTop: 28 * scale,
-                paddingBottom: 8 * scale,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 44 * scale,
-                  fontWeight: 700,
-                  color: "#202124",
-                  letterSpacing: -0.5 * scale,
-                }}
-              >
-                All caught up
-              </div>
-              <div
-                style={{
-                  fontSize: 22 * scale,
-                  color: "#5F6368",
-                  marginTop: 6 * scale,
-                }}
-              >
-                47 conversations replied · 12 archived
-              </div>
-            </div>
-            {/* Stacked bar breakdown */}
-            <div
-              style={{
-                paddingLeft: 36 * scale,
-                paddingRight: 36 * scale,
-                paddingTop: 18 * scale,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  height: 32 * scale,
-                  borderRadius: 16 * scale,
-                  overflow: "hidden",
-                }}
-              >
-                <div style={{ flex: 12, background: "#EA4335" }} />
-                <div style={{ flex: 28, background: "#4285F4" }} />
-                <div style={{ flex: 7, background: "#FBBC04" }} />
-              </div>
-              {/* Legend */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginTop: 14 * scale,
-                  fontSize: 18 * scale,
-                  color: "#202124",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 6 * scale }}>
-                  <div style={{ width: 10 * scale, height: 10 * scale, borderRadius: "50%", background: "#EA4335" }} />
-                  <span>Personal · 12</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 * scale }}>
-                  <div style={{ width: 10 * scale, height: 10 * scale, borderRadius: "50%", background: "#4285F4" }} />
-                  <span>Work · 28</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 * scale }}>
-                  <div style={{ width: 10 * scale, height: 10 * scale, borderRadius: "50%", background: "#FBBC04" }} />
-                  <span>Promo · 7</span>
-                </div>
-              </div>
-            </div>
-            {/* Time saved hero card */}
-            <div
-              style={{
-                margin: 36 * scale,
-                marginTop: 28 * scale,
-                padding: `${22 * scale}px ${24 * scale}px`,
-                borderRadius: 14 * scale,
-                background: "#E8F0FE",
-                display: "flex",
-                alignItems: "center",
-                gap: 14 * scale,
-              }}
-            >
-              <svg width={42 * scale} height={42 * scale} viewBox="0 0 42 42" fill="none">
-                <circle cx="21" cy="21" r="18" stroke="#1A73E8" strokeWidth="3" fill="none" />
-                <path d="M21 11 L21 21 L29 25" stroke="#1A73E8" strokeWidth="3" strokeLinecap="round" fill="none" />
-              </svg>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 30 * scale, fontWeight: 700, color: "#1A73E8", letterSpacing: -0.3 * scale }}>
-                  4h 12m saved
-                </div>
-                <div style={{ fontSize: 16 * scale, color: "#5F6368", marginTop: 2 * scale }}>
-                  vs. typing manually
-                </div>
-              </div>
-            </div>
-            {/* Inbox Zero footer */}
-            <div
-              style={{
-                background: "#34A853",
-                padding: `${20 * scale}px ${36 * scale}px`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 14 * scale,
-                fontSize: 26 * scale,
-                fontWeight: 700,
-                color: "#FFFFFF",
-                letterSpacing: 0.3 * scale,
-              }}
-            >
-              <span>Inbox Zero ✓</span>
-              {/* Confetti */}
-              <span style={{ display: "inline-flex", gap: 4 * scale }}>
-                <span style={{ width: 8 * scale, height: 8 * scale, background: "#FBBC04", transform: "rotate(15deg)", display: "inline-block" }} />
-                <span style={{ width: 8 * scale, height: 8 * scale, background: "#EA4335", transform: "rotate(-20deg)", display: "inline-block" }} />
-                <span style={{ width: 8 * scale, height: 8 * scale, background: "#4285F4", transform: "rotate(35deg)", display: "inline-block" }} />
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
