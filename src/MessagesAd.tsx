@@ -8107,9 +8107,9 @@ const Scene3: React.FC<Scene3Props> = ({
           inset: 0,
           pointerEvents: "none",
           WebkitMaskImage:
-            "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 18%, rgba(0,0,0,0.6) 32%, rgba(0,0,0,1) 42%, rgba(0,0,0,1) 100%)",
+            "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.05) 12%, rgba(0,0,0,0.25) 22%, rgba(0,0,0,0.7) 32%, rgba(0,0,0,1) 37%, rgba(0,0,0,1) 100%)",
           maskImage:
-            "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 18%, rgba(0,0,0,0.6) 32%, rgba(0,0,0,1) 42%, rgba(0,0,0,1) 100%)",
+            "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.05) 12%, rgba(0,0,0,0.25) 22%, rgba(0,0,0,0.7) 32%, rgba(0,0,0,1) 37%, rgba(0,0,0,1) 100%)",
         }}
       >
       {/* Sent message row (input → bubble morph + send button). */}
