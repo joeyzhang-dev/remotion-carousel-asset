@@ -24,6 +24,111 @@ const RECEIVED_TEXT = "#000000";
 
 const sec = (s: number, fps: number) => Math.round(s * fps);
 
+/**
+ * Per-character width lookup for SF Pro Display @ weight 500, expressed
+ * in em (multiply by font-size in px to get pixel width). Tuned against
+ * the actual font's glyph metrics so we can size bubbles snugly around
+ * a phrase regardless of which letters it contains — a fixed average
+ * (e.g. 0.44em/char) overshoots phrases with many narrow letters
+ * (i, l, t, f, r) and undershoots phrases with wide letters (m, w).
+ *
+ * Unknown characters fall back to 0.55em — a conservative default for
+ * an "average" lowercase letter.
+ */
+const SF_PRO_CHAR_WIDTHS: Record<string, number> = {
+  // narrow lowercase
+  i: 0.27,
+  l: 0.27,
+  t: 0.32,
+  f: 0.32,
+  r: 0.35,
+  j: 0.27,
+  // medium lowercase
+  a: 0.5,
+  c: 0.52,
+  e: 0.5,
+  s: 0.5,
+  n: 0.55,
+  o: 0.55,
+  u: 0.55,
+  v: 0.5,
+  x: 0.5,
+  y: 0.5,
+  z: 0.5,
+  b: 0.55,
+  d: 0.55,
+  g: 0.55,
+  h: 0.55,
+  k: 0.5,
+  p: 0.55,
+  q: 0.55,
+  // wide lowercase
+  m: 0.85,
+  w: 0.78,
+  // uppercase (approximate — most are noticeably wider than lowercase)
+  A: 0.65,
+  B: 0.65,
+  C: 0.7,
+  D: 0.7,
+  E: 0.6,
+  F: 0.55,
+  G: 0.72,
+  H: 0.7,
+  I: 0.3,
+  J: 0.5,
+  K: 0.65,
+  L: 0.55,
+  M: 0.85,
+  N: 0.7,
+  O: 0.74,
+  P: 0.62,
+  Q: 0.74,
+  R: 0.65,
+  S: 0.6,
+  T: 0.6,
+  U: 0.7,
+  V: 0.65,
+  W: 0.92,
+  X: 0.65,
+  Y: 0.6,
+  Z: 0.6,
+  // digits, punctuation, symbols
+  "0": 0.55,
+  "1": 0.55,
+  "2": 0.55,
+  "3": 0.55,
+  "4": 0.55,
+  "5": 0.55,
+  "6": 0.55,
+  "7": 0.55,
+  "8": 0.55,
+  "9": 0.55,
+  " ": 0.28,
+  ".": 0.27,
+  ",": 0.27,
+  "'": 0.22,
+  "\"": 0.35,
+  "+": 0.55,
+  "-": 0.32,
+  "?": 0.5,
+  "!": 0.27,
+  ":": 0.27,
+  ";": 0.27,
+};
+
+/**
+ * Sum of per-character widths in em for a string. Used to size text
+ * bubbles to fit their content snugly. With 0 letter-spacing, multiply
+ * by font-size (px) to get rendered text width in px.
+ */
+const measureTextEm = (text: string): number => {
+  let sum = 0;
+  for (const ch of text) {
+    sum += SF_PRO_CHAR_WIDTHS[ch] ?? 0.55;
+  }
+  return sum;
+};
+
 type CaptionProps = {
   text: string;
   emphasized?: string;
@@ -992,19 +1097,20 @@ const Scene3: React.FC<Scene3Props> = ({
     easing: Easing.inOut(Easing.cubic),
   });
 
-  // SF Pro Display at weight 500: lowercase letter widths average ~0.52em,
-  // narrow letters (i, l, t, f, r) ~0.30em, wide letters (m, w) ~0.82em,
-  // spaces ~0.28em. Across typical English copy this works out to roughly
-  // 0.48em per character. We bias slightly upward to 0.50 so the bubble
-  // never clips the text — better to have a hair of right-padding than to
-  // chop a glyph mid-render. (Ruler-based DOM measurement is unreliable
-  // in Remotion's per-frame headless render, so we use a constant tuned
-  // against the actual font.)
-  const charWidthEm = 0.44;
+  // Bubble width is sized to fit its phrase using `measureTextEm` —
+  // a per-character width lookup tuned against SF Pro Display @ 500.
+  // This is critical because each phrase has a different mix of
+  // wide/narrow glyphs; a fixed average leaves visible whitespace on
+  // phrases with lots of narrow letters and clips phrases with wide
+  // letters. We add a tiny 0.1em pad inside the padding (≈ 3px @ our
+  // scale) just so the very last glyph never visually kisses the
+  // bubble's interior edge.
   const bubbleFontShrink = 0.78;
   const bubbleFontSize = fontSize * bubbleFontShrink;
-  const bubbleTextWidth = phrase.length * bubbleFontSize * charWidthEm;
-  const bubblePadX = 32 * scale;
+  const bubbleTextWidth = (measureTextEm(phrase) + 0.1) * bubbleFontSize;
+  // Tighter horizontal padding (was 32) so the bubble snugs around
+  // the text the way real iMessage bubbles do.
+  const bubblePadX = 22 * scale;
   const bubbleWidth = bubbleTextWidth + bubblePadX * 2;
   // Animated font size during morph — text scales down as the bubble forms.
   const animatedFontSize = interpolate(
@@ -1189,11 +1295,27 @@ const Scene3: React.FC<Scene3Props> = ({
   const deliveredFinalOpacity = deliveredOpacity * deliveredOut;
 
   // "Read" fade-in — starts after "Delivered" has fully faded.
-  const readOpacity = interpolate(local, [readInStart, readInEnd], [0, 1], {
+  const readIn = interpolate(local, [readInStart, readInEnd], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.out(Easing.cubic),
   });
+  // First "Read" fades OUT just before the second blue bubble enters,
+  // so older receipt indicators don't stack with the new one. iMessage
+  // only shows a receipt under the latest message.
+  const readFirstOutStart = sec(4.6, fps);
+  const readFirstOutEnd = sec(4.8, fps);
+  const readOut = interpolate(
+    local,
+    [readFirstOutStart, readFirstOutEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const readOpacity = readIn * readOut;
 
   // Vertical gap between sent (outbound) and received (inbound)
   // bubbles. Real iMessage uses a generous gap when the sender
@@ -1202,22 +1324,54 @@ const Scene3: React.FC<Scene3Props> = ({
   // distinct moments in the conversation rather than touching.
   const receivedGap = 36 * scale;
 
-  // Conversation shift: as the received bubble approaches, the sent
-  // bubble drifts upward so the pair (sent + gap + received) ends up
-  // centered around the screen midline rather than bottom-heavy. We
-  // offset by half the received bubble's height (assumed equal to the
-  // sent bubble's settled height) plus half the gap.
-  const conversationShiftEnd = -(bubbleHeight / 2 + receivedGap / 2);
-  const conversationShift = interpolate(
+  // ── Sent bubble #2 timing (the second blue bubble, after the gray
+  //    reply) ──────────────────────────────────────────────────────
+  //   4.85s  conversation shifts up again; sent2 begins popping in
+  //   5.35s  sent2 settled
+  //   5.65s  sent2 "Delivered" begins fading in
+  //   5.95s  sent2 "Delivered" fully visible
+  //   6.30s  sent2 "Delivered" begins fading OUT
+  //   6.45s  fully gone
+  //   6.52s  sent2 "Read" begins fading IN
+  //   6.68s  sent2 "Read" fully visible (held until end of scene)
+  const sent2Start = sec(4.85, fps);
+  const sent2End = sec(5.35, fps);
+  const sent2DeliveredInStart = sec(5.65, fps);
+  const sent2DeliveredInEnd = sec(5.95, fps);
+  const sent2DeliveredOutStart = sec(6.3, fps);
+  const sent2DeliveredOutEnd = sec(6.45, fps);
+  const sent2ReadInStart = sec(6.52, fps);
+  const sent2ReadInEnd = sec(6.68, fps);
+
+  // First conversation shift (when gray bubble appears): sent drifts up
+  // by half a bubble height + half a gap so sent + gray are centered
+  // around the midline.
+  const conversationShift1End = -(bubbleHeight / 2 + receivedGap / 2);
+  const conversationShift1 = interpolate(
     local,
     [receivedStart, receivedEnd],
-    [0, conversationShiftEnd],
+    [0, conversationShift1End],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
       easing: Easing.out(Easing.cubic),
     },
   );
+  // Second conversation shift (when sent2 appears): another shift up
+  // by the same amount, so the THREE bubbles end up centered with the
+  // gray (middle) bubble at the midline.
+  const conversationShift2Delta = -(bubbleHeight / 2 + receivedGap / 2);
+  const conversationShift2 = interpolate(
+    local,
+    [sent2Start, sent2End],
+    [0, conversationShift2Delta],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  const conversationShift = conversationShift1 + conversationShift2;
 
   // Received-bubble pop-in: spring-driven scale + opacity. Starts at
   // 0.85x scale and 0 opacity, settles to 1.0 with a small bounce.
@@ -1237,10 +1391,63 @@ const Scene3: React.FC<Scene3Props> = ({
     },
   );
 
+  // Sent2 pop-in: same spring config as received, so the conversation
+  // tempo stays consistent.
+  const sent2Spring = spring({
+    frame: local - sent2Start,
+    fps,
+    config: { damping: 14, stiffness: 180, mass: 0.55 },
+  });
+  const sent2Scale = interpolate(sent2Spring, [0, 1], [0.85, 1]);
+  const sent2Opacity = interpolate(
+    local,
+    [sent2Start, sent2Start + sec(0.18, fps)],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    },
+  );
+
+  // Sent2 receipt indicators (Delivered → Read), same sequential
+  // pattern as the first sent bubble.
+  const sent2DeliveredIn = interpolate(
+    local,
+    [sent2DeliveredInStart, sent2DeliveredInEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  const sent2DeliveredOut = interpolate(
+    local,
+    [sent2DeliveredOutStart, sent2DeliveredOutEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const sent2DeliveredOpacity = sent2DeliveredIn * sent2DeliveredOut;
+  const sent2ReadOpacity = interpolate(
+    local,
+    [sent2ReadInStart, sent2ReadInEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+
   // Received-bubble dimensions (settled — no morph for this one).
   const receivedPhrase = "added to calendar + invited her";
   const receivedFontSize = bubbleFontSize;
-  const receivedTextWidth = receivedPhrase.length * receivedFontSize * charWidthEm;
+  const receivedTextWidth =
+    (measureTextEm(receivedPhrase) + 0.1) * receivedFontSize;
   const receivedPadX = bubblePadX;
   const receivedWidth = receivedTextWidth + receivedPadX * 2;
   const receivedHeight = bubbleHeight;
@@ -1248,18 +1455,45 @@ const Scene3: React.FC<Scene3Props> = ({
   const receivedTailExt = receivedCornerRadius * 0.5;
   const receivedTailHook = receivedCornerRadius * 0.2;
 
+  // Sent2 (second blue bubble) dimensions — same styling as the first
+  // sent bubble's settled state, just with a different phrase.
+  const sent2Phrase = "find a dinner spot she'll like";
+  const sent2FontSize = bubbleFontSize;
+  const sent2TextWidth = (measureTextEm(sent2Phrase) + 0.1) * sent2FontSize;
+  const sent2PadX = bubblePadX;
+  const sent2Width = sent2TextWidth + sent2PadX * 2;
+  const sent2Height = bubbleHeight;
+  const sent2CornerRadius = sent2Height * 0.42;
+  const sent2TailExt = sent2CornerRadius * 0.5;
+  const sent2TailHook = sent2CornerRadius * 0.2;
+
   // Distance between bubble CENTERS (used in absolute positioning).
   // Add half of each bubble's height plus the gap.
   const receivedYOffset = bubbleHeight / 2 + receivedGap + receivedHeight / 2;
+  // Sent2 sits another full row below the gray bubble.
+  const sent2YOffset =
+    receivedYOffset + receivedHeight / 2 + receivedGap + sent2Height / 2;
 
   // Anchor for the entire conversation, so receipt indicators and the
   // received bubble all move with the sent bubble when it scrolls up.
   const sentBubbleX = width / 2 + rowXOffset;
   const sentBubbleY = height * 0.5 + rowYOffset + conversationShift;
-  // Right edge of the settled sent bubble, in screen coords. Used to
-  // right-align the receipt indicators ("Delivered" / "Read") and to
-  // derive the received bubble's matching left-edge margin.
-  const sentBubbleRight = sentBubbleX + bubbleWidth / 2;
+  // Right edge of the settled sent bubble, in screen coords. The row
+  // (a flex container) is centered at sentBubbleX and contains the
+  // bubble + send button as siblings. The send button has scaled to 0
+  // visually but still occupies its layout space, so the bubble sits
+  // on the LEFT half of the row and its right edge is offset
+  // accordingly:
+  //   row width        = bubbleWidth + sendButtonSize  (gap is 0 after
+  //                      morph completes)
+  //   row left edge    = sentBubbleX - rowWidth/2
+  //   bubble right     = row left + bubbleWidth
+  //                    = sentBubbleX + (bubbleWidth - sendButtonSize)/2
+  // This is what we use for chatEdgeMargin so the received bubble's
+  // left inset and the sent2 bubble's right anchor line up exactly
+  // with the first sent bubble's actual visible right edge.
+  const sentBubbleRight =
+    sentBubbleX + (bubbleWidth - sendButtonSize) / 2;
   const sentBubbleBottom = sentBubbleY + bubbleHeight / 2;
 
   // Mirror the sent bubble's right-edge inset on the left side, so
@@ -1403,6 +1637,83 @@ const Scene3: React.FC<Scene3Props> = ({
           />
         </div>
       )}
+
+      {/* Second sent bubble — pinned to the same right-edge inset as
+          the first sent bubble, sitting one row below the gray reply.
+          Pops in with a spring-driven scale + opacity, then has its
+          own Delivered → Read receipt swap. */}
+      {sent2Opacity > 0 && (
+        <>
+          <div
+            style={{
+              position: "absolute",
+              // Anchor the right edge to the same inset as the first
+              // sent bubble: `width - chatEdgeMargin` = sentBubbleRight.
+              // Subtract sent2Width/2 to account for translate(-50%).
+              left: width - chatEdgeMargin - sent2Width / 2,
+              top: sentBubbleY + sent2YOffset,
+              transform: `translate(-50%, -50%) scale(${sent2Scale})`,
+              opacity: sent2Opacity,
+            }}
+          >
+            <MessageBubble
+              width={sent2Width}
+              height={sent2Height}
+              cornerRadius={sent2CornerRadius}
+              tailExt={sent2TailExt}
+              tailHook={sent2TailHook}
+              tailScaleX={1}
+              tailSide="right"
+              bubbleColor={IMESSAGE_BLUE}
+              textColor="#FFFFFF"
+              fontSize={sent2FontSize}
+              paddingX={sent2PadX}
+              letterSpacing={-0.3 * scale}
+              text={sent2Phrase}
+              shadowOpacity={0.18}
+              shadowBlur={20 * scale}
+              shadowOffsetY={4 * scale}
+              filterId="bubbleShadow-sent2"
+            />
+          </div>
+          {/* Sent2 "Delivered" — fades in after settle, then fades out
+              into "Read". Right-aligned to sent2's right edge. */}
+          {sent2DeliveredOpacity > 0 && (
+            <div
+              style={{
+                ...receiptStyle,
+                // Same right-edge inset as sent2 minus the standard
+                // 50px nudge used for the first bubble's receipt.
+                left: width - chatEdgeMargin - 50 * scale,
+                top:
+                  sentBubbleY +
+                  sent2YOffset +
+                  sent2Height / 2 +
+                  3 * scale,
+                opacity: sent2DeliveredOpacity,
+              }}
+            >
+              Delivered
+            </div>
+          )}
+          {sent2ReadOpacity > 0 && (
+            <div
+              style={{
+                ...receiptStyle,
+                left: width - chatEdgeMargin - 50 * scale,
+                top:
+                  sentBubbleY +
+                  sent2YOffset +
+                  sent2Height / 2 +
+                  3 * scale,
+                opacity: sent2ReadOpacity,
+              }}
+            >
+              Read
+            </div>
+          )}
+        </>
+      )}
     </AbsoluteFill>
   );
 };
@@ -1479,9 +1790,9 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
 
       {/* Scene 3 — starts at 5s (after Scene 2's button has fully faded out)
           for the same reason as Scene 2: avoid stacked send buttons.
-          Extended to 5s to accommodate Delivered→Read swap and an
-          incoming reply bubble. */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(5, fps)}>
+          Extended to 7s to accommodate the full conversation:
+          send + delivered→read, gray reply, second send + delivered→read. */}
+      <Sequence from={sec(5, fps)} durationInFrames={sec(7, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
@@ -1493,7 +1804,7 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           Holds for Scene 3's full duration. */}
       <Sequence
         from={sec(5 - xfade, fps)}
-        durationInFrames={sec(5 + xfade, fps)}
+        durationInFrames={sec(7 + xfade, fps)}
       >
         <Caption
           text="schedule a date with my crush"
