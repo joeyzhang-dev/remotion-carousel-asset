@@ -24,13 +24,14 @@ export const RemotionRoot: React.FC = () => {
         height={1920}
       />
 
-      {/* Vertical 9:16 — mobile-native. 13s total: 0–2s "in your messages",
-          2–5s "does anything", 5–13s send + delivered→read +
-          typing indicator → reply + second send + delivered→read. */}
+      {/* Vertical 9:16 — mobile-native. 16.5s total: 0–2s "in your messages",
+          2–5s "does anything", 5–16.5s send + delivered→read + typing
+          → reply + second send + delivered→read + extended second
+          typing indicator pulsing (reply text added in a follow-up). */}
       <Composition
         id="preview"
         component={MessagesAd}
-        durationInFrames={390}
+        durationInFrames={495}
         fps={30}
         width={1080}
         height={1920}
@@ -38,7 +39,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="master-4k"
         component={MessagesAd}
-        durationInFrames={780}
+        durationInFrames={990}
         fps={60}
         width={2160}
         height={3840}
@@ -50,7 +51,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="preview-16x9"
         component={MessagesAdHorizontal}
-        durationInFrames={390}
+        durationInFrames={495}
         fps={30}
         width={1920}
         height={1080}
@@ -58,7 +59,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="master-16x9-4k"
         component={MessagesAdHorizontal}
-        durationInFrames={780}
+        durationInFrames={990}
         fps={60}
         width={3840}
         height={2160}

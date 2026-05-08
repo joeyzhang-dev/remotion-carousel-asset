@@ -1371,6 +1371,20 @@ const Scene3: React.FC<Scene3Props> = ({
   const sent2ReadInStart = sec(7.32, fps);
   const sent2ReadInEnd = sec(7.48, fps);
 
+  // ── Second received bubble: typing-indicator only (the actual
+  //    message text will be added in a follow-up) ─────────────────
+  //   7.65s  sent2 "Read" begins fading OUT (so it doesn't stack with
+  //          the new typing indicator's row position)
+  //   7.85s  typing #2 pops in
+  //   8.05s  typing #2 fully popped in; dots begin pulsing
+  //   8.05s+ dots continue pulsing through the rest of the scene
+  // The pulse window is intentionally longer than received #1 — the
+  // user will fill in the morph + final message in a future change.
+  const sent2ReadOutStart = sec(7.65, fps);
+  const sent2ReadOutEnd = sec(7.85, fps);
+  const typing2Start = sec(7.85, fps);
+  const typing2PopEnd = sec(8.05, fps);
+
   // First conversation shift (when gray bubble appears): sent drifts up
   // by half a bubble height + half a gap so sent + gray are centered
   // around the midline.
@@ -1399,7 +1413,21 @@ const Scene3: React.FC<Scene3Props> = ({
       easing: Easing.out(Easing.cubic),
     },
   );
-  const conversationShift = conversationShift1 + conversationShift2;
+  // Third conversation shift (when typing #2 appears): another half-row
+  // up so the FOUR bubbles end up balanced around the screen midline.
+  const conversationShift3Delta = -(bubbleHeight / 2 + receivedGap / 2);
+  const conversationShift3 = interpolate(
+    local,
+    [typing2Start, typing2PopEnd],
+    [0, conversationShift3Delta],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+  const conversationShift =
+    conversationShift1 + conversationShift2 + conversationShift3;
 
   // The typing-indicator-then-message bubble pops in at `typingStart`
   // (as a small pill with three pulsing dots) and STAYS visible
@@ -1464,11 +1492,14 @@ const Scene3: React.FC<Scene3Props> = ({
     [1, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
-  // Text fades in slightly after the dots fade out, so the bubble
-  // doesn't look "cluttered" with both visible mid-morph.
+  // Text fades in only AFTER the bubble has grown nearly to its
+  // final width — otherwise the (full-length) text would be visible
+  // while the bubble is still narrow, spilling out of the bubble's
+  // left and right edges. Even with a small fade-in window the text
+  // overlay is also clipped via overflow:hidden as a safety belt.
   const messageTextOpacity = interpolate(
     typingMorphP,
-    [0.55, 1],
+    [0.85, 1],
     [0, 1],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
@@ -1514,7 +1545,7 @@ const Scene3: React.FC<Scene3Props> = ({
     },
   );
   const sent2DeliveredOpacity = sent2DeliveredIn * sent2DeliveredOut;
-  const sent2ReadOpacity = interpolate(
+  const sent2ReadIn = interpolate(
     local,
     [sent2ReadInStart, sent2ReadInEnd],
     [0, 1],
@@ -1524,6 +1555,56 @@ const Scene3: React.FC<Scene3Props> = ({
       easing: Easing.out(Easing.cubic),
     },
   );
+  // sent2 "Read" fades out before typing #2 enters, mirroring how
+  // the first sent bubble's "Read" cleared before sent2 arrived.
+  // iMessage only shows a receipt under the latest message.
+  const sent2ReadOut = interpolate(
+    local,
+    [sent2ReadOutStart, sent2ReadOutEnd],
+    [1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.in(Easing.cubic),
+    },
+  );
+  const sent2ReadOpacity = sent2ReadIn * sent2ReadOut;
+
+  // ── Typing indicator #2 (second gray reply) ─────────────────────
+  // Pops in at typing2Start, dots pulse continuously after typing2PopEnd.
+  // No morph yet — the actual reply text + width-morph will land in a
+  // follow-up change. The pulse loop just runs through end-of-scene.
+  const typing2Spring = spring({
+    frame: local - typing2Start,
+    fps,
+    config: { damping: 14, stiffness: 180, mass: 0.55 },
+  });
+  const typing2Scale = interpolate(typing2Spring, [0, 1], [0.85, 1]);
+  const typing2Opacity = interpolate(
+    local,
+    [typing2Start, typing2Start + sec(0.18, fps)],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    },
+  );
+  // Dots animate via the same sine-driven pulse as typing #1, but
+  // anchored to typing2PopEnd so the wave starts fresh for this
+  // bubble.
+  const dot2WavePhase =
+    ((local - typing2PopEnd) / dotWavePeriodFrames) % 1;
+  const computeDot2State = (dotIndex: 0 | 1 | 2) => {
+    if (local < typing2PopEnd) {
+      return { scale: 0.85, opacity: 0.45 };
+    }
+    const p = (dot2WavePhase + dotIndex / 3) % 1;
+    const pulse = Math.max(0, Math.sin(p * Math.PI * 2));
+    return {
+      scale: 0.85 + pulse * 0.25,
+      opacity: 0.45 + pulse * 0.55,
+    };
+  };
 
   // Received-bubble dimensions (settled — no morph for this one).
   const receivedPhrase = "added to calendar + invited her";
@@ -1545,6 +1626,11 @@ const Scene3: React.FC<Scene3Props> = ({
   const typingInteriorW = dotRadius * 6 + dotGap * 2; // three dots + two gaps
   const typingPadX = 26 * scale;
   const typingBubbleWidth = typingInteriorW + typingPadX * 2;
+  // Typing indicator #2 uses the same pill dimensions as typing #1 —
+  // the reply that follows will be longer than the first reply, but
+  // the typing-pill itself reads as a standard iMessage typing dot
+  // bubble.
+  const typing2BubbleWidth = typingBubbleWidth;
   // Animated bubble width (typing → message). Anchored to the LEFT
   // edge so the bubble grows rightward — the tail stays put on the
   // left, the right edge expands outward.
@@ -1572,6 +1658,11 @@ const Scene3: React.FC<Scene3Props> = ({
   // Sent2 sits another full row below the gray bubble.
   const sent2YOffset =
     receivedYOffset + receivedHeight / 2 + receivedGap + sent2Height / 2;
+  // Typing #2 sits another full row below sent2 — row 4 of the
+  // conversation. We use receivedHeight here because typing #2 will
+  // eventually morph into a gray message bubble of the same height.
+  const typing2YOffset =
+    sent2YOffset + sent2Height / 2 + receivedGap + receivedHeight / 2;
 
   // Anchor for the entire conversation, so receipt indicators and the
   // received bubble all move with the sent bubble when it scrolls up.
@@ -1786,9 +1877,13 @@ const Scene3: React.FC<Scene3Props> = ({
                 })}
               </div>
             )}
-            {/* Text overlay — fades in slightly after dots fade out.
-                Sits on top of the bubble's own (invisible) text overlay
-                so we control its opacity independently. */}
+            {/* Text overlay — fades in once the bubble is ~85%
+                expanded. Text is clipped to the bubble's interior
+                via overflow:hidden + border-radius so even during
+                the brief tail of the morph (when the bubble is still
+                slightly narrower than the text) any overflowing
+                glyphs are clipped to the bubble shape rather than
+                spilling out into the canvas. */}
             {messageTextOpacity > 0 && (
               <div
                 style={{
@@ -1810,6 +1905,8 @@ const Scene3: React.FC<Scene3Props> = ({
                   whiteSpace: "nowrap",
                   pointerEvents: "none",
                   opacity: messageTextOpacity,
+                  overflow: "hidden",
+                  borderRadius: receivedCornerRadius,
                 }}
               >
                 {receivedPhrase}
@@ -1895,6 +1992,82 @@ const Scene3: React.FC<Scene3Props> = ({
           )}
         </>
       )}
+
+      {/* Typing indicator #2 — pops in below sent2 as a small gray
+          pill with three pulsing dots. Slightly wider than typing #1
+          to suggest a longer message is being composed. The actual
+          reply text + width morph will be added in a follow-up; for
+          now the pill just stays in its typing state through the
+          rest of the scene. */}
+      {typing2Opacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            // Same left-edge anchor as the first received bubble, so
+            // the column reads consistently — both gray bubbles tuck
+            // to the chat's left edge.
+            left: chatEdgeMargin + typing2BubbleWidth / 2,
+            top: sentBubbleY + typing2YOffset,
+            transform: `translate(-50%, -50%) scale(${typing2Scale})`,
+            opacity: typing2Opacity,
+          }}
+        >
+          <div style={{ position: "relative" }}>
+            <MessageBubble
+              width={typing2BubbleWidth}
+              height={receivedHeight}
+              cornerRadius={receivedCornerRadius}
+              tailExt={receivedTailExt}
+              tailHook={receivedTailHook}
+              tailScaleX={1}
+              tailSide="left"
+              bubbleColor={RECEIVED_GRAY}
+              textColor={RECEIVED_TEXT}
+              fontSize={receivedFontSize}
+              paddingX={receivedPadX}
+              letterSpacing={-0.3 * scale}
+              text=""
+              shadowOpacity={0.08}
+              shadowBlur={16 * scale}
+              shadowOffsetY={3 * scale}
+              filterId="bubbleShadow-typing2"
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: typing2BubbleWidth,
+                height: receivedHeight,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: dotGap,
+                pointerEvents: "none",
+              }}
+            >
+              {[0, 1, 2].map((i) => {
+                const { scale: ds, opacity: dop } = computeDot2State(
+                  i as 0 | 1 | 2,
+                );
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      width: dotRadius * 2,
+                      height: dotRadius * 2,
+                      borderRadius: dotRadius,
+                      background: "#8E8E93",
+                      opacity: dop,
+                      transform: `scale(${ds})`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </AbsoluteFill>
   );
 };
@@ -1971,10 +2144,10 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
 
       {/* Scene 3 — starts at 5s (after Scene 2's button has fully faded out)
           for the same reason as Scene 2: avoid stacked send buttons.
-          Extended to 8s to fit the full conversation: send +
-          delivered→read, typing indicator → gray reply, second send +
-          delivered→read. */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(8, fps)}>
+          Extended to 11.5s so typing indicator #2 has a longer beat
+          of pulsing before the scene ends (the actual reply text
+          will be added in a follow-up). */}
+      <Sequence from={sec(5, fps)} durationInFrames={sec(11.5, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
@@ -1986,7 +2159,7 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           Holds for Scene 3's full duration. */}
       <Sequence
         from={sec(5 - xfade, fps)}
-        durationInFrames={sec(8 + xfade, fps)}
+        durationInFrames={sec(11.5 + xfade, fps)}
       >
         <Caption
           text="schedule a date with my crush"
