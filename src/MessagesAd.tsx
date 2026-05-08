@@ -4594,41 +4594,52 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
   const docHeaderTotalH = docTitleH + docAuthorH + 30 * scale;
   const paragraphFontSize = 24 * scale;
   const paragraphLineHeight = 1.55;
-  // Approximate paragraph height for scroll-content sizing. Chars
-  // per line × line height. We don't need pixel-accurate; we just
-  // need enough room that the doc scrolls.
-  const charsPerLine = 38;
   const paragraphGap = 28 * scale;
-  const paragraphsH = paragraphs.reduce((sum, p) => {
-    const lines = Math.ceil(p.length / charsPerLine);
-    return (
-      sum +
-      lines * paragraphFontSize * paragraphLineHeight +
-      paragraphGap
-    );
-  }, 0);
-  const totalContentH =
-    navH + toolbarH + docHeaderTotalH + paragraphsH + 200 * scale;
-  const maxScroll = Math.max(0, totalContentH - height);
+  // Pin the paragraph block to a known fixed height. Real text
+  // wrapping is unpredictable, so anchoring the layout via an
+  // explicit container lets us compute the Turn in button's exact
+  // position. Anything past this height is clipped (overflow).
+  const paragraphsBoxH = height * 2.6;
+  // Turn in bar layout: padding-top + button + padding-bottom.
+  const turnInBarH = 18 * scale + 90 * scale + 24 * scale;
+  // Absolute Y of the Turn in bar's bottom edge inside the doc page.
+  const turnInBarBottomY =
+    navH +
+    toolbarH +
+    36 * scale + // doc canvas padding-top
+    docHeaderTotalH +
+    30 * scale + // marginTop on the paragraphs container
+    paragraphsBoxH +
+    60 * scale + // doc canvas padding-bottom
+    turnInBarH;
+  // Scroll target: position the page so the Turn in bar's bottom
+  // sits exactly at the canvas bottom (with a small breathing gap).
+  const scrollTargetPx = Math.max(
+    0,
+    turnInBarBottomY - height + 24 * scale,
+  );
 
   const driveSec = driveFrame / fps;
   let baseScroll = 0;
   if (driveSec < 0.4) {
     baseScroll = 0;
-  } else if (driveSec < 1.2) {
-    baseScroll = interpolate(driveSec, [0.4, 1.2], [0, maxScroll * 0.55], {
+  } else if (driveSec < 1.4) {
+    baseScroll = interpolate(driveSec, [0.4, 1.4], [0, scrollTargetPx], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
       easing: Easing.out(Easing.cubic),
     });
   } else {
-    baseScroll = maxScroll * 0.55;
+    baseScroll = scrollTargetPx;
   }
   const wobble =
     driveSec > 0.4
       ? 4 * scale * Math.sin(2 * Math.PI * 2.5 * (driveSec - 0.4))
       : 0;
-  const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll + wobble));
+  const scrollPx = Math.min(
+    scrollTargetPx,
+    Math.max(0, baseScroll + wobble),
+  );
   const pageY = -scrollPx;
 
   const D_BG = "#FFFFFF";
@@ -4780,12 +4791,15 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
           </div>
           {/* Body paragraphs — real essay prose with a blur filter
               applied so it reads as "actual text on a doc" rather
-              than legible content. The blur strength is tuned to be
-              strong enough to obscure individual words but light
-              enough that line rhythm + paragraph breaks come through. */}
+              than legible content. Pinned to a fixed-height box
+              with overflow:hidden so the Turn in bar's layout-Y is
+              deterministic (otherwise text wrapping varies and the
+              page over-scrolls past the button). */}
           <div
             style={{
               marginTop: 30 * scale,
+              height: paragraphsBoxH,
+              overflow: "hidden",
               filter: `blur(${4 * scale}px)`,
               fontFamily: FONT_STACK,
               fontSize: paragraphFontSize,
