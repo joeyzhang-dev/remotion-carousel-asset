@@ -3098,26 +3098,22 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
 
             {/* ── Foreground content ──────────────────────────── */}
 
-            {/* Top — big white folk mark, centered horizontally.
-                The PNG is black, so we tint it white via a CSS
-                filter (brightness 0 → invert 1 → drop-shadow for
-                metal emboss). */}
+            {/* Top-left — white folk mark. PNG is black, so tint to
+                white via brightness(0) → invert(1) → emboss shadow. */}
             <img
               src={staticFile("folk-mark.png")}
               style={{
                 position: "absolute",
-                left: "50%",
-                top: 36 * scale,
-                width: 240 * scale,
-                height: 240 * scale,
-                transform: "translateX(-50%)",
+                left: 24 * scale,
+                top: 24 * scale,
+                width: 180 * scale,
+                height: 180 * scale,
                 filter: `brightness(0) invert(1) drop-shadow(0 ${2 * scale}px ${4 * scale}px rgba(0,0,0,0.4)) drop-shadow(0 ${-1 * scale}px 0 rgba(0,0,0,0.35))`,
                 opacity: 0.96,
               }}
             />
 
-            {/* Hero cardholder name — Steve Jobs energy:
-                huge typography front and center, no labels */}
+            {/* Hero cardholder name — bottom-left */}
             <div
               style={{
                 position: "absolute",
@@ -3133,6 +3129,42 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
               }}
             >
               {cardholderName}
+            </div>
+
+            {/* Top-right — contactless arc */}
+            <svg
+              width={48 * scale}
+              height={56 * scale}
+              viewBox="0 0 36 40"
+              fill="none"
+              style={{
+                position: "absolute",
+                right: 44 * scale,
+                top: 52 * scale,
+                opacity: 0.85,
+                filter: `drop-shadow(0 ${1 * scale}px 0 rgba(0,0,0,0.35))`,
+              }}
+            >
+              <path d="M14 8 Q22 20 14 32" stroke="#F5F5F7" strokeWidth="2" strokeLinecap="round" fill="none" />
+              <path d="M20 4 Q30 20 20 36" stroke="#F5F5F7" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M26 0 Q38 20 26 40" stroke="#F5F5F7" strokeWidth="3" strokeLinecap="round" fill="none" />
+            </svg>
+
+            {/* Last-4 digits — bottom-right, monospace */}
+            <div
+              style={{
+                position: "absolute",
+                right: 44 * scale,
+                bottom: 56 * scale,
+                fontSize: 28 * scale,
+                fontWeight: 500,
+                letterSpacing: 5 * scale,
+                color: "rgba(245,245,247,0.7)",
+                fontFamily: "monospace",
+                textShadow: `0 ${1 * scale}px 0 rgba(0,0,0,0.4)`,
+              }}
+            >
+              ···· 4829
             </div>
           </div>
         </div>
