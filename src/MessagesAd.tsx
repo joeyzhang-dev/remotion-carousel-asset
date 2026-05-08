@@ -2802,6 +2802,13 @@ type AppleWalletProps = {
   payButtonScale?: number;
   /** Opacity for the "Payment Sent" confirmation overlay. */
   paymentConfirmOpacity?: number;
+  /**
+   * Persistent flag — true once the payment has fully landed.
+   * Stays true even after the confirm sheet fades out, so the
+   * Card Balance / Upcoming Payment tiles do not "reset" when
+   * the wallet exits.
+   */
+  paidLatched?: boolean;
 };
 
 const AppleWallet: React.FC<AppleWalletProps> = ({
@@ -2813,6 +2820,7 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
   opacity,
   payButtonScale = 1,
   paymentConfirmOpacity = 0,
+  paidLatched = false,
 }) => {
   // ── Layout constants ────────────────────────────────────────────
   const padX = 32 * scale;
@@ -2877,18 +2885,21 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
   // Use payment confirm opacity as a proxy for "post-tap state."
   const showFaceID = tapDepth > 0.3 && paymentConfirmOpacity < 0.5;
   // Balance counts down 2847.13 → 0.00 once the confirmation card
-  // begins appearing.
-  const balanceCountdown = interpolate(
+  // begins appearing. Once paidLatched is true we hold at $0.00 even
+  // if the confirm sheet fades back out.
+  const liveCountdown = interpolate(
     paymentConfirmOpacity,
     [0, 0.6],
     [2847.13, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
+  const balanceCountdown = paidLatched ? 0 : liveCountdown;
   const balanceText = `$${balanceCountdown
     .toFixed(2)
     .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-  // Past-due pill softens to "Paid" once the payment lands.
-  const isPaid = paymentConfirmOpacity > 0.4;
+  // Past-due pill softens to "Paid" once the payment lands. Latched
+  // so it persists past the confirm sheet's fade-out.
+  const isPaid = paidLatched || paymentConfirmOpacity > 0.4;
 
   // ── Palette ─────────────────────────────────────────────────────
   const W_BG = "#FFFFFF";
@@ -3224,7 +3235,7 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 letterSpacing: 0.2 * scale,
               }}
             >
-              $5,000.00 Available
+              {isPaid ? "$7,847.13 Available" : "$5,000.00 Available"}
             </div>
             <div
               style={{
@@ -3263,7 +3274,7 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 letterSpacing: -0.2 * scale,
               }}
             >
-              Upcoming Payment
+              {isPaid ? "Last Payment" : "Upcoming Payment"}
             </div>
             <div
               style={{
@@ -3274,7 +3285,9 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
                 letterSpacing: 0.1 * scale,
               }}
             >
-              A payment of $2,847.13 is scheduled for May 22.
+              {isPaid
+                ? "$2,847.13 paid in full on May 8."
+                : "A payment of $2,847.13 is scheduled for May 22."}
             </div>
           </div>
         </div>
@@ -7315,6 +7328,10 @@ const Scene3: React.FC<Scene3Props> = ({
     },
   );
   const paymentConfirmOpacity = paymentToastIn * paymentToastOut;
+  // Persistent paid flag — flips true the moment the confirm sheet
+  // is fully in, and stays true for the rest of the wallet beat so
+  // the Card Balance / Upcoming Payment tiles don't reset.
+  const walletPaidLatched = local >= paymentToastInEnd;
 
   // Wallet page exit.
   const walletExitStart = paymentToastOutEnd;
@@ -7935,6 +7952,7 @@ const Scene3: React.FC<Scene3Props> = ({
             opacity={walletOpacity}
             payButtonScale={payButtonTapScale}
             paymentConfirmOpacity={paymentConfirmOpacity}
+            paidLatched={walletPaidLatched}
           />
         </div>
       )}
