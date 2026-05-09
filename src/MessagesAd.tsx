@@ -6869,7 +6869,7 @@ const Scene3: React.FC<Scene3Props> = ({
   // existing text and types a new phrase ("book my flight and
   // hotel") in its place. The bubble width animates in lockstep so
   // it always snugly fits the current text.
-  const sent3PhraseInitial = "bet, order some protection";
+  const sent3PhraseInitial = "bet, order some roses";
   const sent3PhraseEdited = "book my flight and hotel";
   const sent3PhraseEdited2 = "pay off my credit card";
   const sent3PhraseEdited3 = "respond to all my emails";
