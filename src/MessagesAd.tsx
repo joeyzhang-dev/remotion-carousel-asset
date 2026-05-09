@@ -982,7 +982,7 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
               color: "#0095F6",
             }}
           >
-            @uscedu | @ditto
+            @joeysixfive | @ditto
           </div>
           <div
             style={{
