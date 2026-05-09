@@ -6270,7 +6270,6 @@ const Scene3: React.FC<Scene3Props> = ({
   const typingStart = sec(4.2, fps);
   const typingPopEnd = sec(4.4, fps); // typing bubble fully popped in
   const typingMorphStart = sec(5.2, fps); // begin width morph + content swap
-  const receivedStart = typingMorphStart;
   const receivedEnd = sec(5.45, fps); // morph ends, gray bubble fully formed
 
   // "Delivered" fade-out — sequential, completes before "Read" starts.
@@ -6327,7 +6326,6 @@ const Scene3: React.FC<Scene3Props> = ({
   //   7.57s  sent2 "Read" begins fading IN
   //   7.73s  sent2 "Read" fully visible (held until end of scene)
   const sent2Start = sec(5.9, fps);
-  const sent2End = sec(6.4, fps);
   const sent2DeliveredInStart = sec(6.7, fps);
   const sent2DeliveredInEnd = sec(7.0, fps);
   const sent2DeliveredOutStart = sec(7.35, fps);
@@ -6358,16 +6356,18 @@ const Scene3: React.FC<Scene3Props> = ({
   //   12.95s settled
   const sent2ReadOutStart = sec(7.9, fps);
   const sent2ReadOutEnd = sec(8.1, fps);
-  const typing2Start = sec(8.1, fps);
-  const typing2PopEnd = sec(8.3, fps);
+  // Compressed: typing #2 begins right after sent #1 settles, since
+  // received #1 + sent #2 + their receipts have been removed.
+  const typing2Start = sec(4.6, fps);
+  const typing2PopEnd = sec(4.8, fps);
   // Tap + flight (the IG cell becomes a gray image bubble in chat).
-  const igTapStart = sec(11.1, fps);
-  const igTapEnd = sec(11.3, fps); // tap-down/up complete; flight begins
+  const igTapStart = sec(7.6, fps);
+  const igTapEnd = sec(7.8, fps); // tap-down/up complete; flight begins
   const igFlightStart = igTapEnd;
-  const igFlightEnd = sec(11.9, fps);
+  const igFlightEnd = sec(8.4, fps);
   // typing #2 morph (after the image attachment has settled).
-  const typing2MorphStart = sec(12.1, fps);
-  const typing2MorphEnd = sec(12.5, fps);
+  const typing2MorphStart = sec(8.6, fps);
+  const typing2MorphEnd = sec(9.0, fps);
 
   // ── Image-attachment bubble: tap progress drivers ───────────────
   // Cell tap feedback: scale-down then back to 1.0 over the
@@ -6825,7 +6825,7 @@ const Scene3: React.FC<Scene3Props> = ({
   // 0.4s pause after received #3 settles (12.95s) before the prior-
   // bubbles fade-out starts (sent3Start - 0.3s ≈ 13.5s). The viewer
   // gets a beat to read the gray reply burst before the punchline.
-  const sent3Start = sec(13.8, fps);
+  const sent3Start = sec(10.3, fps);
   // sent #3 lands as the punchline of the scene — everything else
   // fades out so this bubble sits alone on screen, and it enters
   // with a more pronounced expand (0.5 → 1.0 scale, slower settle
@@ -6871,26 +6871,26 @@ const Scene3: React.FC<Scene3Props> = ({
   };
   const editPhases: EditPhase[] = [
     {
-      backspaceStart: sec(14.3, fps),
+      backspaceStart: sec(10.8, fps),
       fromPhrase: sent3PhraseInitial,
       toPhrase: sent3PhraseEdited,
     },
     {
       // Edit 2 — backspace begins ~0.95s before Wallet fades in,
       // matching the cadence of edit 1 → flight transition.
-      backspaceStart: sec(18.05, fps),
+      backspaceStart: sec(14.55, fps),
       fromPhrase: sent3PhraseEdited,
       toPhrase: sent3PhraseEdited2,
     },
     {
       // Edit 3 — backspace begins ~0.95s before Gmail fades in.
-      backspaceStart: sec(22.95, fps),
+      backspaceStart: sec(19.45, fps),
       fromPhrase: sent3PhraseEdited2,
       toPhrase: sent3PhraseEdited3,
     },
     {
       // Edit 4 — backspace begins ~0.95s before Docs fades in.
-      backspaceStart: sec(27.85, fps),
+      backspaceStart: sec(24.35, fps),
       fromPhrase: sent3PhraseEdited3,
       toPhrase: sent3PhraseEdited4,
     },
@@ -7032,8 +7032,8 @@ const Scene3: React.FC<Scene3Props> = ({
   // button (small scale-down/up pulse), then the page fades and
   // lifts away — same exit pattern as the IG profile. The "bet,
   // order some protection" bubble stays put through all of this.
-  const buyTapStart = sec(14.5, fps);
-  const buyTapEnd = sec(14.7, fps);
+  const buyTapStart = sec(11.0, fps);
+  const buyTapEnd = sec(11.2, fps);
   const tapHalf = (buyTapEnd - buyTapStart) / 2;
   const buyTapDown = interpolate(
     local,
@@ -7114,8 +7114,8 @@ const Scene3: React.FC<Scene3Props> = ({
   );
 
   // Tap on the cheapest flight result card.
-  const flightTapStart = sec(16.5, fps);
-  const flightTapEnd = sec(16.7, fps);
+  const flightTapStart = sec(13.0, fps);
+  const flightTapEnd = sec(13.2, fps);
   const flightTapHalf = (flightTapEnd - flightTapStart) / 2;
   const flightTapDown = interpolate(
     local,
@@ -7229,8 +7229,8 @@ const Scene3: React.FC<Scene3Props> = ({
   );
 
   // Pay button tap window.
-  const payTapStart = sec(21.5, fps);
-  const payTapEnd = sec(21.7, fps);
+  const payTapStart = sec(18.0, fps);
+  const payTapEnd = sec(18.2, fps);
   const payTapHalf = (payTapEnd - payTapStart) / 2;
   const payTapDown = interpolate(
     local,
@@ -7337,8 +7337,8 @@ const Scene3: React.FC<Scene3Props> = ({
   );
 
   // Reply All chip tap.
-  const replyAllTapStart = sec(26.4, fps);
-  const replyAllTapEnd = sec(26.6, fps);
+  const replyAllTapStart = sec(22.9, fps);
+  const replyAllTapEnd = sec(23.1, fps);
   const replyAllTapHalf = (replyAllTapEnd - replyAllTapStart) / 2;
   const replyAllTapDown = interpolate(
     local,
@@ -7441,8 +7441,8 @@ const Scene3: React.FC<Scene3Props> = ({
   );
 
   // Turn in button tap.
-  const turnInTapStart = sec(31.1, fps);
-  const turnInTapEnd = sec(31.3, fps);
+  const turnInTapStart = sec(27.6, fps);
+  const turnInTapEnd = sec(27.8, fps);
   const turnInTapHalf = (turnInTapEnd - turnInTapStart) / 2;
   const turnInTapDown = interpolate(
     local,
@@ -7552,7 +7552,7 @@ const Scene3: React.FC<Scene3Props> = ({
 
   // Received #3 timing: pops in shortly after typing #2 morphs into
   // the first text reply.
-  const received3Start = sec(12.6, fps);
+  const received3Start = sec(9.1, fps);
   const received3Spring = spring({
     frame: local - received3Start,
     fps,
@@ -7647,28 +7647,9 @@ const Scene3: React.FC<Scene3Props> = ({
   const typing2YOffsetSettled =
     typing2TopAnchorAfter + bubbleHeight / 2;
   let conversationShift = 0;
-  // 1) Received #1 becomes the newest.
-  conversationShift = interpolate(
-    local,
-    [receivedStart, receivedEnd],
-    [conversationShift, -receivedYOffset],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.out(Easing.cubic),
-    },
-  );
-  // 2) Sent #2 becomes the newest.
-  conversationShift = interpolate(
-    local,
-    [sent2Start, sent2End],
-    [conversationShift, -sent2YOffset],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.out(Easing.cubic),
-    },
-  );
+  // Steps 1 and 2 (received #1 + sent #2) are removed from the
+  // sequence, so we hold conversationShift at 0 until the image
+  // attachment lands and the chat scrolls for real.
   // 3) Image attachment becomes the newest (lands via the IG flight).
   conversationShift = interpolate(
     local,
@@ -7694,7 +7675,7 @@ const Scene3: React.FC<Scene3Props> = ({
   // 5) Received #3.
   conversationShift = interpolate(
     local,
-    [sec(12.6, fps), sec(12.95, fps)],
+    [sec(9.1, fps), sec(9.45, fps)],
     [conversationShift, -received3YOffset],
     {
       extrapolateLeft: "clamp",
@@ -7705,7 +7686,7 @@ const Scene3: React.FC<Scene3Props> = ({
   // 6) Sent #3 (closing reply) becomes the newest.
   conversationShift = interpolate(
     local,
-    [sec(13.8, fps), sec(14.25, fps)],
+    [sec(10.3, fps), sec(10.75, fps)],
     [conversationShift, -sent3YOffset],
     {
       extrapolateLeft: "clamp",
@@ -8593,7 +8574,7 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           closing-punchline edit animation + the flight search
           background, tap on a flight, "Booking confirmed" toast,
           and the page exit. */}
-      <Sequence from={sec(5, fps)} durationInFrames={sec(34, fps)}>
+      <Sequence from={sec(5, fps)} durationInFrames={sec(30.5, fps)}>
         <Scene3
           scale={scale}
           width={layoutWidth}
