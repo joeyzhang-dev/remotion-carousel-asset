@@ -578,6 +578,14 @@ const PROFILE_GRID_COLORS = [
   "#C8D0B8", "#D4B5C0", "#B8D0C4",
 ];
 
+const PROFILE_GRID_IMAGES = [
+  "ig/p01.jpg", "ig/p02.jpg", "ig/p03.jpg",
+  "ig/p04.jpg", "ig/p05.jpg", "ig/p06.jpg",
+  "ig/p07.jpg", "ig/p08.jpg", "ig/p09.jpg",
+  "ig/p10.jpg", "ig/p11.jpg", "ig/p12.jpg",
+  "ig/p13.jpg", "ig/p14.jpg",
+];
+
 /**
  * Shared layout geometry for the Instagram profile background. Same
  * values used inside `InstagramProfile` for rendering AND inside
@@ -1122,6 +1130,8 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
         >
           {Array.from({ length: gridRows * 3 }).map((_, idx) => {
             const isTapped = idx === tappedCellIndex;
+            const imgSrc =
+              PROFILE_GRID_IMAGES[idx % PROFILE_GRID_IMAGES.length];
             return (
               <div
                 key={idx}
@@ -1130,6 +1140,7 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
                   height: cellSize,
                   background:
                     PROFILE_GRID_COLORS[idx % PROFILE_GRID_COLORS.length],
+                  overflow: "hidden",
                   // Tap-pulse: only applied to the tapped cell. Others
                   // render unchanged.
                   transform: isTapped
@@ -1137,7 +1148,17 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
                     : undefined,
                   opacity: isTapped ? tappedCellOpacity : 1,
                 }}
-              />
+              >
+                <Img
+                  src={staticFile(imgSrc)}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
+              </div>
             );
           })}
         </div>
@@ -6771,6 +6792,8 @@ const Scene3: React.FC<Scene3Props> = ({
   const dwelledCellIndex = dwelledRow * igLayout.gridCols + 1; // middle column
   const dwelledCellColor =
     PROFILE_GRID_COLORS[dwelledCellIndex % PROFILE_GRID_COLORS.length];
+  const dwelledCellImage =
+    PROFILE_GRID_IMAGES[dwelledCellIndex % PROFILE_GRID_IMAGES.length];
   // Cell screen position during dwell. Layout coords minus the
   // current page-Y (which is -igDwellTarget during the dwell stage).
   const dwelledCellLayoutX = cellLayoutX(dwelledCellIndex, igLayout);
@@ -8558,6 +8581,7 @@ const Scene3: React.FC<Scene3Props> = ({
                 height: cloneSize,
                 borderRadius: cloneRadius,
                 background: dwelledCellColor,
+                overflow: "hidden",
                 transform: `translate(-50%, -50%) scale(${tapScale})`,
                 opacity: dwelledCellHighlightOpacity * priorBubblesOpacity,
                 boxShadow:
@@ -8566,7 +8590,17 @@ const Scene3: React.FC<Scene3Props> = ({
                     : "none",
                 pointerEvents: "none",
               }}
-            />
+            >
+              <Img
+                src={staticFile(dwelledCellImage)}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+            </div>
           );
         })()
       )}
