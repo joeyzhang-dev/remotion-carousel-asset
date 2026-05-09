@@ -8597,12 +8597,22 @@ const Scene3: React.FC<Scene3Props> = ({
             }}
           />
         </div>
-        {/* Name + chevron */}
+        {/* Name pill — frosted glass, light mode */}
         <div
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: 6 * scale,
+            gap: 8 * scale,
+            padding: `${10 * scale}px ${22 * scale}px`,
+            borderRadius: 999,
+            background: "rgba(255, 255, 255, 0.65)",
+            backdropFilter: `blur(${20 * scale}px) saturate(180%)`,
+            WebkitBackdropFilter: `blur(${20 * scale}px) saturate(180%)`,
+            border: `${1 * scale}px solid rgba(255, 255, 255, 0.6)`,
+            boxShadow: `
+              0 ${4 * scale}px ${20 * scale}px rgba(0, 0, 0, 0.08),
+              inset 0 ${1 * scale}px 0 rgba(255, 255, 255, 0.9)
+            `,
             fontSize: 28 * scale,
             fontWeight: 600,
             color: "#1C1C1E",
@@ -8610,7 +8620,7 @@ const Scene3: React.FC<Scene3Props> = ({
           }}
         >
           <span>Folk</span>
-          <svg width={18 * scale} height={26 * scale} viewBox="0 0 16 26" fill="none">
+          <svg width={16 * scale} height={22 * scale} viewBox="0 0 16 26" fill="none">
             <path
               d="M3 3 L13 13 L3 23"
               stroke="#8E8E93"
