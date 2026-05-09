@@ -6150,12 +6150,16 @@ const Scene3: React.FC<Scene3Props> = ({
   // estimation slack would manifest as visible whitespace asymmetry
   // (specifically extra room on the right). Trust the lookup; if a
   // glyph overflows by 1-2px the deviation is invisible to the eye.
-  const bubbleFontShrink = 0.78;
+  // Master bubble size multiplier. 0.78 was the pre-bump baseline; we
+  // upsize every bubble (font, padding, height) by 15% so the chat
+  // reads bigger on screen.
+  const bubbleSizeMul = 1.15;
+  const bubbleFontShrink = 0.78 * bubbleSizeMul;
   const bubbleFontSize = fontSize * bubbleFontShrink;
   const bubbleTextWidth = measureTextEm(phrase) * bubbleFontSize;
   // Tighter horizontal padding (was 32) so the bubble snugs around
   // the text the way real iMessage bubbles do.
-  const bubblePadX = 22 * scale;
+  const bubblePadX = 22 * scale * bubbleSizeMul;
   const bubbleWidth = bubbleTextWidth + bubblePadX * 2;
   // Animated font size during morph — text scales down as the bubble forms.
   const animatedFontSize = interpolate(
@@ -6164,7 +6168,7 @@ const Scene3: React.FC<Scene3Props> = ({
     [fontSize, bubbleFontSize],
   );
   // Bubble height shrinks slightly too, for a more natural chat-bubble shape.
-  const bubbleHeight = inputHeight * 0.85;
+  const bubbleHeight = inputHeight * 0.85 * bubbleSizeMul;
   const animatedHeight = interpolate(
     morphP,
     [0, 1],
