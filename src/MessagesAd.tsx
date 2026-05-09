@@ -7587,14 +7587,16 @@ const Scene3: React.FC<Scene3Props> = ({
   const imageBubbleCornerRadius = bubbleHeight * 0.42;
 
   // Distance between bubble CENTERS (used in absolute positioning).
-  // Add half of each bubble's height plus the gap.
-  const receivedYOffset = bubbleHeight / 2 + receivedGap + receivedHeight / 2;
-  // Sent2 sits another full row below the gray bubble.
-  const sent2YOffset =
-    receivedYOffset + receivedHeight / 2 + receivedGap + sent2Height / 2;
-  // Image attachment row.
+  // Received #1 and sent #2 are removed from the visible sequence,
+  // so their Y offsets stay at 0 for layout purposes — the image
+  // attachment row sits directly below sent #1 instead of below
+  // those (now-invisible) bubbles.
+  const receivedYOffset = 0;
+  const sent2YOffset = 0;
+  // Image attachment row sits one gap below sent #1 (now the
+  // last visible bubble before it).
   const imageBubbleTopAnchorY =
-    sent2YOffset + sent2Height / 2 + receivedGap;
+    bubbleHeight / 2 + receivedGap;
   const imageBubbleYOffset = imageBubbleTopAnchorY + imageBubbleSize / 2;
   // Same-sender gap between consecutive gray bubbles (image → text replies).
   const sameSenderGap = 8 * scale;
