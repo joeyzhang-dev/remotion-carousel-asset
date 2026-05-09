@@ -40,8 +40,8 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="Notification"
         component={Notification}
-        durationInFrames={90}
-        fps={30}
+        durationInFrames={180}
+        fps={60}
         width={1080}
         height={1920}
       />
