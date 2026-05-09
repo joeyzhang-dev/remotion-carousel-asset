@@ -8613,7 +8613,7 @@ const Scene3: React.FC<Scene3Props> = ({
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 15 * scale,
+              gap: 22 * scale,
               fontFamily: FONT_STACK,
               pointerEvents: "none",
               opacity: headerOpacity,
@@ -8623,8 +8623,8 @@ const Scene3: React.FC<Scene3Props> = ({
                 (source is white "f" on black; inverted for black on white). */}
             <div
               style={{
-                width: 138 * scale,
-                height: 138 * scale,
+                width: 220 * scale,
+                height: 220 * scale,
                 borderRadius: "50%",
                 overflow: "hidden",
                 background: "#FFFFFF",
@@ -8648,30 +8648,30 @@ const Scene3: React.FC<Scene3Props> = ({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 10 * scale,
-                padding: `${13 * scale}px ${28 * scale}px`,
+                gap: 14 * scale,
+                padding: `${20 * scale}px ${40 * scale}px`,
                 borderRadius: 999,
                 background: `rgba(255, 255, 255, ${headerBgAlpha})`,
                 backdropFilter: `blur(${headerBlurPx * scale}px) saturate(180%)`,
                 WebkitBackdropFilter: `blur(${headerBlurPx * scale}px) saturate(180%)`,
-                border: `${1.25 * scale}px solid rgba(255, 255, 255, 0.6)`,
+                border: `${1.5 * scale}px solid rgba(255, 255, 255, 0.6)`,
                 boxShadow: `
-                  0 ${5 * scale}px ${25 * scale}px rgba(0, 0, 0, 0.08),
-                  inset 0 ${1.25 * scale}px 0 rgba(255, 255, 255, 0.9)
+                  0 ${7 * scale}px ${32 * scale}px rgba(0, 0, 0, 0.10),
+                  inset 0 ${1.5 * scale}px 0 rgba(255, 255, 255, 0.9)
                 `,
-                fontSize: 35 * scale,
+                fontSize: 50 * scale,
                 fontWeight: 600,
                 color: "#1C1C1E",
-                letterSpacing: -0.25 * scale,
+                letterSpacing: -0.4 * scale,
                 transform: `scale(${headerSettle})`,
               }}
             >
               <span>Folk</span>
-              <svg width={20 * scale} height={28 * scale} viewBox="0 0 16 26" fill="none">
+              <svg width={28 * scale} height={40 * scale} viewBox="0 0 16 26" fill="none">
                 <path
                   d="M3 3 L13 13 L3 23"
                   stroke="#8E8E93"
-                  strokeWidth="2.5"
+                  strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
