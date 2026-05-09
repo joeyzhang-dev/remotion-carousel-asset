@@ -8575,25 +8575,25 @@ const Scene3: React.FC<Scene3Props> = ({
           pointerEvents: "none",
         }}
       >
-        {/* Avatar — black circle with white folk mark */}
+        {/* Avatar — light-mode invert of the folk "f" icon
+            (source is white "f" on black; inverted for black on white). */}
         <div
           style={{
             width: 110 * scale,
             height: 110 * scale,
             borderRadius: "50%",
-            background: "#000000",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
             overflow: "hidden",
+            background: "#FFFFFF",
           }}
         >
           <Img
-            src={staticFile("folk-mark.png")}
+            src={staticFile("folk-f-icon.jpg")}
             style={{
-              width: 96 * scale,
-              height: 96 * scale,
-              filter: "brightness(0) invert(1)",
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+              filter: "invert(1)",
             }}
           />
         </div>
