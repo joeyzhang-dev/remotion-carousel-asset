@@ -5318,11 +5318,8 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
         </div>
       </div>
 
-      {/* Homework submitted — Google Classroom-style submission card.
-          Green status banner at the top, assignment card with subject
-          chip + teacher row + Docs attachment, rubric preview with
-          mini progress bars, and a circular grade-prediction ring. */}
-      {submitConfirmOpacity > 0 && (
+      {/* Homework submitted popup — disabled per request. */}
+      {false && submitConfirmOpacity > 0 && (
         <div
           style={{
             position: "absolute",
