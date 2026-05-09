@@ -7606,8 +7606,22 @@ const Scene3: React.FC<Scene3Props> = ({
   const typing2TopAnchorBefore = imageBubbleTopAnchorY;
   const typing2TopAnchorAfter =
     imageBubbleTopAnchorY + imageBubbleSize + sameSenderGap;
+  // typing #2's slide uses the SAME easing as `conversationShift` step 3
+  // (Easing.out(Easing.cubic)), not the flight's inOut. Otherwise the
+  // chat shifts up faster than typing #2 slides down and the dots
+  // appear to drift up briefly before moving into place.
+  const typing2SlideProgress = interpolate(
+    local,
+    [igFlightStart, igFlightEnd],
+    [0, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
   const typing2TopAnchorY = interpolate(
-    flightProgress,
+    typing2SlideProgress,
     [0, 1],
     [typing2TopAnchorBefore, typing2TopAnchorAfter],
   );
