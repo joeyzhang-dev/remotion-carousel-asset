@@ -563,6 +563,12 @@ type InstagramProfileProps = {
    * can be hidden once a flight clone takes over outside this
    * component). 1 = visible, 0 = hidden. Defaults to 1. */
   tappedCellOpacity?: number;
+  /** Optional override that forces a specific image source for
+   * `focusedCellIndex`. Used to make the dwelled cell display a
+   * specific photo (e.g. the roses bouquet) regardless of what
+   * the cycling PROFILE_GRID_IMAGES would otherwise put there. */
+  focusedCellIndex?: number;
+  focusedCellImage?: string;
 };
 
 // Placeholder colors for each grid cell. The user will swap these for
@@ -658,6 +664,8 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
   tappedCellIndex,
   tappedCellScale = 1,
   tappedCellOpacity = 1,
+  focusedCellIndex,
+  focusedCellImage,
 }) => {
   // Geometry derived from the shared helper so the parent can compute
   // matching screen positions for the dwell-cell flight animation.
@@ -1131,7 +1139,9 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
           {Array.from({ length: gridRows * 3 }).map((_, idx) => {
             const isTapped = idx === tappedCellIndex;
             const imgSrc =
-              PROFILE_GRID_IMAGES[idx % PROFILE_GRID_IMAGES.length];
+              idx === focusedCellIndex && focusedCellImage
+                ? focusedCellImage
+                : PROFILE_GRID_IMAGES[idx % PROFILE_GRID_IMAGES.length];
             return (
               <div
                 key={idx}
@@ -6792,8 +6802,10 @@ const Scene3: React.FC<Scene3Props> = ({
   const dwelledCellIndex = dwelledRow * igLayout.gridCols + 1; // middle column
   const dwelledCellColor =
     PROFILE_GRID_COLORS[dwelledCellIndex % PROFILE_GRID_COLORS.length];
-  const dwelledCellImage =
-    PROFILE_GRID_IMAGES[dwelledCellIndex % PROFILE_GRID_IMAGES.length];
+  // Force the dwelled cell to display the "focus" photo (the roses
+  // bouquet) so the image that flies into the chat matches the
+  // closing punchline.
+  const dwelledCellImage = "ig/focus.jpg";
   // Cell screen position during dwell. Layout coords minus the
   // current page-Y (which is -igDwellTarget during the dwell stage).
   const dwelledCellLayoutX = cellLayoutX(dwelledCellIndex, igLayout);
@@ -7837,6 +7849,8 @@ const Scene3: React.FC<Scene3Props> = ({
             opacity={igFeedOpacity}
             tappedCellIndex={dwelledCellIndex}
             tappedCellScale={dwelledCellTapScale}
+            focusedCellIndex={dwelledCellIndex}
+            focusedCellImage={dwelledCellImage}
             // Hide the original cell during flight — a brighter
             // clone (rendered separately, above the IG layer) takes
             // over. dwelledCellSourceOpacity ramps 1→0 during the
