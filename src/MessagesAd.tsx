@@ -6125,17 +6125,11 @@ const Scene3: React.FC<Scene3Props> = ({
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  // Row drifts up. After the morph completes, a tiny continued upward drift
-  // during the held period gives the bubble a sense of being "delivered".
-  const morphYOffset = interpolate(morphP, [0, 1], [0, -height * 0.06]);
+  // Sent #1 settles at the canvas midline. Its old upward "delivered"
+  // drift was meant to make room for received #1 + sent #2 below; with
+  // those removed we keep sent #1 centered at height/2.
+  const rowYOffset = 0;
   const holdStart = morphEnd;
-  const holdEnd = sec(3.0, fps);
-  const holdYDrift = interpolate(local, [holdStart, holdEnd], [0, -height * 0.01], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-  const rowYOffset = morphYOffset + holdYDrift;
   // Right-align the bubble like a real iMessage outbound.
   const rowXOffset = interpolate(morphP, [0, 1], [
     0,
