@@ -1171,7 +1171,7 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
  * Amazon-style product page background. Mirrors `InstagramProfile`'s
  * role — sits behind the chat as ambient context — but redesigned to
  * read as an e-commerce listing for the closing punchline ("bet,
- * order some protection"): top nav, big product image, title +
+ * order some roses"): top nav, big product image, title +
  * brand + rating, price, buy buttons, "frequently bought together"
  * row, and a couple of additional rows below the fold.
  *
@@ -1369,7 +1369,7 @@ const AmazonProduct: React.FC<AmazonProductProps> = ({
         >
           {/* Product hero image */}
           <Img
-            src={staticFile("trojan-magnum.jpg")}
+            src={staticFile("roses-bouquet.jpg")}
             style={{
               width: heroImageH * 0.85,
               height: heroImageH * 0.85,
@@ -1395,7 +1395,7 @@ const AmazonProduct: React.FC<AmazonProductProps> = ({
               marginBottom: 8 * scale,
             }}
           >
-            Visit the Trojan Store
+            Visit the FloraVie Store
           </div>
           <div
             style={{
@@ -1406,7 +1406,7 @@ const AmazonProduct: React.FC<AmazonProductProps> = ({
               lineHeight: 1.25,
             }}
           >
-            Trojan Magnum Lubricated Latex Condoms — 12 Count
+            FloraVie Fresh Red Rose Bouquet (8 Stems) — Pink Ribbon Wrap, Same-Day Delivery
           </div>
         </div>
 
@@ -1595,7 +1595,7 @@ const AmazonProduct: React.FC<AmazonProductProps> = ({
                   style={{
                     width: 130 * scale,
                     height: 130 * scale,
-                    background: ["#D4A04F", "#C8B6A6", "#A8C0BE"][i],
+                    background: ["#C2185B", "#FCE4EC", "#7A4F36"][i],
                     borderRadius: 6 * scale,
                   }}
                 />
@@ -7055,7 +7055,7 @@ const Scene3: React.FC<Scene3Props> = ({
   );
 
   // ── Amazon product page background (closing punchline context) ──
-  // While sent #3 ("bet, order some protection") is alone on screen,
+  // While sent #3 ("bet, order some roses") is alone on screen,
   // an Amazon product listing slides in behind it with the same
   // iOS-style "open app" zoom we used for the IG profile. Reads as
   // "the agent is checking out a product page right now."
@@ -7089,7 +7089,7 @@ const Scene3: React.FC<Scene3Props> = ({
   // Once the Amazon page has settled, the agent "taps" the Buy Now
   // button (small scale-down/up pulse), then the page fades and
   // lifts away — same exit pattern as the IG profile. The "bet,
-  // order some protection" bubble stays put through all of this.
+  // order some roses" bubble stays put through all of this.
   const buyTapStart = sec(11.0, fps);
   const buyTapEnd = sec(11.2, fps);
   const tapHalf = (buyTapEnd - buyTapStart) / 2;
