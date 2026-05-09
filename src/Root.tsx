@@ -4,6 +4,7 @@ import { AppCarousel } from "./AppCarousel";
 import { AIOrgChart } from "./AIOrgChart";
 import { MessagesAd, MessagesAdHorizontal } from "./MessagesAd";
 import { Showcase } from "./Showcase";
+import { Notification } from "./Notification";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -29,6 +30,16 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="Showcase"
         component={Showcase}
+        durationInFrames={90}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+
+      {/* Notification — apple iOS Messages banner from Folk. */}
+      <Composition
+        id="Notification"
+        component={Notification}
         durationInFrames={90}
         fps={30}
         width={1080}
