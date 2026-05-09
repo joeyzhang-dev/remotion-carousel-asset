@@ -6074,9 +6074,9 @@ const Scene3: React.FC<Scene3Props> = ({
   // (specifically extra room on the right). Trust the lookup; if a
   // glyph overflows by 1-2px the deviation is invisible to the eye.
   // Master bubble size multiplier. 0.78 was the pre-bump baseline; we
-  // upsize every bubble (font, padding, height) by 15% so the chat
-  // reads bigger on screen.
-  const bubbleSizeMul = 1.15;
+  // upsize every bubble (font, padding, height) so the chat reads
+  // bigger on screen. 1.15 * 1.25 = 1.4375 (15% then another 25%).
+  const bubbleSizeMul = 1.4375;
   const bubbleFontShrink = 0.78 * bubbleSizeMul;
   const bubbleFontSize = fontSize * bubbleFontShrink;
   const bubbleTextWidth = measureTextEm(phrase) * bubbleFontSize;
@@ -8613,7 +8613,7 @@ const Scene3: React.FC<Scene3Props> = ({
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 12 * scale,
+              gap: 15 * scale,
               fontFamily: FONT_STACK,
               pointerEvents: "none",
               opacity: headerOpacity,
@@ -8623,8 +8623,8 @@ const Scene3: React.FC<Scene3Props> = ({
                 (source is white "f" on black; inverted for black on white). */}
             <div
               style={{
-                width: 110 * scale,
-                height: 110 * scale,
+                width: 138 * scale,
+                height: 138 * scale,
                 borderRadius: "50%",
                 overflow: "hidden",
                 background: "#FFFFFF",
@@ -8648,26 +8648,26 @@ const Scene3: React.FC<Scene3Props> = ({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 8 * scale,
-                padding: `${10 * scale}px ${22 * scale}px`,
+                gap: 10 * scale,
+                padding: `${13 * scale}px ${28 * scale}px`,
                 borderRadius: 999,
                 background: `rgba(255, 255, 255, ${headerBgAlpha})`,
                 backdropFilter: `blur(${headerBlurPx * scale}px) saturate(180%)`,
                 WebkitBackdropFilter: `blur(${headerBlurPx * scale}px) saturate(180%)`,
-                border: `${1 * scale}px solid rgba(255, 255, 255, 0.6)`,
+                border: `${1.25 * scale}px solid rgba(255, 255, 255, 0.6)`,
                 boxShadow: `
-                  0 ${4 * scale}px ${20 * scale}px rgba(0, 0, 0, 0.08),
-                  inset 0 ${1 * scale}px 0 rgba(255, 255, 255, 0.9)
+                  0 ${5 * scale}px ${25 * scale}px rgba(0, 0, 0, 0.08),
+                  inset 0 ${1.25 * scale}px 0 rgba(255, 255, 255, 0.9)
                 `,
-                fontSize: 28 * scale,
+                fontSize: 35 * scale,
                 fontWeight: 600,
                 color: "#1C1C1E",
-                letterSpacing: -0.2 * scale,
+                letterSpacing: -0.25 * scale,
                 transform: `scale(${headerSettle})`,
               }}
             >
               <span>Folk</span>
-              <svg width={16 * scale} height={22 * scale} viewBox="0 0 16 26" fill="none">
+              <svg width={20 * scale} height={28 * scale} viewBox="0 0 16 26" fill="none">
                 <path
                   d="M3 3 L13 13 L3 23"
                   stroke="#8E8E93"
