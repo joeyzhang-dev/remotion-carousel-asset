@@ -157,7 +157,7 @@ export const Notification: React.FC = () => {
                 lineHeight: 1.3,
               }}
             >
-              iMessage
+              Hey Elsa is ready for your date!
             </div>
           </div>
         </div>
