@@ -129,128 +129,6 @@ const measureTextEm = (text: string): number => {
   return sum;
 };
 
-type CaptionProps = {
-  text: string;
-  emphasized?: string;
-  scale: number;
-  width: number;
-  height: number;
-  /** Seconds before sequence end where caption begins fading out. */
-  fadeOutAtSec?: number;
-  durationSec?: number;
-};
-
-const Caption: React.FC<CaptionProps> = ({
-  text,
-  emphasized,
-  scale,
-  width,
-  height,
-  fadeOutAtSec,
-  durationSec,
-}) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-
-  const popFrames = sec(0.25, fps);
-  const popProgress = interpolate(frame, [0, popFrames], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-  const popScale = 0.92 + 0.08 * popProgress;
-  let popOpacity = popProgress;
-
-  if (fadeOutAtSec != null && durationSec != null) {
-    const startFrame = sec(fadeOutAtSec, fps);
-    const endFrame = sec(durationSec, fps);
-    const outP = interpolate(frame, [startFrame, endFrame], [1, 0], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.in(Easing.cubic),
-    });
-    popOpacity = Math.min(popOpacity, outP);
-  }
-
-  const renderText = () => {
-    if (!emphasized) return text;
-    const idx = text.indexOf(emphasized);
-    if (idx === -1) return text;
-    const before = text.slice(0, idx);
-    const after = text.slice(idx + emphasized.length);
-    const empPop = interpolate(
-      frame,
-      [sec(0.05, fps), sec(0.35, fps)],
-      [1, 1.15],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.out(Easing.back(2)),
-      },
-    );
-    const empSettle = interpolate(
-      frame,
-      [sec(0.35, fps), sec(0.55, fps)],
-      [1.15, 1.0],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    const empScale = frame < sec(0.35, fps) ? empPop : empSettle;
-    return (
-      <>
-        {before}
-        <span
-          style={{
-            display: "inline-block",
-            fontWeight: 900,
-            transform: `scale(${empScale})`,
-            transformOrigin: "center",
-          }}
-        >
-          {emphasized}
-        </span>
-        {after}
-      </>
-    );
-  };
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        top: height * 0.73,
-        display: "flex",
-        justifyContent: "center",
-        opacity: popOpacity,
-        transform: `scale(${popScale})`,
-      }}
-    >
-      <div
-        style={{
-          background: "rgba(0,0,0,0.75)",
-          color: "#FFFFFF",
-          fontFamily: FONT_STACK,
-          fontSize: 64 * scale,
-          fontWeight: 700,
-          padding: `${18 * scale}px ${32 * scale}px`,
-          borderRadius: 100 * scale,
-          letterSpacing: -0.5 * scale,
-          maxWidth: width * 0.86,
-          textAlign: "center",
-          lineHeight: 1.15,
-        }}
-      >
-        {renderText()}
-      </div>
-    </div>
-  );
-};
-
 type SceneProps = {
   scale: number;
   width: number;
@@ -8698,13 +8576,6 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
   const { fps } = useVideoConfig();
   const scale = layoutWidth / 1080;
 
-  // Sequence boundaries are extended by `xfade` seconds on each side of the
-  // logical scene end so adjacent scenes overlap and crossfade rather than
-  // hard-cutting. The internal frame=0 of each Sequence still aligns with
-  // the logical scene start (we use `from` exactly at the start), and we
-  // wrap with a parent Sequence whose duration includes the trailing tail.
-  const xfade = 0.35;
-
   return (
     <AbsoluteFill style={{ background: BG_WHITE }}>
       {/* Scene 1 — 0s–2s: logo spin → morph → slide + input fade-in.
@@ -8715,42 +8586,11 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
         <Scene1 scale={scale} width={layoutWidth} height={layoutHeight} />
       </Sequence>
 
-      {/* Caption 1 — 0s–2s (tail), "In your messages" */}
-      <Sequence
-        from={sec(0, fps)}
-        durationInFrames={sec(2 + xfade, fps)}
-      >
-        <Caption
-          text="In your messages"
-          scale={scale}
-          width={layoutWidth}
-          height={layoutHeight}
-          fadeOutAtSec={2 - xfade}
-          durationSec={2}
-        />
-      </Sequence>
-
       {/* Scene 2 — 2s–5s: hard-cuts in on identical chat-row geometry, so the
           input/button appear persistent across the boundary. No fade-out at
           the end, for the same reason at the Scene 3 boundary. */}
       <Sequence from={sec(2, fps)} durationInFrames={sec(3, fps)}>
         <Scene2 scale={scale} width={layoutWidth} height={layoutHeight} />
-      </Sequence>
-
-      {/* Caption 2 — overlapping crossfade with Caption 1 (text-only, no stacking issue) */}
-      <Sequence
-        from={sec(2 - xfade, fps)}
-        durationInFrames={sec(3 + xfade * 2, fps)}
-      >
-        <Caption
-          text="and DOES ANYTHING you tell it to do"
-          emphasized="DOES ANYTHING"
-          scale={scale}
-          width={layoutWidth}
-          height={layoutHeight}
-          fadeOutAtSec={3 + xfade}
-          durationSec={3 + xfade * 2}
-        />
       </Sequence>
 
       {/* Scene 3 — starts at 5s. Extended to 18.5s to fit the
@@ -8762,27 +8602,6 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           scale={scale}
           width={layoutWidth}
           height={layoutHeight}
-        />
-      </Sequence>
-
-      {/* Caption 3 — overlaps with Caption 2 (text-only crossfade is fine).
-          Fades out alongside the prior conversation just before the
-          closing punchline ("bet, order some protection") enters, so
-          sent #3 sits alone on screen as the focal point. */}
-      <Sequence
-        from={sec(5 - xfade, fps)}
-        durationInFrames={sec(34 + xfade, fps)}
-      >
-        <Caption
-          text="schedule a date with my crush"
-          scale={scale}
-          width={layoutWidth}
-          height={layoutHeight}
-          // sent3Start is at Scene 3 local 13.8s = video 18.8s.
-          // Caption local time = video time - (5 - xfade) = video - 4.65s.
-          // priorFadeStart = sent3Start - 0.3s → caption-local 13.85s.
-          fadeOutAtSec={13.85}
-          durationSec={14.1}
         />
       </Sequence>
     </AbsoluteFill>
