@@ -8084,13 +8084,11 @@ const Scene3: React.FC<Scene3Props> = ({
               so the tail stays put and the right edge expands).
             - Dots fade out, then text fades in.
           After phase 2, the bubble IS the received message bubble. */}
-      {receivedOpacity > 0 && (
+      {/* Removed: typing indicator + "added to calendar + invited her" gray bubble. */}
+      {false && receivedOpacity > 0 && (
         <div
           style={{
             position: "absolute",
-            // Anchor the bubble's LEFT edge to chatEdgeMargin and let
-            // the WIDTH animate outward, so the bubble grows
-            // rightward (the tail at bottom-left stays anchored).
             left: chatEdgeMargin + animatedBubbleW / 2,
             top: sentBubbleY + receivedYOffset,
             transform: `translate(-50%, -50%) scale(${receivedScale})`,
@@ -8202,14 +8200,12 @@ const Scene3: React.FC<Scene3Props> = ({
           the first sent bubble, sitting one row below the gray reply.
           Pops in with a spring-driven scale + opacity, then has its
           own Delivered → Read receipt swap. */}
-      {sent2Opacity > 0 && (
+      {/* Removed: "find a dinner spot she'll like" sent bubble + receipts. */}
+      {false && sent2Opacity > 0 && (
         <>
           <div
             style={{
               position: "absolute",
-              // Anchor the right edge to the same inset as the first
-              // sent bubble: `width - chatEdgeMargin` = sentBubbleRight.
-              // Subtract sent2Width/2 to account for translate(-50%).
               left: width - chatEdgeMargin - sent2Width / 2,
               top: sentBubbleY + sent2YOffset,
               transform: `translate(-50%, -50%) scale(${sent2Scale})`,
