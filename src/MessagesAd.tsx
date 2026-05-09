@@ -6339,7 +6339,7 @@ const Scene3: React.FC<Scene3Props> = ({
   //   12.10s typing #2 begins morphing into the first text reply
   //   12.50s morph completes; "she posted italian food before"
   //          settled
-  //   12.60s "reserving table for you two @ 7pm on friday" pops in
+  //   12.60s "reserving table 7pm friday" pops in
   //   12.95s settled
   const sent2ReadOutStart = sec(7.9, fps);
   const sent2ReadOutEnd = sec(8.1, fps);
@@ -7530,7 +7530,7 @@ const Scene3: React.FC<Scene3Props> = ({
   const received2TailHook = 0;
 
   // Received bubble #3 — second message in the burst. Gets the tail.
-  const received3Phrase = "reserving table for you two @ 7pm on friday";
+  const received3Phrase = "reserving table 7pm friday";
   const received3FontSize = bubbleFontSize;
   const received3PadX = bubblePadX;
   const received3TextWidth =
