@@ -878,7 +878,7 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
               color: "#000",
             }}
           >
-            _placeholder
+            _elsacai
           </div>
           {/* hamburger / dots */}
           <div
@@ -904,18 +904,41 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
             gap: 24 * scale,
           }}
         >
-          {/* Avatar */}
+          {/* Avatar — Instagram-gradient ring + real profile pic */}
           <div
             style={{
-              width: avatarSize,
-              height: avatarSize,
+              width: avatarSize + 8 * scale,
+              height: avatarSize + 8 * scale,
               borderRadius: "50%",
-              background: PROFILE_GRID_COLORS[0],
-              border: `${2 * scale}px solid #fff`,
-              boxShadow: `0 0 0 ${2 * scale}px #DBDBDB`,
+              padding: 4 * scale,
+              background:
+                "conic-gradient(from 220deg, #F58529 0%, #DD2A7B 30%, #8134AF 60%, #515BD4 80%, #F58529 100%)",
               flexShrink: 0,
+              boxSizing: "border-box",
             }}
-          />
+          >
+            <div
+              style={{
+                width: avatarSize,
+                height: avatarSize,
+                borderRadius: "50%",
+                background: "#FFFFFF",
+                padding: 3 * scale,
+                boxSizing: "border-box",
+              }}
+            >
+              <Img
+                src={staticFile("elsa-profile.jpg")}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+            </div>
+          </div>
           {/* Stats row */}
           <div
             style={{
@@ -925,9 +948,9 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
               justifyContent: "space-around",
             }}
           >
-            {renderStat("posts", "284")}
-            {renderStat("followers", "1.2k")}
-            {renderStat("following", "537")}
+            {renderStat("posts", "72")}
+            {renderStat("followers", "6,187")}
+            {renderStat("following", "2,287")}
           </div>
         </div>
 
@@ -946,30 +969,42 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
           <div
             style={{
               fontFamily: FONT_STACK,
-              fontSize: 24 * scale,
-              fontWeight: 700,
-              color: "#000",
+              fontSize: 22 * scale,
+              color: "#262626",
             }}
           >
-            placeholder name
+            probably side questing
           </div>
           <div
             style={{
               fontFamily: FONT_STACK,
               fontSize: 22 * scale,
-              color: "#262626",
+              color: "#0095F6",
+            }}
+          >
+            @uscedu | @ditto
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_STACK,
+              fontSize: 22 * scale,
+              color: "#0095F6",
               display: "inline-flex",
               alignItems: "center",
               gap: 6 * scale,
             }}
           >
-            <span>living life</span>
-            <svg width={20 * scale} height={20 * scale} viewBox="0 0 24 24" fill="none">
-              <path d="M12 2 L13.5 9 L20 10.5 L13.5 12 L12 19 L10.5 12 L4 10.5 L10.5 9 Z" fill="#262626" />
-              <path d="M19 3 L19.6 5 L21.5 5.6 L19.6 6.2 L19 8.2 L18.4 6.2 L16.5 5.6 L18.4 5 Z" fill="#262626" />
-              <path d="M5 16 L5.5 17.5 L7 18 L5.5 18.5 L5 20 L4.5 18.5 L3 18 L4.5 17.5 Z" fill="#262626" />
+            <svg width={18 * scale} height={18 * scale} viewBox="0 0 24 24" fill="none">
+              <path
+                d="M9 15 L15 9 M10 6 L13 3 C15 1 18 1 20 3 C22 5 22 8 20 10 L17 13 M14 18 L11 21 C9 23 6 23 4 21 C2 19 2 16 4 14 L7 11"
+                stroke="#0095F6"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
             </svg>
-            <span>· sf → la</span>
+            <span>tryditto.com</span>
           </div>
         </div>
 
