@@ -695,24 +695,16 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
   //
   // Stages (driveFrame in seconds):
   //   0.00–0.80s  HOLD: profile fully visible, no scroll yet.
-  //                (Initial landing — viewer registers the profile.)
   //   0.80–1.80s  SCAN HEADER: slow scroll through the profile
-  //                section (avatar, stats, bio, action buttons).
-  //                Reads as "user reading the bio." Cubic ease-out.
-  //                Covers ~headerTotalH worth of scroll.
+  //                section (cubic ease-out).
   //   1.80–2.40s  FLICK GRID: faster scroll through the first few
-  //                grid rows. Linear-ish (slight ease-in-out).
-  //   2.40–3.00s  DWELL: scroll holds on a "good post" row for
-  //                ~0.6s — viewer pauses to look at a particular
-  //                photo. (Picks the row centered ~60% through the
-  //                content — a notional eye-catcher.)
-  //   3.00s+     CRUISE: slow continuous scroll covering the
-  //                remaining distance, gently easing as it
-  //                approaches maxScroll. Cubic ease-in-out.
+  //                grid rows (cubic ease-in-out).
+  //   2.40–3.00s  DWELL: ease into the focus row and STOP. No
+  //                further scroll — the page just holds on the
+  //                target post until the agent taps it.
   //
-  // Throughout the post-hold phase a small sinusoidal wobble (~4px,
-  // 2.5Hz) is layered on the Y so the motion doesn't feel
-  // mathematically smooth — simulates the finger's micro-jitter.
+  // No micro-wobble or cruise-past — motion is clean and ends on
+  // the focus post.
   const driveSec = driveFrame / fps;
   const maxScroll = Math.max(0, totalContentH - height);
   // Region targets — use page geometry to decide where each stage
@@ -732,14 +724,11 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
     scanEnd: 1.8,
     flickEnd: 2.4,
     dwellEnd: 3.0,
-    cruiseEnd: 5.5,
   };
   let baseScroll: number;
   if (driveSec < t.holdEnd) {
-    // Hold — no scroll yet.
     baseScroll = 0;
   } else if (driveSec < t.scanEnd) {
-    // Scan header — slow, deliberate.
     baseScroll = interpolate(
       driveSec,
       [t.holdEnd, t.scanEnd],
@@ -751,7 +740,6 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
       },
     );
   } else if (driveSec < t.flickEnd) {
-    // Flick through early grid — faster, near-linear.
     baseScroll = interpolate(
       driveSec,
       [t.scanEnd, t.flickEnd],
@@ -763,9 +751,6 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
       },
     );
   } else if (driveSec < t.dwellEnd) {
-    // Dwell — ease into the dwell target and hold there. Use a
-    // cubic ease-out so the viewer feels the user "settling" on
-    // the post rather than abruptly stopping.
     baseScroll = interpolate(
       driveSec,
       [t.flickEnd, t.dwellEnd],
@@ -777,31 +762,11 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
       },
     );
   } else {
-    // Cruise — slow continuous scroll covering the remainder. After
-    // cruiseEnd we clamp at maxScroll.
-    baseScroll = interpolate(
-      driveSec,
-      [t.dwellEnd, t.cruiseEnd],
-      [dwellTarget, maxScroll],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
+    // Hold on the focus post — no further motion.
+    baseScroll = dwellTarget;
   }
 
-  // Micro-wobble: small sinusoidal jitter on Y, fading in only after
-  // the hold so the initial profile-landing reads as still.
-  const wobbleAmp = 4 * scale;
-  const wobbleHz = 2.5; // cycles per second
-  const wobbleEnabled = driveSec > t.holdEnd ? 1 : 0;
-  const wobble =
-    wobbleEnabled *
-    wobbleAmp *
-    Math.sin(2 * Math.PI * wobbleHz * (driveSec - t.holdEnd));
-
-  const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll + wobble));
+  const scrollPx = Math.min(maxScroll, Math.max(0, baseScroll));
   const pageY = -scrollPx;
 
   // Stat block (followers / following / posts).
