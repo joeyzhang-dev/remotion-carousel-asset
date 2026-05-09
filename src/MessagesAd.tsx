@@ -8557,6 +8557,70 @@ const Scene3: React.FC<Scene3Props> = ({
         })()
       )}
       </div>
+
+      {/* iMessage-style chat header — sits at the top of the canvas,
+          above the bubble mask, so it stays sharp. Avatar + "Folk ›"
+          name pill in light mode. */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: height * 0.06,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 12 * scale,
+          fontFamily: FONT_STACK,
+          pointerEvents: "none",
+        }}
+      >
+        {/* Avatar — black circle with white folk mark */}
+        <div
+          style={{
+            width: 110 * scale,
+            height: 110 * scale,
+            borderRadius: "50%",
+            background: "#000000",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
+          <Img
+            src={staticFile("folk-mark.png")}
+            style={{
+              width: 96 * scale,
+              height: 96 * scale,
+              filter: "brightness(0) invert(1)",
+            }}
+          />
+        </div>
+        {/* Name + chevron */}
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6 * scale,
+            fontSize: 28 * scale,
+            fontWeight: 600,
+            color: "#1C1C1E",
+            letterSpacing: -0.2 * scale,
+          }}
+        >
+          <span>Folk</span>
+          <svg width={18 * scale} height={26 * scale} viewBox="0 0 16 26" fill="none">
+            <path
+              d="M3 3 L13 13 L3 23"
+              stroke="#8E8E93"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+      </div>
     </AbsoluteFill>
   );
 };
