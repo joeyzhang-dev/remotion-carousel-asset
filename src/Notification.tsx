@@ -45,7 +45,7 @@ export const Notification: React.FC = () => {
   const iconRadius = 14 * scale;
 
   return (
-    <AbsoluteFill style={{ background: "#000000" }}>
+    <AbsoluteFill style={{ background: "transparent" }}>
       <div
         style={{
           position: "absolute",
@@ -60,7 +60,7 @@ export const Notification: React.FC = () => {
           style={{
             width: cardW,
             borderRadius: cardRadius,
-            background: "rgba(255, 255, 255, 0.78)",
+            background: "rgba(255, 255, 255, 0.92)",
             backdropFilter: `blur(${30 * scale}px) saturate(180%)`,
             WebkitBackdropFilter: `blur(${30 * scale}px) saturate(180%)`,
             border: `${1.5 * scale}px solid rgba(255, 255, 255, 0.55)`,
