@@ -678,7 +678,6 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
     bioH,
     buttonsH,
     tabBarH,
-    headerTotalH,
     gridGap,
     cellSize,
     gridRows,
@@ -695,74 +694,36 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
   //
   // Stages (driveFrame in seconds):
   //   0.00–0.80s  HOLD: profile fully visible, no scroll yet.
-  //   0.80–1.80s  SCAN HEADER: slow scroll through the profile
-  //                section (cubic ease-out).
-  //   1.80–2.40s  FLICK GRID: faster scroll through the first few
-  //                grid rows (cubic ease-in-out).
-  //   2.40–3.00s  DWELL: ease into the focus row and STOP. No
-  //                further scroll — the page just holds on the
-  //                target post until the agent taps it.
-  //
-  // No micro-wobble or cruise-past — motion is clean and ends on
-  // the focus post.
+  //   0.80–3.00s  SCROLL: one continuous eased motion from the top
+  //                straight down to the focus post. No staggered
+  //                stages — single ease-in-out cubic so the speed
+  //                builds and settles in one smooth arc.
+  //   3.00s+      HOLD on the focus post until tap fires.
   const driveSec = driveFrame / fps;
   const maxScroll = Math.max(0, totalContentH - height);
-  // Region targets — use page geometry to decide where each stage
-  // lands. Clamped to maxScroll so short pages still scroll
-  // sensibly even if these regions exceed the available distance.
-  const headerScrollTarget = Math.min(maxScroll, headerTotalH * 0.85);
-  const flickGridTarget = Math.min(
-    maxScroll,
-    headerScrollTarget + (cellSize + gridGap) * 2.5,
-  );
   // Dwell point: ~60% through the total scroll (a posts row near
   // the middle of the grid).
   const dwellTarget = Math.min(maxScroll, maxScroll * 0.6);
   // Stage timings.
   const t = {
     holdEnd: 0.8,
-    scanEnd: 1.8,
-    flickEnd: 2.4,
-    dwellEnd: 3.0,
+    scrollEnd: 3.0,
   };
   let baseScroll: number;
   if (driveSec < t.holdEnd) {
     baseScroll = 0;
-  } else if (driveSec < t.scanEnd) {
+  } else if (driveSec < t.scrollEnd) {
     baseScroll = interpolate(
       driveSec,
-      [t.holdEnd, t.scanEnd],
-      [0, headerScrollTarget],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.out(Easing.cubic),
-      },
-    );
-  } else if (driveSec < t.flickEnd) {
-    baseScroll = interpolate(
-      driveSec,
-      [t.scanEnd, t.flickEnd],
-      [headerScrollTarget, flickGridTarget],
+      [t.holdEnd, t.scrollEnd],
+      [0, dwellTarget],
       {
         extrapolateLeft: "clamp",
         extrapolateRight: "clamp",
         easing: Easing.inOut(Easing.cubic),
       },
     );
-  } else if (driveSec < t.dwellEnd) {
-    baseScroll = interpolate(
-      driveSec,
-      [t.flickEnd, t.dwellEnd],
-      [flickGridTarget, dwellTarget],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.out(Easing.cubic),
-      },
-    );
   } else {
-    // Hold on the focus post — no further motion.
     baseScroll = dwellTarget;
   }
 
