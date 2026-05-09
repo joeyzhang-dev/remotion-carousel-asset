@@ -8557,77 +8557,129 @@ const Scene3: React.FC<Scene3Props> = ({
 
       {/* iMessage-style chat header — sits at the top of the canvas,
           above the bubble mask, so it stays sharp. Avatar + "Folk ›"
-          name pill in light mode. */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          top: height * 0.06,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 12 * scale,
-          fontFamily: FONT_STACK,
-          pointerEvents: "none",
-        }}
-      >
-        {/* Avatar — light-mode invert of the folk "f" icon
-            (source is white "f" on black; inverted for black on white). */}
-        <div
-          style={{
-            width: 110 * scale,
-            height: 110 * scale,
-            borderRadius: "50%",
-            overflow: "hidden",
-            background: "#FFFFFF",
-          }}
-        >
-          <Img
-            src={staticFile("folk-f-icon.jpg")}
+          name pill in light mode. Materializes in over the first
+          ~0.5s of Scene 3: opacity ramps 0→1 while the pill's
+          backdrop blur ramps 0→20px and the avatar settles 0.96→1. */}
+      {(() => {
+        const headerInStart = sec(0.0, fps);
+        const headerInEnd = sec(0.55, fps);
+        const headerOpacity = interpolate(
+          local,
+          [headerInStart, headerInEnd],
+          [0, 1],
+          {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+            easing: Easing.out(Easing.cubic),
+          },
+        );
+        const headerBlurPx = interpolate(
+          local,
+          [headerInStart, headerInEnd],
+          [0, 20],
+          {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+            easing: Easing.inOut(Easing.cubic),
+          },
+        );
+        const headerBgAlpha = interpolate(
+          local,
+          [headerInStart, headerInEnd],
+          [0, 0.65],
+          {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+            easing: Easing.inOut(Easing.cubic),
+          },
+        );
+        const headerSettle = interpolate(
+          local,
+          [headerInStart, headerInEnd],
+          [0.96, 1],
+          {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+            easing: Easing.out(Easing.cubic),
+          },
+        );
+        return (
+          <div
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-              filter: "invert(1)",
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: height * 0.06,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 12 * scale,
+              fontFamily: FONT_STACK,
+              pointerEvents: "none",
+              opacity: headerOpacity,
             }}
-          />
-        </div>
-        {/* Name pill — frosted glass, light mode */}
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8 * scale,
-            padding: `${10 * scale}px ${22 * scale}px`,
-            borderRadius: 999,
-            background: "rgba(255, 255, 255, 0.65)",
-            backdropFilter: `blur(${20 * scale}px) saturate(180%)`,
-            WebkitBackdropFilter: `blur(${20 * scale}px) saturate(180%)`,
-            border: `${1 * scale}px solid rgba(255, 255, 255, 0.6)`,
-            boxShadow: `
-              0 ${4 * scale}px ${20 * scale}px rgba(0, 0, 0, 0.08),
-              inset 0 ${1 * scale}px 0 rgba(255, 255, 255, 0.9)
-            `,
-            fontSize: 28 * scale,
-            fontWeight: 600,
-            color: "#1C1C1E",
-            letterSpacing: -0.2 * scale,
-          }}
-        >
-          <span>Folk</span>
-          <svg width={16 * scale} height={22 * scale} viewBox="0 0 16 26" fill="none">
-            <path
-              d="M3 3 L13 13 L3 23"
-              stroke="#8E8E93"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-      </div>
+          >
+            {/* Avatar — light-mode invert of the folk "f" icon
+                (source is white "f" on black; inverted for black on white). */}
+            <div
+              style={{
+                width: 110 * scale,
+                height: 110 * scale,
+                borderRadius: "50%",
+                overflow: "hidden",
+                background: "#FFFFFF",
+                transform: `scale(${headerSettle})`,
+              }}
+            >
+              <Img
+                src={staticFile("folk-f-icon.jpg")}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                  filter: "invert(1)",
+                }}
+              />
+            </div>
+            {/* Name pill — frosted glass, light mode. The blur and
+                background alpha both ramp up so the glass coalesces. */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8 * scale,
+                padding: `${10 * scale}px ${22 * scale}px`,
+                borderRadius: 999,
+                background: `rgba(255, 255, 255, ${headerBgAlpha})`,
+                backdropFilter: `blur(${headerBlurPx * scale}px) saturate(180%)`,
+                WebkitBackdropFilter: `blur(${headerBlurPx * scale}px) saturate(180%)`,
+                border: `${1 * scale}px solid rgba(255, 255, 255, 0.6)`,
+                boxShadow: `
+                  0 ${4 * scale}px ${20 * scale}px rgba(0, 0, 0, 0.08),
+                  inset 0 ${1 * scale}px 0 rgba(255, 255, 255, 0.9)
+                `,
+                fontSize: 28 * scale,
+                fontWeight: 600,
+                color: "#1C1C1E",
+                letterSpacing: -0.2 * scale,
+                transform: `scale(${headerSettle})`,
+              }}
+            >
+              <span>Folk</span>
+              <svg width={16 * scale} height={22 * scale} viewBox="0 0 16 26" fill="none">
+                <path
+                  d="M3 3 L13 13 L3 23"
+                  stroke="#8E8E93"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
+        );
+      })()}
     </AbsoluteFill>
   );
 };
