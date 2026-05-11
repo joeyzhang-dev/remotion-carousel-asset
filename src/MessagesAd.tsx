@@ -8927,15 +8927,14 @@ const Scene3: React.FC<Scene3Props> = ({
   // if the LONGEST bubble phrase is too long at 1.91× font, we
   // shrink the font down for ALL bubbles to keep their text sizes
   // consistent (a shared `widthFitFactor`).
-  // bubbleGrowMul = 1.3 bumps every bubble (font, height, padding) by
-  // 30% on top of the base bubbleSizeMul. Sent #3 inherits this too
-  // because its sizing divides out priorMul, not bubbleSizeMul.
-  const bubbleGrowMul = 1.3;
-  const bubbleSizeMul = 1.4375 * bubbleGrowMul;
-  const bubbleHorizontalMargin = 60 * scale;
+  const bubbleSizeMul = 1.4375;
+  const bubbleHorizontalMargin = 30 * scale;
   const maxBubbleWidth = width - bubbleHorizontalMargin;
-  const bubblePadX = 22 * scale * bubbleSizeMul * priorMul;
-  const naiveFontSize = fontSize * 0.78 * bubbleSizeMul;
+  const bubblePadX = 18 * scale * bubbleSizeMul * priorMul;
+  // Bubble TEXT specifically gets a 30% bump on top — the prior tune
+  // grew the bubble shape but the text inside still looked small.
+  const bubbleTextMul = 1.3;
+  const naiveFontSize = fontSize * 0.78 * bubbleSizeMul * bubbleTextMul;
   // Find the longest naive bubble width across all bubble phrases so
   // every bubble shrinks together if needed.
   const allBubblePhrases = [
@@ -9169,7 +9168,7 @@ const Scene3: React.FC<Scene3Props> = ({
   // changes — closer to the height of the receipt indicator + a
   // line-height of breathing room — so both bubbles feel like
   // distinct moments in the conversation rather than touching.
-  const receivedGap = 36 * scale * priorMul * bubbleGrowMul;
+  const receivedGap = 36 * scale * priorMul;
 
   // ── Sent bubble #2 timing (the second blue bubble, after the gray
   //    reply) ──────────────────────────────────────────────────────
@@ -9676,10 +9675,10 @@ const Scene3: React.FC<Scene3Props> = ({
   // bubble — just wide enough to fit three dots with comfortable
   // padding. Width morphs to receivedWidth across the typing→message
   // transition.
-  const dotRadius = 8 * scale * priorMul * bubbleGrowMul;
-  const dotGap = 12 * scale * priorMul * bubbleGrowMul;
+  const dotRadius = 8 * scale * priorMul;
+  const dotGap = 12 * scale * priorMul;
   const typingInteriorW = dotRadius * 6 + dotGap * 2; // three dots + two gaps
-  const typingPadX = 26 * scale * priorMul * bubbleGrowMul;
+  const typingPadX = 26 * scale * priorMul;
   const typingBubbleWidth = typingInteriorW + typingPadX * 2;
   // Typing indicator #2 reuses the same pill width as typing #1
   // (`typingBubbleWidth`) directly — the longer-message variant
@@ -10503,7 +10502,7 @@ const Scene3: React.FC<Scene3Props> = ({
     bubbleHeight / 2 + receivedGap;
   const imageBubbleYOffset = imageBubbleTopAnchorY + imageBubbleSize / 2;
   // Same-sender gap between consecutive gray bubbles (image → text replies).
-  const sameSenderGap = 8 * scale * priorMul * bubbleGrowMul;
+  const sameSenderGap = 8 * scale * priorMul;
   // Typing #2 has TWO row positions:
   //   - Before the image arrives, it pulses at the image's row
   //     (`typing2TopAnchorBefore` — centered in the image slot).
