@@ -11455,6 +11455,22 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
   const { fps } = useVideoConfig();
   const scale = layoutWidth / 1080;
 
+  // For the desktop variant, the canvas is wider than the phone column;
+  // Scene1 and Scene2 (which don't have any background app to fill the
+  // wider area) need to be horizontally centered so their content sits
+  // in the middle of the canvas instead of pinned to the left edge.
+  // We wrap them in a positioned div sized to the phone column.
+  const phoneCenterStyle =
+    variant === "desktop" && canvasWidth
+      ? {
+          position: "absolute" as const,
+          left: (canvasWidth - layoutWidth) / 2,
+          top: 0,
+          width: layoutWidth,
+          height: layoutHeight,
+        }
+      : undefined;
+
   return (
     <AbsoluteFill style={{ background: BG_WHITE }}>
       {/* Scene 1 — 0s–2s: logo spin → morph → slide + input fade-in.
@@ -11462,14 +11478,26 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           geometry, so the input/button stay visually persistent across the
           boundary. */}
       <Sequence from={sec(0, fps)} durationInFrames={sec(2, fps)}>
-        <Scene1 scale={scale} width={layoutWidth} height={layoutHeight} />
+        {phoneCenterStyle ? (
+          <div style={phoneCenterStyle}>
+            <Scene1 scale={scale} width={layoutWidth} height={layoutHeight} />
+          </div>
+        ) : (
+          <Scene1 scale={scale} width={layoutWidth} height={layoutHeight} />
+        )}
       </Sequence>
 
       {/* Scene 2 — 2s–5s: hard-cuts in on identical chat-row geometry, so the
           input/button appear persistent across the boundary. No fade-out at
           the end, for the same reason at the Scene 3 boundary. */}
       <Sequence from={sec(2, fps)} durationInFrames={sec(3, fps)}>
-        <Scene2 scale={scale} width={layoutWidth} height={layoutHeight} />
+        {phoneCenterStyle ? (
+          <div style={phoneCenterStyle}>
+            <Scene2 scale={scale} width={layoutWidth} height={layoutHeight} />
+          </div>
+        ) : (
+          <Scene2 scale={scale} width={layoutWidth} height={layoutHeight} />
+        )}
       </Sequence>
 
       {/* Scene 3 — starts at 5s. Extended to 18.5s to fit the
