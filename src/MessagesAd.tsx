@@ -24,6 +24,165 @@ const RECEIVED_TEXT = "#000000";
 
 const sec = (s: number, fps: number) => Math.round(s * fps);
 
+// Reusable inline SVG icon component used across desktop screens.
+// Replaces emoji glyphs (which render inconsistently and look like emoji)
+// with crisp single-color line/fill icons.
+type IconName =
+  | "search" | "settings" | "help" | "appsGrid" | "moon"
+  | "menu" | "back" | "chevronDown" | "chevronUp" | "chevronRight" | "chevronLeft"
+  | "close" | "plus" | "minus" | "check" | "circleDot" | "swap"
+  | "user" | "userPlus" | "people"
+  | "calendar" | "clock" | "leaf" | "luggage" | "sparkle" | "checkCircle"
+  | "cart" | "pin"
+  | "star" | "starFilled" | "heart" | "heartFilled" | "flag"
+  | "link" | "share"
+  | "home" | "homeFilled" | "compass" | "play" | "messageCircle" | "messageCircleFilled" | "bell" | "imageSquare" | "burger"
+  | "highlight"
+  | "envelope" | "envelopeOpen" | "inboxIcon" | "starOutline" | "snooze" | "send" | "draft" | "important" | "spam" | "trash" | "archive" | "label"
+  | "reply" | "replyAll" | "forward" | "moreVert" | "moreHoriz"
+  | "pencil" | "attachment" | "smile" | "image" | "drive"
+  | "shoppingBag" | "music" | "car" | "groceries" | "creditCard"
+  | "info";
+
+// Each icon is encoded as an SVG path string drawn at viewBox 0 0 24 24.
+// Using a data table avoids JSX-fragment-as-function-arg parsing edge
+// cases inside the giant switch statement.
+type IconDef = { paths: string[]; filled?: boolean; rects?: { x: number; y: number; w: number; h: number; rx?: number }[]; circles?: { cx: number; cy: number; r: number; fill?: boolean }[] };
+const ICONS: Record<IconName, IconDef> = {
+  search: { paths: ["M21 21 L16 16"], circles: [{ cx: 11, cy: 11, r: 7 }] },
+  settings: { circles: [{ cx: 12, cy: 12, r: 3 }], paths: ["M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"] },
+  help: { circles: [{ cx: 12, cy: 12, r: 9 }], paths: ["M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3", "M12 17 V17.01"] },
+  appsGrid: {
+    filled: true,
+    circles: [
+      { cx: 4, cy: 4, r: 1.7 }, { cx: 12, cy: 4, r: 1.7 }, { cx: 20, cy: 4, r: 1.7 },
+      { cx: 4, cy: 12, r: 1.7 }, { cx: 12, cy: 12, r: 1.7 }, { cx: 20, cy: 12, r: 1.7 },
+      { cx: 4, cy: 20, r: 1.7 }, { cx: 12, cy: 20, r: 1.7 }, { cx: 20, cy: 20, r: 1.7 },
+    ],
+    paths: [],
+  },
+  moon: { paths: ["M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"] },
+  menu: { paths: ["M3 6 H21", "M3 12 H21", "M3 18 H21"] },
+  burger: { paths: ["M3 6 H21", "M3 12 H21", "M3 18 H21"] },
+  back: { paths: ["M19 12 H5", "M12 19 L5 12 L12 5"] },
+  chevronDown: { paths: ["M6 9 L12 15 L18 9"] },
+  chevronUp: { paths: ["M6 15 L12 9 L18 15"] },
+  chevronRight: { paths: ["M9 6 L15 12 L9 18"] },
+  chevronLeft: { paths: ["M15 6 L9 12 L15 18"] },
+  close: { paths: ["M18 6 L6 18", "M6 6 L18 18"] },
+  plus: { paths: ["M12 5 V19", "M5 12 H19"] },
+  minus: { paths: ["M5 12 H19"] },
+  check: { paths: ["M5 12 L10 17 L20 7"] },
+  checkCircle: { circles: [{ cx: 12, cy: 12, r: 10 }], paths: ["M8 12 L11 15 L16 9"] },
+  circleDot: { filled: true, circles: [{ cx: 12, cy: 12, r: 5 }], paths: [] },
+  swap: { paths: ["M7 7 H17 L14 4", "M17 17 H7 L10 20"] },
+  user: { circles: [{ cx: 12, cy: 8, r: 4 }], paths: ["M4 21 C4 16 8 14 12 14 C16 14 20 16 20 21"] },
+  userPlus: { circles: [{ cx: 9, cy: 8, r: 4 }], paths: ["M2 21 C2 16 5 14 9 14 C13 14 16 16 16 21", "M19 8 V14 M16 11 H22"] },
+  people: { circles: [{ cx: 9, cy: 8, r: 3 }, { cx: 17, cy: 9, r: 2.5 }], paths: ["M2 19 C2 16 5 14 9 14 C13 14 15 16 15 19", "M14 19 C14 17 16 16 18 16 C20 16 22 17 22 19"] },
+  calendar: { rects: [{ x: 3, y: 5, w: 18, h: 16, rx: 2 }], paths: ["M3 9 H21", "M8 3 V7 M16 3 V7"] },
+  clock: { circles: [{ cx: 12, cy: 12, r: 9 }], paths: ["M12 7 V12 L15.5 14"] },
+  leaf: { filled: true, paths: ["M3 21 C3 12 12 3 21 3 C21 12 12 21 3 21 Z"] },
+  luggage: { rects: [{ x: 6, y: 7, w: 12, h: 14, rx: 2 }], paths: ["M9 7 V4 H15 V7", "M10 11 V18 M14 11 V18"] },
+  sparkle: { filled: true, paths: ["M12 2 L13.5 9 L20 10.5 L13.5 12 L12 19 L10.5 12 L4 10.5 L10.5 9 Z"] },
+  cart: { circles: [{ cx: 9, cy: 20, r: 1.5 }, { cx: 18, cy: 20, r: 1.5 }], paths: ["M3 4 H6 L8 16 H19 L21 8 H7"] },
+  pin: { circles: [{ cx: 12, cy: 9, r: 2.5 }], paths: ["M12 22 C12 22 19 14 19 9 A7 7 0 1 0 5 9 C5 14 12 22 12 22 Z"] },
+  star: { paths: ["M12 2 L14.9 8.5 L22 9.3 L16.6 14 L18.2 21 L12 17.3 L5.8 21 L7.4 14 L2 9.3 L9.1 8.5 Z"] },
+  starFilled: { filled: true, paths: ["M12 2 L14.9 8.5 L22 9.3 L16.6 14 L18.2 21 L12 17.3 L5.8 21 L7.4 14 L2 9.3 L9.1 8.5 Z"] },
+  starOutline: { paths: ["M12 2 L14.9 8.5 L22 9.3 L16.6 14 L18.2 21 L12 17.3 L5.8 21 L7.4 14 L2 9.3 L9.1 8.5 Z"] },
+  heart: { paths: ["M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"] },
+  heartFilled: { filled: true, paths: ["M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"] },
+  flag: { paths: ["M5 22 V4 L20 6 L18 11 L20 16 L5 14"] },
+  link: { paths: ["M9 15 L15 9", "M10 6 L13 3 C15 1 18 1 20 3 C22 5 22 8 20 10 L17 13", "M14 18 L11 21 C9 23 6 23 4 21 C2 19 2 16 4 14 L7 11"] },
+  share: { paths: ["M4 12 V19 C4 20 5 21 6 21 H18 C19 21 20 20 20 19 V12", "M16 6 L12 2 L8 6", "M12 2 V15"] },
+  home: { paths: ["M3 12 L12 4 L21 12 V20 H14 V14 H10 V20 H3 Z"] },
+  homeFilled: { filled: true, paths: ["M3 12 L12 4 L21 12 V20 H14 V14 H10 V20 H3 Z"] },
+  compass: { circles: [{ cx: 12, cy: 12, r: 9 }], paths: ["M16 8 L13.5 13.5 L8 16 L10.5 10.5 Z"] },
+  play: { circles: [{ cx: 12, cy: 12, r: 9 }], paths: ["M10 8 L16 12 L10 16 Z"] },
+  messageCircle: { paths: ["M21 12 A9 9 0 1 1 12 3 C16 3 21 7 21 12 Z M3 21 L7 17"] },
+  messageCircleFilled: { filled: true, paths: ["M21 12 A9 9 0 1 1 12 3 C16 3 21 7 21 12 Z M3 21 L7 17"] },
+  bell: { paths: ["M18 8 A6 6 0 1 0 6 8 C6 14 4 16 4 16 H20 C20 16 18 14 18 8", "M10 20 A2 2 0 0 0 14 20"] },
+  imageSquare: { rects: [{ x: 3, y: 3, w: 18, h: 18, rx: 2 }], circles: [{ cx: 8.5, cy: 9.5, r: 1.5 }], paths: ["M21 15 L17 11 L7 21"] },
+  highlight: { circles: [{ cx: 12, cy: 12, r: 9 }], paths: [] },
+  envelope: { rects: [{ x: 3, y: 5, w: 18, h: 14, rx: 2 }], paths: ["M3 7 L12 13 L21 7"] },
+  envelopeOpen: { paths: ["M3 11 L12 4 L21 11 V19 H3 Z", "M3 11 L12 17 L21 11"] },
+  inboxIcon: { paths: ["M22 12 H16 L14 15 H10 L8 12 H2", "M5 5 H19 L22 12 V19 H2 V12 Z"] },
+  snooze: { circles: [{ cx: 12, cy: 13, r: 8 }], paths: ["M9 9 H15 L9 17 H15", "M5 3 L2 6 M19 3 L22 6"] },
+  send: { paths: ["M22 2 L11 13", "M22 2 L15 22 L11 13 L2 9 Z"] },
+  draft: { paths: ["M14 2 H6 C5 2 4 3 4 4 V20 C4 21 5 22 6 22 H18 C19 22 20 21 20 20 V8 Z", "M14 2 V8 H20", "M9 13 L13 17 L19 11"] },
+  important: { filled: true, paths: ["M3 6 H17 L21 12 L17 18 H3 L7 12 Z"] },
+  spam: { circles: [{ cx: 12, cy: 12, r: 9 }], paths: ["M12 7 V13", "M12 17 V17.01"] },
+  trash: { paths: ["M3 6 H21", "M19 6 L18 20 C18 21 17 22 16 22 H8 C7 22 6 21 6 20 L5 6", "M9 6 V4 C9 3 10 2 11 2 H13 C14 2 15 3 15 4 V6"] },
+  archive: { rects: [{ x: 3, y: 3, w: 18, h: 5, rx: 1 }], paths: ["M5 8 V21 H19 V8", "M10 12 H14"] },
+  label: { paths: ["M3 7 V17 L20 17 L23 12 L20 7 Z"] },
+  reply: { paths: ["M9 17 L4 12 L9 7", "M4 12 H14 C17 12 20 14 20 18 V20"] },
+  replyAll: { paths: ["M7 17 L2 12 L7 7", "M11 17 L6 12 L11 7", "M6 12 H16 C19 12 22 14 22 18 V20"] },
+  forward: { paths: ["M15 7 L20 12 L15 17", "M20 12 H10 C7 12 4 14 4 18 V20"] },
+  moreVert: { filled: true, circles: [{ cx: 12, cy: 5, r: 1.6 }, { cx: 12, cy: 12, r: 1.6 }, { cx: 12, cy: 19, r: 1.6 }], paths: [] },
+  moreHoriz: { filled: true, circles: [{ cx: 5, cy: 12, r: 1.6 }, { cx: 12, cy: 12, r: 1.6 }, { cx: 19, cy: 12, r: 1.6 }], paths: [] },
+  pencil: { paths: ["M3 21 L9 19 L20 8 L16 4 L5 15 Z", "M14 6 L18 10"] },
+  attachment: { paths: ["M21 12 L13 20 C11 22 7 22 5 20 C3 18 3 14 5 12 L13 4 C14 3 16 3 17 4 C18 5 18 7 17 8 L9 16 C8 17 7 17 6 16 C5 15 5 14 6 13 L13 6"] },
+  smile: { circles: [{ cx: 12, cy: 12, r: 9 }, { cx: 9, cy: 10, r: 0.6, fill: true }, { cx: 15, cy: 10, r: 0.6, fill: true }], paths: ["M8 14 Q12 18 16 14"] },
+  image: { rects: [{ x: 3, y: 3, w: 18, h: 18, rx: 2 }], circles: [{ cx: 8.5, cy: 9.5, r: 1.5 }], paths: ["M21 15 L17 11 L7 21"] },
+  drive: { paths: ["M9 4 L20 4 L15 13 H4 Z", "M9 4 L4 13 L9 22 H15 L20 13"] },
+  shoppingBag: { paths: ["M5 7 H19 L18 21 H6 Z", "M9 7 V4 A3 3 0 0 1 15 4 V7"] },
+  music: { circles: [{ cx: 6, cy: 17, r: 3 }, { cx: 17, cy: 15, r: 3 }], paths: ["M9 17 V5 L20 3 V15"] },
+  car: { circles: [{ cx: 7, cy: 18, r: 1.5 }, { cx: 17, cy: 18, r: 1.5 }], paths: ["M3 12 L5 7 H19 L21 12 V18 H3 Z"] },
+  groceries: { paths: ["M5 7 H19 L18 21 H6 Z", "M8 11 H16 M8 15 H16"] },
+  creditCard: { rects: [{ x: 2, y: 6, w: 20, h: 13, rx: 2 }], paths: ["M2 11 H22"] },
+  info: { circles: [{ cx: 12, cy: 12, r: 9 }], paths: ["M12 11 V17", "M12 7 V7.01"] },
+};
+
+const Icon: React.FC<{
+  name: IconName;
+  size: number;
+  color?: string;
+  strokeWidth?: number;
+}> = ({ name, size, color = "currentColor", strokeWidth = 2 }) => {
+  const def = ICONS[name];
+  if (!def) return null;
+  const isFill = !!def.filled;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {def.rects?.map((r, i) => (
+        <rect
+          key={`r-${i}`}
+          x={r.x}
+          y={r.y}
+          width={r.w}
+          height={r.h}
+          rx={r.rx ?? 0}
+          fill={isFill ? color : "none"}
+          stroke={isFill ? "none" : color}
+          strokeWidth={strokeWidth}
+          strokeLinejoin="round"
+        />
+      ))}
+      {def.circles?.map((c, i) => (
+        <circle
+          key={`c-${i}`}
+          cx={c.cx}
+          cy={c.cy}
+          r={c.r}
+          fill={c.fill || isFill ? color : "none"}
+          stroke={c.fill || isFill ? "none" : color}
+          strokeWidth={strokeWidth}
+        />
+      ))}
+      {def.paths.map((d, i) => (
+        <path
+          key={`p-${i}`}
+          d={d}
+          fill={isFill ? color : "none"}
+          stroke={isFill ? "none" : color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ))}
+    </svg>
+  );
+};
+
 /**
  * Per-character width lookup for SF Pro Display @ weight 500, expressed
  * in em (multiply by font-size in px to get pixel width). Tuned against
@@ -723,7 +882,7 @@ const InstagramProfileDesktop: React.FC<
     { label: "lala", bg: "#7A7373" },
     { label: "Swappi", bg: "#9DB7DF" },
     { label: "▼", bg: "#1A1A1A" },
-    { label: "🦋", bg: "#3B5066" },
+    { label: "fly", bg: "#3B5066" },
     { label: "fits", bg: "#FCE4EC" },
     { label: "Highlights", bg: "#5B7184" },
   ];
@@ -872,7 +1031,9 @@ const InstagramProfileDesktop: React.FC<
             <div style={{ fontSize: 14 * u, color: "#000", lineHeight: 1.4 }}>
               <div>probably side questing</div>
               <div style={{ color: "#0095F6" }}>@joeysixfive | @ditto</div>
-              <div style={{ color: "#0095F6" }}>🔗 tryditto.com</div>
+              <div style={{ color: "#0095F6", display: "inline-flex", alignItems: "center", gap: 4 * u }}>
+                <Icon name="link" size={14 * u} color="#0095F6" strokeWidth={2} /> tryditto.com
+              </div>
             </div>
             {/* "Followed by" row with 3 mini avatars */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 * u, fontSize: 13 * u, color: "#000" }}>
@@ -925,7 +1086,7 @@ const InstagramProfileDesktop: React.FC<
                   fontSize: 16 * u,
                 }}
               >
-                ⚐
+                <Icon name="userPlus" size={14 * u} color="#000" />
               </div>
             </div>
           </div>
@@ -974,22 +1135,27 @@ const InstagramProfileDesktop: React.FC<
           }}
         >
           {[
-            { l: "▦", active: true },
-            { l: "🎬" },
-            { l: "👤" },
+            { name: "imageSquare" as const, active: true, label: "POSTS" },
+            { name: "play" as const, label: "REELS" },
+            { name: "user" as const, label: "TAGGED" },
           ].map((t, i) => (
             <div
               key={i}
               style={{
-                fontSize: 14 * u,
+                fontSize: 12 * u,
                 fontWeight: 600,
                 color: t.active ? "#000" : "#8E8E8E",
                 paddingTop: 14 * u,
                 borderTop: t.active ? `${1 * u}px solid #000` : "none",
                 marginTop: t.active ? -1 * u : 0,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6 * u,
+                letterSpacing: 1 * u,
               }}
             >
-              {t.l}
+              <Icon name={t.name} size={14 * u} color={t.active ? "#000" : "#8E8E8E"} strokeWidth={1.6} />
+              {t.label}
             </div>
           ))}
         </div>
@@ -1055,9 +1221,11 @@ const InstagramProfileDesktop: React.FC<
           <div style={{ width: 4 * u, height: 4 * u, borderRadius: "50%", background: "#FF3040" }} />
         </div>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 * u }}>
-          <span style={{ color: "#000" }}>✉</span> Messages
+          <Icon name="messageCircle" size={14 * u} color="#000" strokeWidth={1.8} /> Messages
         </span>
-        <div style={{ marginLeft: "auto", color: "#8E8E8E", fontWeight: 400 }}>⌃</div>
+        <div style={{ marginLeft: "auto", color: "#8E8E8E", fontWeight: 400 }}>
+          <Icon name="chevronUp" size={14 * u} color="#8E8E8E" strokeWidth={2} />
+        </div>
       </div>
     </div>
   );
@@ -1635,7 +1803,9 @@ const AmazonProductDesktop: React.FC<
         <div style={{ color: NAV_LINK, fontSize: 11 * u, lineHeight: 1.2 }}>
           Returns<br/><strong style={{ fontSize: 13 * u }}>& Orders</strong>
         </div>
-        <div style={{ color: NAV_LINK, fontSize: 14 * u, fontWeight: 700 }}>🛒 Cart</div>
+        <div style={{ color: NAV_LINK, fontSize: 14 * u, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 * u }}>
+          <Icon name="cart" size={18 * u} color={NAV_LINK} strokeWidth={2} /> Cart
+        </div>
       </div>
       {/* Sub nav */}
       <div
@@ -1730,7 +1900,7 @@ const AmazonProductDesktop: React.FC<
                   <div key={i} style={{ width: 14 * u, height: 14 * u, background: AMAZON_ORANGE, clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)" }} />
                 ))}
               </div>
-              <span style={{ fontSize: 12 * u, color: LINK }}>4.5 ★★★★★ (681)</span>
+              <span style={{ fontSize: 12 * u, color: LINK, display: "inline-flex", alignItems: "center", gap: 4 * u }}>4.5 (681)</span>
             </div>
             <div style={{ fontSize: 11 * u, color: MUTED, marginBottom: 10 * u }}>
               2k+ bought in past month
@@ -1822,7 +1992,9 @@ const AmazonProductDesktop: React.FC<
                 Or Prime members get FREE delivery <strong>Wednesday, May 13</strong>. <span style={{ color: LINK }}>Join Prime</span>
               </div>
               <div style={{ marginTop: 8 * u, padding: 6 * u, background: "#F7F8F8", borderRadius: 4 * u, fontSize: 11 * u, color: TEXT }}>
-                <div>📍 Delivering to Duluth 30097</div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 4 * u }}>
+                  <Icon name="pin" size={12 * u} color={TEXT} strokeWidth={1.6} /> Delivering to Duluth 30097
+                </div>
                 <div style={{ color: LINK, marginTop: 2 * u }}>Update location</div>
               </div>
               <div style={{ marginTop: 8 * u, fontSize: 12 * u, color: "#007600", fontWeight: 700 }}>
@@ -2689,11 +2861,11 @@ const FlightSearchDesktop: React.FC<
         {/* Tab pills */}
         <div style={{ display: "flex", gap: 8 * u, marginLeft: 12 * u }}>
           {[
-            { label: "Travel", active: false, icon: "✈" },
-            { label: "Explore", active: false, icon: "◎" },
-            { label: "Flights", active: true, icon: "✈" },
-            { label: "Hotels", active: false, icon: "▢" },
-            { label: "Vacation rentals", active: false, icon: "🏖" },
+            { label: "Travel", active: false, icon: "send" as const },
+            { label: "Explore", active: false, icon: "compass" as const },
+            { label: "Flights", active: true, icon: "send" as const },
+            { label: "Hotels", active: false, icon: "homeFilled" as const },
+            { label: "Vacation rentals", active: false, icon: "imageSquare" as const },
           ].map((t) => (
             <div
               key={t.label}
@@ -2712,7 +2884,7 @@ const FlightSearchDesktop: React.FC<
                 fontWeight: t.active ? 600 : 400,
               }}
             >
-              <span style={{ fontSize: 13 * u, opacity: 0.85 }}>{t.icon}</span>
+              <Icon name={t.icon} size={13 * u} color={t.active ? G_BLUE : G_LIGHT} strokeWidth={1.8} />
               {t.label}
             </div>
           ))}
@@ -2720,12 +2892,8 @@ const FlightSearchDesktop: React.FC<
         <div style={{ flex: 1 }} />
         {/* Right cluster — moon, apps grid, avatar */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 * u }}>
-          <div style={{ fontSize: 18 * u, color: G_LIGHT }}>☾</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2 * u, width: 18 * u, height: 18 * u }}>
-            {[...Array(9)].map((_, i) => (
-              <div key={i} style={{ width: 4 * u, height: 4 * u, background: G_LIGHT, borderRadius: "50%" }} />
-            ))}
-          </div>
+          <Icon name="moon" size={20 * u} color={G_LIGHT} strokeWidth={1.8} />
+          <Icon name="appsGrid" size={20 * u} color={G_LIGHT} />
           <div style={{ width: 32 * u, height: 32 * u, borderRadius: "50%", overflow: "hidden", background: "#F5F5F7" }}>
             <Img src={staticFile("elsa-profile.jpg")} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
@@ -2747,7 +2915,7 @@ const FlightSearchDesktop: React.FC<
             <span style={{ color: G_LIGHT }}>⇄</span> Round trip <span style={{ color: G_LIGHT }}>▾</span>
           </div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6 * u, padding: `${5 * u}px ${10 * u}px`, borderRadius: 6 * u }}>
-            <span style={{ color: G_LIGHT }}>👤</span> 1 <span style={{ color: G_LIGHT }}>▾</span>
+            <Icon name="user" size={14 * u} color={G_LIGHT} strokeWidth={1.8} /> 1 <span style={{ color: G_LIGHT }}>▾</span>
           </div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6 * u, padding: `${5 * u}px ${10 * u}px`, borderRadius: 6 * u }}>
             Economy (include Basic) <span style={{ color: G_LIGHT }}>▾</span>
@@ -2809,7 +2977,7 @@ const FlightSearchDesktop: React.FC<
               >
                 {(obj as any).icon && <span>{(obj as any).icon}</span>}
                 {obj.label}
-                {(obj as any).removable && <span style={{ marginLeft: 2 * u }}>✕</span>}
+                {(obj as any).removable && <span style={{ marginLeft: 2 * u, display: "inline-flex" }}><Icon name="close" size={10 * u} color={G_BLUE} strokeWidth={2.2} /></span>}
                 {!(obj as any).removable && !(obj as any).icon && <span style={{ color: G_LIGHT }}>▾</span>}
               </div>
             );
@@ -2886,7 +3054,7 @@ const FlightSearchDesktop: React.FC<
                   <div style={{ fontSize: 12 * u, color: G_LIGHT, marginTop: 4 * u }}>{r.airline}</div>
                   {r.callout && (
                     <div style={{ marginTop: 6 * u, display: "inline-flex", alignItems: "center", gap: 4 * u, padding: `${3 * u}px ${8 * u}px`, borderRadius: 4 * u, background: "#E6F4EA", fontSize: 11 * u, color: "#188038" }}>
-                      🌱 {r.callout}
+                      <Icon name="leaf" size={12 * u} color="#188038" /> {r.callout}
                     </div>
                   )}
                 </div>
@@ -2905,7 +3073,7 @@ const FlightSearchDesktop: React.FC<
                 {/* Price + round trip */}
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 * u }}>
-                    <span style={{ fontSize: 11 * u, color: G_LIGHT }}>1 🛄</span>
+                    <span style={{ fontSize: 11 * u, color: G_LIGHT, display: "inline-flex", alignItems: "center", gap: 3 * u }}>1 <Icon name="luggage" size={11 * u} color={G_LIGHT} strokeWidth={1.6} /></span>
                     <span style={{ fontSize: 18 * u, color: G_GREEN, fontWeight: 600 }}>{r.price}</span>
                   </div>
                   <div style={{ fontSize: 11 * u, color: G_LIGHT, marginTop: 2 * u }}>round trip</div>
@@ -2920,7 +3088,7 @@ const FlightSearchDesktop: React.FC<
         {/* Tile row below */}
         <div style={{ display: "flex", gap: 12 * u, marginTop: 22 * u }}>
           <div style={{ flex: 2, padding: `${14 * u}px ${18 * u}px`, border: `${1 * u}px solid ${G_BORDER}`, borderRadius: 10 * u, background: "#fff", display: "flex", alignItems: "center", gap: 10 * u }}>
-            <span style={{ color: G_BLUE, fontSize: 18 * u }}>✱</span>
+            <Icon name="sparkle" size={18 * u} color={G_BLUE} />
             <div style={{ fontSize: 13 * u, color: G_TEXT }}>The cheapest time to book is usually earlier, about 2–5 months before takeoff</div>
           </div>
           <div style={{ flex: 1, padding: `${14 * u}px ${18 * u}px`, border: `${1 * u}px solid ${G_BORDER}`, borderRadius: 10 * u, background: "#fff", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -2975,10 +3143,9 @@ const FlightSearchDesktop: React.FC<
                 alignItems: "center",
                 justifyContent: "center",
                 color: "#fff",
-                fontSize: 50 * u,
               }}
             >
-              ✓
+              <Icon name="check" size={50 * u} color="#fff" strokeWidth={3} />
             </div>
             <div style={{ fontSize: 24 * u, fontWeight: 700, color: G_TEXT }}>Booking confirmed</div>
             <div style={{ fontSize: 14 * u, color: G_LIGHT }}>SFO → JFK · Alaska · Tue May 26</div>
@@ -4154,7 +4321,15 @@ const AppleWalletDesktop: React.FC<
               Statement Balance
             </div>
             <div style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6 * u, padding: `${5 * u}px ${12 * u}px`, borderRadius: 999, background: isPaid ? "rgba(52, 199, 89, 0.2)" : "rgba(255, 69, 58, 0.2)", border: `${1 * u}px solid ${isPaid ? "rgba(52, 199, 89, 0.45)" : "rgba(255, 69, 58, 0.45)"}`, color: isPaid ? "#34C759" : "#FF453A", fontSize: 11 * u, fontWeight: 600 }}>
-              {isPaid ? "✓ Paid" : "● Past due"}
+              {isPaid ? (
+                <>
+                  <Icon name="check" size={11 * u} color="#34C759" strokeWidth={2.5} /> Paid
+                </>
+              ) : (
+                <>
+                  <Icon name="circleDot" size={10 * u} color="#FF453A" /> Past due
+                </>
+              )}
             </div>
           </div>
           <div
@@ -4218,17 +4393,21 @@ const AppleWalletDesktop: React.FC<
               boxShadow: `inset 0 ${1.5 * u}px 0 rgba(255,255,255,0.4), 0 ${10 * u}px ${24 * u}px rgba(0,0,0,0.35)`,
             }}
           >
-            {isPaid ? "✓ Paid" : `Pay ${balanceText}`}
+            {isPaid ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 * u, justifyContent: "center" }}>
+                <Icon name="check" size={22 * u} color="#fff" strokeWidth={3} /> Paid
+              </span>
+            ) : `Pay ${balanceText}`}
           </div>
         </div>
 
         {/* Quick-action chips row */}
         <div style={{ display: "flex", gap: 10 * u }}>
           {[
-            { l: "Send", icon: "↑" },
-            { l: "Request", icon: "↓" },
-            { l: "Split", icon: "⇆" },
-            { l: "Top up", icon: "+" },
+            { l: "Send", icon: "send" as const },
+            { l: "Request", icon: "envelopeOpen" as const },
+            { l: "Split", icon: "swap" as const },
+            { l: "Top up", icon: "plus" as const },
           ].map((a) => (
             <div
               key={a.l}
@@ -4243,9 +4422,13 @@ const AppleWalletDesktop: React.FC<
                 textAlign: "center",
                 fontSize: 12 * u,
                 fontWeight: 500,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4 * u,
               }}
             >
-              <div style={{ fontSize: 18 * u, marginBottom: 4 * u }}>{a.icon}</div>
+              <Icon name={a.icon} size={20 * u} color="#fff" strokeWidth={1.8} />
               {a.l}
             </div>
           ))}
@@ -4268,10 +4451,10 @@ const AppleWalletDesktop: React.FC<
         </div>
         <div style={{ display: "flex", gap: 14 * u }}>
           {[
-            { name: "Whole Foods", emoji: "🥬", amount: "−$42.18", date: "Today" },
-            { name: "Uber", emoji: "🚗", amount: "−$14.50", date: "Yesterday" },
-            { name: "Spotify", emoji: "🎵", amount: "−$9.99", date: "May 5" },
-            { name: "Apple Store", emoji: "", amount: "−$29.83", date: "Apr 30" },
+            { name: "Whole Foods", icon: "groceries" as const, amount: "−$42.18", date: "Today" },
+            { name: "Uber", icon: "car" as const, amount: "−$14.50", date: "Yesterday" },
+            { name: "Spotify", icon: "music" as const, amount: "−$9.99", date: "May 5" },
+            { name: "Apple Store", icon: "shoppingBag" as const, amount: "−$29.83", date: "Apr 30" },
           ].map((tx) => (
             <div
               key={tx.name}
@@ -4285,7 +4468,9 @@ const AppleWalletDesktop: React.FC<
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 10 * u }}>
-                <div style={{ width: 36 * u, height: 36 * u, borderRadius: 10 * u, background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 * u }}>{tx.emoji}</div>
+                <div style={{ width: 36 * u, height: 36 * u, borderRadius: 10 * u, background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Icon name={tx.icon} size={18 * u} color="#fff" strokeWidth={1.8} />
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14 * u, fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tx.name}</div>
                   <div style={{ fontSize: 11 * u, color: "rgba(255,255,255,0.5)" }}>{tx.date}</div>
@@ -5562,7 +5747,7 @@ const GmailInboxDesktop: React.FC<
       ],
       signoff: "Love,",
       signature: ["Mom", "xoxo"],
-      reply: "Yes, see you Sunday at 6! Will text Aunt Carol tonight.",
+      reply: "See you Sunday at 6.",
     },
     {
       name: "GitHub",
@@ -5581,7 +5766,7 @@ const GmailInboxDesktop: React.FC<
       ],
       signoff: "—",
       signature: ["GitHub", "github.com/acme/api/pull/2841"],
-      reply: "Reviewed and approved. Migration looks safe. LGTM.",
+      reply: "Approved, LGTM.",
     },
     {
       name: "Kevin Lee",
@@ -5600,7 +5785,7 @@ const GmailInboxDesktop: React.FC<
       ],
       signoff: "Cheers,",
       signature: ["Kevin", "Design Lead · Studio Lab"],
-      reply: "3pm works perfectly — calendar updated. Will review the flow beforehand.",
+      reply: "3pm works. Calendar updated.",
     },
     {
       name: "Jenna Park",
@@ -5619,7 +5804,7 @@ const GmailInboxDesktop: React.FC<
       ],
       signoff: "xx",
       signature: ["jenna"],
-      reply: "I'll grab the res. Down for Becca's — count me in!",
+      reply: "Got the res. In for Becca.",
     },
     {
       name: "Stripe",
@@ -5639,7 +5824,7 @@ const GmailInboxDesktop: React.FC<
       ],
       signoff: "—",
       signature: ["Stripe", "stripe.com"],
-      reply: "Filed for expense — auto-tagged.",
+      reply: "Filed for expense.",
     },
     {
       name: "Linear",
@@ -5661,16 +5846,16 @@ const GmailInboxDesktop: React.FC<
       ],
       signoff: "—",
       signature: ["Linear", "linear.app/inbox"],
-      reply: "Triaged — moving BUG-318 to in-progress, rest are queued.",
+      reply: "Triaged, on it.",
     },
   ];
 
-  // Cycle through emails — each gets ~2.2s of focus, then we advance.
-  // Within each window: select email + slide-in body, then type reply,
-  // then "send" reply (highlight + clear), then next.
+  // Rapid-fire cycle through emails — each gets ~0.9s of focus, then we
+  // advance. Within each window: select email + slide-in body, then type
+  // reply, then "send" reply (highlight + clear), then next.
   const driveSec = driveFrame / fps;
-  const perEmail = 2.4;
-  const cycleStart = 0.6;
+  const perEmail = 0.95;
+  const cycleStart = 0.5;
   const idxFloat = Math.max(0, (driveSec - cycleStart) / perEmail);
   const activeIdx = Math.min(mails.length - 1, Math.floor(idxFloat));
   const t = idxFloat - activeIdx; // 0..1 inside the email
@@ -5734,10 +5919,12 @@ const GmailInboxDesktop: React.FC<
           <span style={{ fontSize: 20 * u, color: G_TEXT, fontWeight: 400 }}>Gmail</span>
         </div>
         <div style={{ flex: 1, maxWidth: 720 * u, height: 44 * u, background: "#EAF1FB", borderRadius: 10 * u, display: "flex", alignItems: "center", paddingLeft: 16 * u, fontSize: 15 * u, color: G_LIGHT, gap: 10 * u }}>
-          <span>🔍</span> Search mail
+          <Icon name="search" size={18 * u} color={G_LIGHT} strokeWidth={1.8} /> Search mail
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 * u, color: G_LIGHT, fontSize: 18 * u }}>
-          <span>?</span><span>⚙</span><span>▢</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 * u, color: G_LIGHT }}>
+          <Icon name="help" size={20 * u} color={G_LIGHT} strokeWidth={1.6} />
+          <Icon name="settings" size={20 * u} color={G_LIGHT} strokeWidth={1.6} />
+          <Icon name="appsGrid" size={20 * u} color={G_LIGHT} />
         </div>
         <div style={{ width: 38 * u, height: 38 * u, borderRadius: "50%", background: "#34A853", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 * u, fontWeight: 600 }}>J</div>
       </div>
@@ -5767,19 +5954,19 @@ const GmailInboxDesktop: React.FC<
             marginBottom: 16 * u,
           }}
         >
-          ✏ Compose
+          <Icon name="pencil" size={16 * u} color={G_TEXT} strokeWidth={1.8} /> Compose
         </div>
-        {[
-          { l: "Inbox", c: "47", icon: "📥", active: true },
-          { l: "Starred", icon: "☆" },
-          { l: "Snoozed", icon: "⏰" },
-          { l: "Sent", icon: "↗" },
-          { l: "Drafts", c: "3", icon: "📝" },
-          { l: "Important", icon: "ⓘ" },
-          { l: "All Mail", icon: "✉" },
-          { l: "Spam", icon: "⚠" },
-          { l: "Trash", icon: "🗑" },
-        ].map((row) => (
+        {([
+          { l: "Inbox", c: "47", icon: "inboxIcon", active: true },
+          { l: "Starred", icon: "starOutline" },
+          { l: "Snoozed", icon: "snooze" },
+          { l: "Sent", icon: "send" },
+          { l: "Drafts", c: "3", icon: "draft" },
+          { l: "Important", icon: "important" },
+          { l: "All Mail", icon: "envelope" },
+          { l: "Spam", icon: "spam" },
+          { l: "Trash", icon: "trash" },
+        ] as { l: string; c?: string; icon: IconName; active?: boolean }[]).map((row) => (
           <div
             key={row.l}
             style={{
@@ -5795,7 +5982,7 @@ const GmailInboxDesktop: React.FC<
               gap: 12 * u,
             }}
           >
-            <span style={{ width: 18 * u, fontSize: 14 * u }}>{row.icon}</span>
+            <span style={{ width: 18 * u, display: "inline-flex", alignItems: "center" }}><Icon name={row.icon} size={16 * u} color={G_LIGHT} strokeWidth={1.6} /></span>
             <span style={{ flex: 1 }}>{row.l}</span>
             {row.c && <span style={{ fontSize: 12 * u }}>{row.c}</span>}
           </div>
@@ -5817,8 +6004,10 @@ const GmailInboxDesktop: React.FC<
         }}
       >
         {/* Mini toolbar */}
-        <div style={{ height: 44 * u, padding: `0 ${16 * u}px`, display: "flex", alignItems: "center", gap: 14 * u, color: G_LIGHT, fontSize: 14 * u, borderBottom: `${1 * u}px solid #F0F2F5` }}>
-          <span>☐</span><span>↻</span><span>⋯</span>
+        <div style={{ height: 44 * u, padding: `0 ${16 * u}px`, display: "flex", alignItems: "center", gap: 14 * u, color: G_LIGHT }}>
+          <Icon name="check" size={16 * u} color={G_LIGHT} strokeWidth={1.5} />
+          <Icon name="chevronDown" size={16 * u} color={G_LIGHT} strokeWidth={1.6} />
+          <Icon name="moreVert" size={16 * u} color={G_LIGHT} />
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: 12 * u }}>1–47 of 4,283</span>
         </div>
@@ -5858,13 +6047,20 @@ const GmailInboxDesktop: React.FC<
         }}
       >
         {/* Toolbar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 14 * u, color: G_LIGHT, fontSize: 18 * u, marginBottom: 14 * u }}>
-          <span>←</span><span>📁</span><span>⚠</span><span>🗑</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 * u, color: G_LIGHT, marginBottom: 14 * u }}>
+          <Icon name="back" size={20 * u} color={G_LIGHT} strokeWidth={1.6} />
+          <Icon name="archive" size={20 * u} color={G_LIGHT} strokeWidth={1.6} />
+          <Icon name="spam" size={20 * u} color={G_LIGHT} strokeWidth={1.6} />
+          <Icon name="trash" size={20 * u} color={G_LIGHT} strokeWidth={1.6} />
           <div style={{ width: 1 * u, height: 20 * u, background: "#E0E4EB" }} />
-          <span>📧</span><span>⏰</span><span>✓</span><span>+</span>
+          <Icon name="envelope" size={20 * u} color={G_LIGHT} strokeWidth={1.6} />
+          <Icon name="snooze" size={20 * u} color={G_LIGHT} strokeWidth={1.6} />
+          <Icon name="checkCircle" size={20 * u} color={G_LIGHT} strokeWidth={1.6} />
+          <Icon name="plus" size={20 * u} color={G_LIGHT} strokeWidth={1.6} />
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: 13 * u }}>1 of 47</span>
-          <span>‹</span><span>›</span>
+          <Icon name="chevronLeft" size={18 * u} color={G_LIGHT} strokeWidth={1.6} />
+          <Icon name="chevronRight" size={18 * u} color={G_LIGHT} strokeWidth={1.6} />
         </div>
         {/* Subject + sender */}
         <div style={{ fontSize: 28 * u, fontWeight: 500, color: G_TEXT, marginBottom: 18 * u, lineHeight: 1.25 }}>
@@ -5896,8 +6092,10 @@ const GmailInboxDesktop: React.FC<
             <div style={{ fontSize: 13 * u, color: G_LIGHT }}>to me ▾</div>
           </div>
           <div style={{ fontSize: 13 * u, color: G_LIGHT }}>{active.time} (just now)</div>
-          <div style={{ display: "flex", gap: 12 * u, fontSize: 18 * u, color: G_LIGHT }}>
-            <span>☆</span><span>↶</span><span>⋮</span>
+          <div style={{ display: "flex", gap: 12 * u, color: G_LIGHT }}>
+            <Icon name="starOutline" size={18 * u} color={G_LIGHT} strokeWidth={1.6} />
+            <Icon name="reply" size={18 * u} color={G_LIGHT} strokeWidth={1.6} />
+            <Icon name="moreVert" size={18 * u} color={G_LIGHT} />
           </div>
         </div>
         {/* Body */}
@@ -5927,7 +6125,7 @@ const GmailInboxDesktop: React.FC<
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 * u, marginBottom: 10 * u, fontSize: 13 * u, color: G_LIGHT }}>
-            <span>↶</span> Reply to <strong style={{ color: G_TEXT }}>{active.name}</strong>
+            <Icon name="reply" size={14 * u} color={G_LIGHT} strokeWidth={1.6} /> Reply to <strong style={{ color: G_TEXT }}>{active.name}</strong>
           </div>
           <div style={{ minHeight: 36 * u, fontSize: 16 * u, color: G_TEXT, display: "flex", alignItems: "center" }}>
             <span>{replyVisible}</span>
@@ -5964,17 +6162,21 @@ const GmailInboxDesktop: React.FC<
             >
               {isSending ? "Sending…" : "Send"} ▾
             </div>
-            <div style={{ display: "flex", gap: 12 * u, color: G_LIGHT, fontSize: 16 * u }}>
-              <span>𝐀</span><span>📎</span><span>🔗</span><span>😀</span><span>🖼</span>
+            <div style={{ display: "flex", gap: 12 * u, color: G_LIGHT, alignItems: "center" }}>
+              <span style={{ fontSize: 14 * u, fontWeight: 700, color: G_LIGHT }}>A</span>
+              <Icon name="attachment" size={16 * u} color={G_LIGHT} strokeWidth={1.6} />
+              <Icon name="link" size={16 * u} color={G_LIGHT} strokeWidth={1.6} />
+              <Icon name="smile" size={16 * u} color={G_LIGHT} strokeWidth={1.6} />
+              <Icon name="image" size={16 * u} color={G_LIGHT} strokeWidth={1.6} />
             </div>
             <div style={{ flex: 1 }} />
-            <div style={{ color: G_LIGHT, fontSize: 16 * u }}>🗑</div>
+            <Icon name="trash" size={18 * u} color={G_LIGHT} strokeWidth={1.6} />
           </div>
         </div>
       </div>
 
-      {/* "Replied to 47 emails" overlay */}
-      {replySentOpacity > 0 && (
+      {/* "Replied to 47 emails" overlay — disabled per request. */}
+      {false && replySentOpacity > 0 && (
         <div
           style={{
             position: "absolute",
@@ -6165,7 +6367,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
       ],
       signoff: "—",
       signature: ["GitHub", "github.com/acme/api/pull/2841"],
-      reply: "Reviewed and approved. Migration looks safe. LGTM.",
+      reply: "Approved, LGTM.",
     },
     {
       initial: "K",
@@ -6182,7 +6384,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
       ],
       signoff: "Cheers,",
       signature: ["Kevin", "Design Lead · Studio Lab"],
-      reply: "3pm works perfectly — calendar updated. Will review the flow beforehand.",
+      reply: "3pm works. Calendar updated.",
     },
     {
       initial: "J",
@@ -6198,7 +6400,7 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
       ],
       signoff: "xx",
       signature: ["jenna"],
-      reply: "I'll grab the res. Down for Becca's — count me in!",
+      reply: "Got the res. In for Becca.",
     },
     {
       initial: "T",
@@ -7191,25 +7393,19 @@ const GoogleDocsDesktop: React.FC<
   const docW = 816 * u;
   const docMarginX = (width - docW) / 2;
 
-  // Doc content as outline bullets, like the screenshot.
-  type Item = { text: string; depth: number };
-  const items: Item[] = [
-    { text: "Surrounding yourself with people that hate on you", depth: 0 },
-    { text: "They actually care", depth: 1 },
-    { text: 'When I don\'t give a fuck about you or your idea I just say "cool bro"', depth: 2 },
-    { text: "You need a high ego to be successful", depth: 0 },
-    { text: "I am right 98% of the time so statistically I'm going to believe in myself", depth: 1 },
-    { text: "That doesn't mean I'm ignorant — confident (aura)", depth: 2 },
-    { text: "SF has no bitches → good for productivity", depth: 0 },
-    { text: "If my team and I wanna relax we're flying out to NY and fucking ?", depth: 1 },
-    { text: "If you fail at something that means you don't try hard enough", depth: 0 },
-    { text: "Almost zero chance that you tried your absolute hardest and didn't succeed in some capacity", depth: 1 },
-    { text: "Why I dropped out of highschool AND/OR Why college is a waste of time", depth: 0 },
-    { text: "Why saving money is dumb", depth: 0 },
-    { text: "Time > money", depth: 1 },
-    { text: "Most ideas are dumb until they aren't", depth: 0 },
-    { text: "First time I heard about Bitcoin I laughed at the guy who told me", depth: 1 },
-    { text: "Now he's worth $40m and I'm writing this in a Google doc", depth: 2 },
+  // Doc content — full essay paragraphs (legible, no blur).
+  const docTitle = "The Art of Gooning: A Meditation on Discipline, Devotion, and the Modern Male Condition";
+  const docSubtitle = "A philosophical inquiry into focus, restraint, and unrestrained pursuit";
+  const paragraphs = [
+    "Gooning, at its essence, is the willful surrender of the rational mind to a singular and uninterrupted devotion. It is not, as critics have long suggested, an act of weakness — but rather a discipline, a pilgrimage, and a quiet rebellion against the modern condition of perpetual distraction. To goon is to reject the algorithm and embrace the inner monologue. To pause time. To exist, however briefly, in pure unbroken focus.",
+    "The history of gooning is the history of devotion itself. Ancient monks who chanted single syllables for hours; samurai who polished a single blade for a lifetime; programmers who debug a single function until dawn — all share the same lineage. The goon, then, is not a deviant but a descendant: heir to a long tradition of those who refused to break concentration, no matter the cost.",
+    "Critics ask: what is the productive output of the goon? But this is a category error. The goon does not produce. The goon contemplates. In an economy that demands ceaseless creation, the act of contemplation has itself become radical — and the goon, perhaps unintentionally, has become a philosopher of stillness. To opt out of the dopamine treadmill, even temporarily, is to assert that one's attention is not a commodity but a sovereign good.",
+    "Modern neuroscience has begun, tentatively, to validate what gooners have always intuited. Sustained focus, even in unconventional forms, strengthens the prefrontal cortex's capacity for delayed gratification. The goon trains the very faculties that society claims to value — patience, depth, resistance to interruption — only in a register polite society refuses to acknowledge.",
+    "There is, of course, a darker side. The goon who cannot return is no longer a practitioner but a captive. Like all disciplines, gooning demands a teacher, a tradition, and a ritual structure. Without these, what begins as devotion calcifies into compulsion. The wise gooner knows when to begin and, more importantly, when to end. The wise gooner returns to the world refreshed, not depleted.",
+    "What separates the modern goon from earlier ascetics is the technological substrate. The internet has both enabled and distorted the practice. On one hand, it provides an inexhaustible reservoir of stimulus; on the other, it threatens to dissolve the very interiority that gooning is meant to cultivate. The 21st-century goon must be his own monastery.",
+    "We must also reckon with the social dimension. To goon alone is one thing; to goon in company is another entirely. The communal goon — once unthinkable — has, in certain digital subcultures, become a recognized form. Whether this represents an evolution or a degradation of the practice remains an open question among scholars in the field.",
+    "Yet the deeper truth persists: at the heart of the goon's discipline is a refusal. A refusal to be hurried. A refusal to surface. A refusal to let the world dictate the rhythms of one's own attention. In this sense, the goon is the last romantic — committed to a private devotion that the public square cannot fully comprehend.",
+    "In conclusion: gooning is not a crisis to be overcome, but a practice to be refined. It is a mirror in which we see, with uncomfortable clarity, our own capacity for focused attention. To dismiss it is to dismiss something essential about the male condition in late modernity. To study it is to study ourselves.",
   ];
 
   return (
@@ -7261,10 +7457,10 @@ const GoogleDocsDesktop: React.FC<
         </div>
         <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 * u }}>
-            <div style={{ fontSize: 18 * u, color: D_TEXT, fontWeight: 500 }}>aridotty script</div>
-            <span style={{ color: D_LIGHT, fontSize: 14 * u }}>☆</span>
-            <span style={{ color: D_LIGHT, fontSize: 14 * u }}>📁</span>
-            <span style={{ color: D_LIGHT, fontSize: 14 * u }}>☁</span>
+            <div style={{ fontSize: 18 * u, color: D_TEXT, fontWeight: 500 }}>the art of gooning</div>
+            <Icon name="starOutline" size={14 * u} color={D_LIGHT} strokeWidth={1.6} />
+            <Icon name="archive" size={14 * u} color={D_LIGHT} strokeWidth={1.6} />
+            <Icon name="drive" size={14 * u} color={D_LIGHT} strokeWidth={1.6} />
           </div>
           <div style={{ display: "flex", gap: 14 * u, fontSize: 13 * u, color: D_TEXT, marginTop: 2 * u }}>
             <span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Format</span><span>Tools</span><span>Extensions</span><span>Help</span>
@@ -7273,10 +7469,10 @@ const GoogleDocsDesktop: React.FC<
         {/* Right cluster — pencil/Editing dropdown + comments + meet + share + avatar */}
         <div style={{ display: "flex", gap: 8 * u, alignItems: "center" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6 * u, padding: `${6 * u}px ${10 * u}px`, borderRadius: 6 * u, background: "#F1F3F4", fontSize: 12 * u, color: D_TEXT }}>
-            ✎ Editing <span style={{ color: D_LIGHT }}>▾</span>
+            <Icon name="pencil" size={14 * u} color={D_TEXT} strokeWidth={1.8} /> Editing <span style={{ color: D_LIGHT }}>▾</span>
           </div>
-          <div style={{ width: 32 * u, height: 32 * u, display: "flex", alignItems: "center", justifyContent: "center", color: D_LIGHT }}>💬</div>
-          <div style={{ width: 32 * u, height: 32 * u, display: "flex", alignItems: "center", justifyContent: "center", color: D_LIGHT }}>📹</div>
+          <Icon name="messageCircle" size={20 * u} color={D_LIGHT} strokeWidth={1.6} />
+          <Icon name="play" size={20 * u} color={D_LIGHT} strokeWidth={1.6} />
           <div
             style={{
               display: "inline-flex",
@@ -7292,7 +7488,7 @@ const GoogleDocsDesktop: React.FC<
               transformOrigin: "center",
             }}
           >
-            🔒 Share <span style={{ color: D_LIGHT }}>▾</span>
+            <Icon name="user" size={14 * u} color="#001D35" strokeWidth={1.8} /> Share <span style={{ color: D_LIGHT }}>▾</span>
           </div>
           <div style={{ width: 32 * u, height: 32 * u, borderRadius: "50%", background: "#34A853", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 * u, fontWeight: 600 }}>J</div>
         </div>
@@ -7314,18 +7510,16 @@ const GoogleDocsDesktop: React.FC<
         }}
       >
         {[
-          "↶", "↷", "🖨", "✓", "🎨",
-          "100%▾",
+          "100%",
           "|",
-          "Normal text▾", "|", "Arial▾", "|", "−", "11", "+", "|",
-          "B", "I", "U", "A▾", "🔗", "▤", "≡", "⇆", "•", "1.",
+          "Normal text", "|", "Arial", "|", "11", "|",
+          "B", "I", "U",
         ].map((t, i) => (
           <span key={i} style={{ padding: `${4 * u}px ${6 * u}px`, color: t === "B" || t === "I" || t === "U" ? D_TEXT : D_LIGHT, fontWeight: t === "B" ? 700 : 400, fontStyle: t === "I" ? "italic" : "normal", textDecoration: t === "U" ? "underline" : "none" }}>
             {t}
           </span>
         ))}
         <div style={{ flex: 1 }} />
-        <div style={{ paddingRight: 16 * u, color: D_LIGHT, fontSize: 14 * u }}>↑</div>
       </div>
 
       {/* Sidebar (right) — minimal column with icons */}
@@ -7347,10 +7541,10 @@ const GoogleDocsDesktop: React.FC<
           color: D_LIGHT,
         }}
       >
-        <span>📅</span>
-        <span>📌</span>
-        <span>✓</span>
-        <span>＋</span>
+        <Icon name="calendar" size={18 * u} color={D_LIGHT} strokeWidth={1.6} />
+        <Icon name="pin" size={18 * u} color={D_LIGHT} strokeWidth={1.6} />
+        <Icon name="check" size={18 * u} color={D_LIGHT} strokeWidth={1.8} />
+        <Icon name="plus" size={18 * u} color={D_LIGHT} strokeWidth={1.6} />
       </div>
 
       {/* Doc page (centered, white, large) */}
@@ -7366,30 +7560,39 @@ const GoogleDocsDesktop: React.FC<
         <div
           style={{
             background: "#FFFFFF",
-            padding: `${64 * u}px ${72 * u}px`,
+            padding: `${72 * u}px ${96 * u}px`,
             boxShadow: `0 ${2 * u}px ${10 * u}px rgba(0,0,0,0.08)`,
             border: `${1 * u}px solid ${D_BORDER}`,
-            fontSize: 14 * u,
+            fontSize: 13 * u,
             color: D_TEXT,
-            lineHeight: 1.5,
+            lineHeight: 1.6,
             minHeight: 1056 * u, // 11" page
-            fontFamily: "'Arial', " + FONT_STACK,
+            fontFamily: "'Times New Roman', 'Georgia', serif",
           }}
         >
-          {items.map((item, i) => (
-            <div
+          {/* Title */}
+          <div style={{ fontSize: 22 * u, fontWeight: 700, color: D_TEXT, textAlign: "center", marginBottom: 6 * u, lineHeight: 1.3 }}>
+            {docTitle}
+          </div>
+          <div style={{ fontSize: 13 * u, fontStyle: "italic", color: D_LIGHT, textAlign: "center", marginBottom: 28 * u }}>
+            {docSubtitle}
+          </div>
+          {/* Paragraphs */}
+          {paragraphs.map((p, i) => (
+            <p
               key={i}
               style={{
-                paddingLeft: (item.depth * 28) * u,
-                marginBottom: 4 * u,
-                display: "flex",
-                gap: 8 * u,
+                marginTop: 0,
+                marginBottom: 12 * u,
+                textIndent: 28 * u,
                 color: D_TEXT,
+                fontSize: 13 * u,
+                lineHeight: 1.65,
+                textAlign: "justify",
               }}
             >
-              <span style={{ width: 12 * u, color: D_LIGHT }}>—</span>
-              <span style={{ filter: `blur(${3 * u}px)` }}>{item.text}</span>
-            </div>
+              {p}
+            </p>
           ))}
         </div>
       </div>
