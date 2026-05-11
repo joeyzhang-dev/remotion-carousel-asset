@@ -9464,8 +9464,12 @@ const Scene3: React.FC<Scene3Props> = ({
       dContentLeft + dCol * (dCellSize + dGridGap) + dCellSize / 2;
     const dCellLayoutY =
       dGridTopY + dRow * (dCellSize + dGridGap) + dCellSize / 2;
-    // Screen position during dwell.
-    dwelledCellScreenX = dCellLayoutX;
+    // Screen position during dwell — these coords need to be in the
+    // BUBBLE LAYER WRAPPER's local space (not canvas-space), since the
+    // flight clone is rendered inside that wrapper. The wrapper itself
+    // is offset by `phoneColLeft` from the canvas left edge, so we
+    // subtract that offset here to keep the math correct.
+    dwelledCellScreenX = dCellLayoutX - phoneColLeft;
     dwelledCellScreenY = dCellLayoutY - dDwellTarget;
     dwelledCellSize = dCellSize;
   }
