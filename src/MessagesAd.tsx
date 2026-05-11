@@ -8997,7 +8997,14 @@ const Scene3: React.FC<Scene3Props> = ({
   // Sent #1 settles at the canvas midline. Its old upward "delivered"
   // drift was meant to make room for received #1 + sent #2 below; with
   // those removed we keep sent #1 centered at height/2.
-  const rowYOffset = 0;
+  // Shift the entire conversation column DOWN after the morph so the
+  // "newest" bubble sits in the visual center of the area BELOW the
+  // Folk header (the geometric midline reads as "too high" because
+  // the header occupies the top of the canvas). We interpolate from
+  // 0 (at morph start, matching Scene 2's centered input field) to a
+  // settled offset, so the cut from Scene 2 → Scene 3 stays seamless.
+  const conversationVerticalShift = height * 0.1;
+  const rowYOffset = interpolate(morphP, [0, 1], [0, conversationVerticalShift]);
   const holdStart = morphEnd;
   // (rowXOffset removed — sentBubbleX now interpolates to a directly
   // right-anchored canvas position, no per-row offset needed.)
