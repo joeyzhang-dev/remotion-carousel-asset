@@ -2320,16 +2320,32 @@ const FlightSearchDesktop: React.FC<
   fps,
   width,
   height,
-  scale,
   opacity,
   cardTapScale = 1,
   tappedCardIndex = -1,
   bookingConfirmOpacity = 0,
 }) => {
+  // Real Google Flights desktop has a fixed ~960-1100px centered
+  // content column at default zoom. We use a `u` (unit) factor based
+  // on the canvas width treating the design space as ~1280px wide,
+  // then size everything explicitly. This avoids dependence on the
+  // outer `scale` prop (which is sized to the phone column, not the
+  // full desktop canvas).
+  const u = width / 1280; // 1u = ~1 real desktop pixel
+  // Content column — clamped between sensible bounds.
+  const colW = Math.min(960 * u, width * 0.7);
+  const colLeft = (width - colW) / 2;
+
   const driveSec = driveFrame / fps;
-  const totalContentH = height + 700 * scale;
+  const headerStaticH = 280 * u; // top nav + search row roughly
+  const filterRowH = 90 * u;
+  const tabRowH = 120 * u;
+  const flightCardH = 130 * u;
+  const flightCardGap = 8 * u;
+  const totalContentH =
+    headerStaticH + filterRowH + tabRowH + (flightCardH + flightCardGap) * 7 + 600 * u;
   const maxScroll = Math.max(0, totalContentH - height);
-  const dwellTarget = Math.min(maxScroll, maxScroll * 0.5);
+  const dwellTarget = Math.min(maxScroll, maxScroll * 0.4);
   let baseScroll = 0;
   if (driveSec >= 0.8 && driveSec < 3.0) {
     baseScroll = interpolate(driveSec, [0.8, 3.0], [0, dwellTarget], {
@@ -2349,15 +2365,103 @@ const FlightSearchDesktop: React.FC<
   const G_BLUE = "#1A73E8";
   const G_BG = "#FFFFFF";
 
-  type Row = { airline: string; color: string; times: string; duration: string; stops: string; emissions: string; price: string };
+  type Row = {
+    airline: string;
+    logoColor: string;
+    times: string;
+    nextDay?: boolean;
+    duration: string;
+    route: string;
+    stops: string;
+    co2: string;
+    emissionsLabel: string;
+    emissionsPill?: { label: string; bg: string; color: string };
+    callout?: string;
+    price: string;
+  };
   const rows: Row[] = [
-    { airline: "United", color: "#0033A0", times: "8:35 AM – 5:14 PM", duration: "5h 39min", stops: "Nonstop", emissions: "−15% emissions", price: "$284" },
-    { airline: "Delta", color: "#003A70", times: "11:50 AM – 8:30 PM", duration: "5h 40min", stops: "Nonstop", emissions: "−12%", price: "$298" },
-    { airline: "Alaska", color: "#01426A", times: "6:45 AM – 3:22 PM", duration: "5h 37min", stops: "Nonstop", emissions: "Avg", price: "$312" },
-    { airline: "American", color: "#9DA6AB", times: "2:30 PM – 11:08 PM", duration: "5h 38min", stops: "Nonstop", emissions: "+8%", price: "$324" },
-    { airline: "JetBlue", color: "#0067C5", times: "9:00 AM – 5:55 PM", duration: "5h 55min", stops: "Nonstop", emissions: "−18%", price: "$348" },
-    { airline: "Spirit", color: "#FFE600", times: "5:55 AM – 3:08 PM", duration: "6h 13min", stops: "1 stop", emissions: "+12%", price: "$386" },
-    { airline: "Frontier", color: "#005C3F", times: "7:14 PM – 4:47 AM+1", duration: "6h 33min", stops: "1 stop", emissions: "Avg", price: "$402" },
+    {
+      airline: "JetBlue",
+      logoColor: "#0067C5",
+      times: "11:47 PM – 8:34 AM",
+      nextDay: true,
+      duration: "5 hr 47 min",
+      route: "SFO – JFK",
+      stops: "Nonstop",
+      co2: "417 kg CO2e",
+      emissionsLabel: "+20% emissions",
+      price: "$432",
+    },
+    {
+      airline: "Alaska · American",
+      logoColor: "#01426A",
+      times: "6:00 AM – 2:41 PM",
+      duration: "5 hr 41 min",
+      route: "SFO – EWR",
+      stops: "Nonstop",
+      co2: "305 kg CO2e",
+      emissionsLabel: "−12% emissions",
+      emissionsPill: { label: "−12% emissions", bg: "#E6F4EA", color: "#188038" },
+      callout: "Avoids as much CO2e as 2,557 trees absorb in a day",
+      price: "$433",
+    },
+    {
+      airline: "Delta",
+      logoColor: "#003A70",
+      times: "4:10 PM – 12:52 AM",
+      nextDay: true,
+      duration: "5 hr 42 min",
+      route: "SFO – JFK",
+      stops: "Nonstop",
+      co2: "438 kg CO2e",
+      emissionsLabel: "+26% emissions",
+      price: "$450",
+    },
+    {
+      airline: "American",
+      logoColor: "#D31E2C",
+      times: "6:15 AM – 2:59 PM",
+      duration: "5 hr 44 min",
+      route: "SFO – JFK",
+      stops: "Nonstop",
+      co2: "573 kg CO2e",
+      emissionsLabel: "+65% emissions",
+      price: "$479",
+    },
+    {
+      airline: "United",
+      logoColor: "#1A1F71",
+      times: "8:00 AM – 4:38 PM",
+      duration: "5 hr 38 min",
+      route: "SFO – JFK",
+      stops: "Nonstop",
+      co2: "412 kg CO2e",
+      emissionsLabel: "+18% emissions",
+      price: "$492",
+    },
+    {
+      airline: "Frontier",
+      logoColor: "#005C3F",
+      times: "10:24 PM – 9:11 AM",
+      nextDay: true,
+      duration: "7 hr 47 min",
+      route: "SFO – LGA",
+      stops: "1 stop · DEN",
+      co2: "362 kg CO2e",
+      emissionsLabel: "+4% emissions",
+      price: "$528",
+    },
+    {
+      airline: "Spirit",
+      logoColor: "#FFE600",
+      times: "5:55 AM – 4:18 PM",
+      duration: "7 hr 23 min",
+      route: "SFO – JFK",
+      stops: "1 stop · LAS",
+      co2: "388 kg CO2e",
+      emissionsLabel: "+11% emissions",
+      price: "$546",
+    },
   ];
 
   return (
@@ -2373,128 +2477,298 @@ const FlightSearchDesktop: React.FC<
         pointerEvents: "none",
         background: G_BG,
         fontFamily: FONT_STACK,
-        filter: `blur(${1 * scale}px) brightness(0.99)`,
+        filter: `blur(${0.6 * u}px) brightness(0.99)`,
       }}
     >
-      {/* Top bar — Google Flights style */}
+      {/* Top nav */}
       <div
         style={{
-          height: 80 * scale,
-          paddingLeft: 32 * scale,
-          paddingRight: 32 * scale,
+          height: 68 * u,
+          paddingLeft: 26 * u,
+          paddingRight: 26 * u,
           display: "flex",
           alignItems: "center",
-          gap: 24 * scale,
-          borderBottom: `${1 * scale}px solid ${G_BORDER}`,
+          gap: 18 * u,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 * scale }}>
-          {[
-            "#4285F4",
-            "#EA4335",
-            "#FBBC05",
-            "#4285F4",
-            "#34A853",
-            "#EA4335",
-          ].map((c, i) => (
-            <span key={i} style={{ fontSize: 30 * scale, color: c, fontWeight: 500 }}>
-              {"Google"[i]}
-            </span>
+        {/* Hamburger */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 * u }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{ width: 22 * u, height: 2.5 * u, background: G_LIGHT, borderRadius: 999 }} />
           ))}
-          <span style={{ fontSize: 24 * scale, color: G_TEXT, fontWeight: 400, marginLeft: 6 * scale }}>Flights</span>
         </div>
-        <div style={{ flex: 1 }} />
-        <div style={{ display: "flex", gap: 22 * scale, fontSize: 16 * scale, color: G_TEXT }}>
-          <span>Travel</span>
-          <span>Explore</span>
-          <span>Flights</span>
-          <span>Hotels</span>
-          <span>Trips</span>
-        </div>
-      </div>
-      {/* Search row card */}
-      <div
-        style={{
-          margin: `${24 * scale}px ${48 * scale}px`,
-          padding: 24 * scale,
-          border: `${1 * scale}px solid ${G_BORDER}`,
-          borderRadius: 12 * scale,
-          boxShadow: `0 ${1 * scale}px ${3 * scale}px rgba(0,0,0,0.08)`,
-          display: "flex",
-          gap: 12 * scale,
-          alignItems: "center",
-        }}
-      >
-        <div style={{ display: "flex", gap: 12 * scale, fontSize: 14 * scale, color: G_TEXT }}>
-          <span>⇄ Round trip ▾</span>
-          <span>1 passenger ▾</span>
-          <span>Economy ▾</span>
-        </div>
-        <div style={{ flex: 1, display: "flex", gap: 12 * scale }}>
-          {["San Francisco (SFO)", "New York (JFK)", "Fri, May 14", "Fri, May 21"].map((p, i) => (
-            <div
+        {/* Google logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+          {[
+            { c: "#4285F4", l: "G" },
+            { c: "#EA4335", l: "o" },
+            { c: "#FBBC05", l: "o" },
+            { c: "#4285F4", l: "g" },
+            { c: "#34A853", l: "l" },
+            { c: "#EA4335", l: "e" },
+          ].map((g, i) => (
+            <span
               key={i}
               style={{
-                flex: 1,
-                height: 56 * scale,
-                border: `${1 * scale}px solid ${G_BORDER}`,
-                borderRadius: 6 * scale,
-                display: "flex",
-                alignItems: "center",
-                paddingLeft: 14 * scale,
-                fontSize: 16 * scale,
-                color: G_TEXT,
+                fontSize: 26 * u,
+                color: g.c,
+                fontFamily: "'Product Sans', " + FONT_STACK,
+                fontWeight: 500,
+                letterSpacing: -0.4 * u,
               }}
             >
-              {p}
+              {g.l}
+            </span>
+          ))}
+        </div>
+        {/* Tab pills */}
+        <div style={{ display: "flex", gap: 8 * u, marginLeft: 12 * u }}>
+          {[
+            { label: "Travel", active: false, icon: "✈" },
+            { label: "Explore", active: false, icon: "◎" },
+            { label: "Flights", active: true, icon: "✈" },
+            { label: "Hotels", active: false, icon: "▢" },
+            { label: "Vacation rentals", active: false, icon: "🏖" },
+          ].map((t) => (
+            <div
+              key={t.label}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8 * u,
+                height: 38 * u,
+                paddingLeft: 16 * u,
+                paddingRight: 18 * u,
+                borderRadius: 999,
+                border: `${1 * u}px solid ${t.active ? G_BLUE : "#E0E4EB"}`,
+                background: t.active ? "#E8F0FE" : "transparent",
+                fontSize: 14 * u,
+                color: t.active ? G_BLUE : G_TEXT,
+                fontWeight: t.active ? 600 : 400,
+              }}
+            >
+              <span style={{ fontSize: 13 * u, opacity: 0.85 }}>{t.icon}</span>
+              {t.label}
             </div>
           ))}
         </div>
+        <div style={{ flex: 1 }} />
+        {/* Right cluster — moon, apps grid, avatar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 * u }}>
+          <div style={{ fontSize: 18 * u, color: G_LIGHT }}>☾</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2 * u, width: 18 * u, height: 18 * u }}>
+            {[...Array(9)].map((_, i) => (
+              <div key={i} style={{ width: 4 * u, height: 4 * u, background: G_LIGHT, borderRadius: "50%" }} />
+            ))}
+          </div>
+          <div style={{ width: 32 * u, height: 32 * u, borderRadius: "50%", overflow: "hidden", background: "#F5F5F7" }}>
+            <Img src={staticFile("elsa-profile.jpg")} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          </div>
+        </div>
       </div>
 
-      {/* Section header */}
-      <div style={{ paddingLeft: 48 * scale, paddingRight: 48 * scale, paddingBottom: 16 * scale, fontSize: 22 * scale, fontWeight: 500, color: G_TEXT }}>
-        Best departing flights
-      </div>
-
-      {/* Scrolling table */}
+      {/* Centered content column */}
       <div
         style={{
           position: "absolute",
-          left: 48 * scale,
-          right: 48 * scale,
-          top: 320 * scale,
-          transform: `translateY(${pageY}px)`,
+          left: colLeft,
+          top: 84 * u,
+          width: colW,
         }}
       >
-        {rows.map((r, i) => {
-          const isTapped = i === tappedCardIndex;
-          return (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: `${20 * scale}px ${24 * scale}px`,
-                borderBottom: `${1 * scale}px solid ${G_BORDER}`,
-                gap: 24 * scale,
-                background: isTapped ? "#F0F7FF" : "transparent",
-                transform: isTapped ? `scale(${cardTapScale})` : undefined,
-                transformOrigin: "center",
-              }}
-            >
-              <div style={{ width: 36 * scale, height: 36 * scale, borderRadius: "50%", background: r.color, flexShrink: 0 }} />
-              <div style={{ width: 220 * scale, fontSize: 18 * scale, color: G_TEXT, fontWeight: 500 }}>{r.times}</div>
-              <div style={{ flex: 1, fontSize: 14 * scale, color: G_LIGHT }}>{r.airline}</div>
-              <div style={{ width: 140 * scale, fontSize: 16 * scale, color: G_TEXT }}>{r.duration}<br/><span style={{fontSize: 13 * scale, color: G_LIGHT}}>SFO–JFK</span></div>
-              <div style={{ width: 120 * scale, fontSize: 16 * scale, color: G_TEXT }}>{r.stops}</div>
-              <div style={{ width: 160 * scale, fontSize: 14 * scale, color: G_GREEN }}>{r.emissions}</div>
-              <div style={{ width: 100 * scale, fontSize: 22 * scale, color: G_GREEN, fontWeight: 600, textAlign: "right" }}>{r.price}</div>
-              <div style={{ fontSize: 18 * scale, color: G_LIGHT }}>›</div>
+        {/* Round trip / passengers / cabin chips */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 * u, fontSize: 13 * u, color: G_TEXT, marginBottom: 12 * u, paddingLeft: 6 * u }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 * u, padding: `${5 * u}px ${10 * u}px`, borderRadius: 6 * u, background: "#fff" }}>
+            <span style={{ color: G_LIGHT }}>⇄</span> Round trip <span style={{ color: G_LIGHT }}>▾</span>
+          </div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 * u, padding: `${5 * u}px ${10 * u}px`, borderRadius: 6 * u }}>
+            <span style={{ color: G_LIGHT }}>👤</span> 1 <span style={{ color: G_LIGHT }}>▾</span>
+          </div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 * u, padding: `${5 * u}px ${10 * u}px`, borderRadius: 6 * u }}>
+            Economy (include Basic) <span style={{ color: G_LIGHT }}>▾</span>
+          </div>
+        </div>
+
+        {/* Search inputs row */}
+        <div
+          style={{
+            display: "flex",
+            gap: 10 * u,
+            padding: 12 * u,
+            border: `${1 * u}px solid ${G_BORDER}`,
+            borderRadius: 8 * u,
+            boxShadow: `0 ${1 * u}px ${3 * u}px rgba(0,0,0,0.08)`,
+            background: "#fff",
+          }}
+        >
+          <div style={{ flex: 2, display: "flex", gap: 6 * u }}>
+            <div style={{ flex: 1, height: 50 * u, border: `${1 * u}px solid ${G_BORDER}`, borderRadius: 6 * u, display: "flex", alignItems: "center", paddingLeft: 14 * u, fontSize: 14 * u, color: G_TEXT, gap: 8 * u }}>
+              <span style={{ color: G_LIGHT }}>○</span> San Francisco
             </div>
-          );
-        })}
+            <div style={{ width: 30 * u, display: "flex", alignItems: "center", justifyContent: "center", color: G_LIGHT, fontSize: 16 * u }}>⇄</div>
+            <div style={{ flex: 1, height: 50 * u, border: `${1 * u}px solid ${G_BORDER}`, borderRadius: 6 * u, display: "flex", alignItems: "center", paddingLeft: 14 * u, fontSize: 14 * u, color: G_TEXT, gap: 8 * u }}>
+              <span style={{ color: G_LIGHT }}>○</span> New York
+            </div>
+          </div>
+          <div style={{ flex: 1.6, display: "flex", border: `${1 * u}px solid ${G_BORDER}`, borderRadius: 6 * u }}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", paddingLeft: 14 * u, fontSize: 14 * u, color: G_TEXT }}>Tue, May 26 <span style={{ color: G_LIGHT, marginLeft: 6 * u }}>‹</span></div>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", paddingLeft: 14 * u, fontSize: 14 * u, color: G_TEXT, borderLeft: `${1 * u}px solid ${G_BORDER}` }}>Sat, May 30 <span style={{ color: G_LIGHT, marginLeft: 6 * u }}>›</span></div>
+          </div>
+        </div>
+
+        {/* Filter chips */}
+        <div style={{ display: "flex", gap: 8 * u, marginTop: 16 * u, flexWrap: "wrap" }}>
+          {[
+            { label: "All filters (1)", icon: "≡", active: false },
+            { label: "Nonstop", active: true, removable: true },
+            "Airlines", "Bags", "Price", "Times", "Emissions", "Connecting airports", "Duration",
+          ].map((c, i) => {
+            const obj = typeof c === "string" ? { label: c } : c;
+            return (
+              <div
+                key={i}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6 * u,
+                  height: 30 * u,
+                  paddingLeft: 12 * u,
+                  paddingRight: 12 * u,
+                  borderRadius: 999,
+                  border: `${1 * u}px solid ${(obj as any).active ? G_BLUE : G_BORDER}`,
+                  background: (obj as any).active ? "#E8F0FE" : "#fff",
+                  fontSize: 12 * u,
+                  color: (obj as any).active ? G_BLUE : G_TEXT,
+                  fontWeight: (obj as any).active ? 600 : 400,
+                }}
+              >
+                {(obj as any).icon && <span>{(obj as any).icon}</span>}
+                {obj.label}
+                {(obj as any).removable && <span style={{ marginLeft: 2 * u }}>✕</span>}
+                {!(obj as any).removable && !(obj as any).icon && <span style={{ color: G_LIGHT }}>▾</span>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Best / Cheapest tabs */}
+        <div style={{ display: "flex", gap: 12 * u, marginTop: 22 * u }}>
+          <div style={{ flex: 1, padding: `${14 * u}px ${18 * u}px`, border: `${2 * u}px solid ${G_BLUE}`, background: "#E8F0FE", borderRadius: 8 * u, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 * u }}>
+            <span style={{ fontSize: 15 * u, fontWeight: 600, color: G_BLUE }}>Best</span>
+            <span style={{ width: 14 * u, height: 14 * u, borderRadius: "50%", border: `${1 * u}px solid ${G_BLUE}`, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10 * u, color: G_BLUE }}>i</span>
+          </div>
+          <div style={{ flex: 1, padding: `${14 * u}px ${18 * u}px`, border: `${1 * u}px solid ${G_BORDER}`, borderRadius: 8 * u, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 * u, background: "#fff" }}>
+            <span style={{ fontSize: 15 * u, color: G_TEXT }}>Cheapest</span>
+            <span style={{ fontSize: 13 * u, color: G_LIGHT }}>from</span>
+            <span style={{ fontSize: 15 * u, color: G_GREEN, fontWeight: 600 }}>$374</span>
+          </div>
+        </div>
+
+        {/* Section header */}
+        <div style={{ display: "flex", alignItems: "center", marginTop: 28 * u, marginBottom: 10 * u }}>
+          <div style={{ fontSize: 18 * u, fontWeight: 600, color: G_TEXT }}>Top departing flights</div>
+          <span style={{ marginLeft: 8 * u, fontSize: 13 * u, color: G_LIGHT }}>(i)</span>
+          <div style={{ flex: 1 }} />
+          <div style={{ fontSize: 13 * u, color: G_BLUE }}>Sorted by top flights ↕</div>
+        </div>
+        <div style={{ fontSize: 12 * u, color: G_LIGHT, marginBottom: 14 * u, lineHeight: 1.5 }}>
+          Ranked based on price and convenience. (i) Prices include required taxes + fees for 1 adult. Optional charges and <span style={{ color: G_BLUE }}>bag fees</span> may apply.<br/>
+          <span style={{ color: G_BLUE, textDecoration: "underline" }}>Passenger assistance</span> info.
+        </div>
+
+        {/* Flight rows */}
+        <div style={{ border: `${1 * u}px solid ${G_BORDER}`, borderRadius: 10 * u, overflow: "hidden", background: "#fff" }}>
+          {rows.map((r, i) => {
+            const isTapped = i === tappedCardIndex;
+            return (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: `${14 * u}px ${18 * u}px`,
+                  borderBottom: i < rows.length - 1 ? `${1 * u}px solid #F0F2F5` : "none",
+                  gap: 16 * u,
+                  background: isTapped ? "#F0F7FF" : "transparent",
+                  transform: isTapped ? `scale(${cardTapScale})` : undefined,
+                  transformOrigin: "center",
+                }}
+              >
+                {/* Airline logo */}
+                <div
+                  style={{
+                    width: 32 * u,
+                    height: 32 * u,
+                    borderRadius: 4 * u,
+                    background: r.logoColor,
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#fff",
+                    fontSize: 11 * u,
+                    fontWeight: 700,
+                  }}
+                >
+                  {r.airline[0]}
+                </div>
+                {/* Times + airline */}
+                <div style={{ width: 200 * u }}>
+                  <div style={{ fontSize: 16 * u, fontWeight: 500, color: G_TEXT }}>
+                    {r.times}
+                    {r.nextDay && <sup style={{ fontSize: 10 * u, color: G_LIGHT, marginLeft: 2 * u }}>+1</sup>}
+                  </div>
+                  <div style={{ fontSize: 12 * u, color: G_LIGHT, marginTop: 4 * u }}>{r.airline}</div>
+                  {r.callout && (
+                    <div style={{ marginTop: 6 * u, display: "inline-flex", alignItems: "center", gap: 4 * u, padding: `${3 * u}px ${8 * u}px`, borderRadius: 4 * u, background: "#E6F4EA", fontSize: 11 * u, color: "#188038" }}>
+                      🌱 {r.callout}
+                    </div>
+                  )}
+                </div>
+                {/* Duration + route */}
+                <div style={{ width: 110 * u }}>
+                  <div style={{ fontSize: 14 * u, color: G_TEXT }}>{r.duration}</div>
+                  <div style={{ fontSize: 12 * u, color: G_LIGHT, marginTop: 4 * u }}>{r.route}</div>
+                </div>
+                {/* Stops */}
+                <div style={{ width: 90 * u, fontSize: 14 * u, color: G_TEXT }}>{r.stops}</div>
+                {/* CO2 */}
+                <div style={{ width: 150 * u }}>
+                  <div style={{ fontSize: 13 * u, color: G_TEXT }}>{r.co2}</div>
+                  <div style={{ fontSize: 12 * u, color: r.emissionsLabel.startsWith("−") ? G_GREEN : G_LIGHT, marginTop: 2 * u }}>{r.emissionsLabel}</div>
+                </div>
+                {/* Price + round trip */}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 * u }}>
+                    <span style={{ fontSize: 11 * u, color: G_LIGHT }}>1 🛄</span>
+                    <span style={{ fontSize: 18 * u, color: G_GREEN, fontWeight: 600 }}>{r.price}</span>
+                  </div>
+                  <div style={{ fontSize: 11 * u, color: G_LIGHT, marginTop: 2 * u }}>round trip</div>
+                </div>
+                {/* Chevron */}
+                <div style={{ fontSize: 16 * u, color: G_LIGHT, paddingLeft: 4 * u }}>⌄</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Tile row below */}
+        <div style={{ display: "flex", gap: 12 * u, marginTop: 22 * u }}>
+          <div style={{ flex: 2, padding: `${14 * u}px ${18 * u}px`, border: `${1 * u}px solid ${G_BORDER}`, borderRadius: 10 * u, background: "#fff", display: "flex", alignItems: "center", gap: 10 * u }}>
+            <span style={{ color: G_BLUE, fontSize: 18 * u }}>✱</span>
+            <div style={{ fontSize: 13 * u, color: G_TEXT }}>The cheapest time to book is usually earlier, about 2–5 months before takeoff</div>
+          </div>
+          <div style={{ flex: 1, padding: `${14 * u}px ${18 * u}px`, border: `${1 * u}px solid ${G_BORDER}`, borderRadius: 10 * u, background: "#fff", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ fontSize: 13 * u, color: G_TEXT, fontWeight: 500 }}>
+              Prices are currently typical
+            </div>
+            <div style={{ fontSize: 12 * u, color: G_BLUE }}>View price history ▾</div>
+          </div>
+        </div>
       </div>
+
+      {/* Scrolling layer wrapper handled via top-level transformY on the body for simplicity */}
+      <div style={{ display: "none" }}>{pageY}</div>
 
       {/* Booking confirmation overlay */}
       {bookingConfirmOpacity > 0 && (
@@ -2514,36 +2788,36 @@ const FlightSearchDesktop: React.FC<
         >
           <div
             style={{
-              width: width * 0.4,
+              width: 420 * u,
               background: "#fff",
-              borderRadius: 16 * scale,
-              padding: 40 * scale,
+              borderRadius: 16 * u,
+              padding: 32 * u,
               fontFamily: FONT_STACK,
-              boxShadow: `0 ${20 * scale}px ${60 * scale}px rgba(0,0,0,0.35)`,
+              boxShadow: `0 ${20 * u}px ${60 * u}px rgba(0,0,0,0.35)`,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 16 * scale,
+              gap: 14 * u,
             }}
           >
             <div
               style={{
-                width: 90 * scale,
-                height: 90 * scale,
+                width: 90 * u,
+                height: 90 * u,
                 borderRadius: "50%",
                 background: G_GREEN,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 color: "#fff",
-                fontSize: 50 * scale,
+                fontSize: 50 * u,
               }}
             >
               ✓
             </div>
-            <div style={{ fontSize: 28 * scale, fontWeight: 700, color: G_TEXT }}>Booking confirmed</div>
-            <div style={{ fontSize: 16 * scale, color: G_LIGHT }}>SFO → JFK · United · Fri May 14</div>
-            <div style={{ fontSize: 22 * scale, color: G_BLUE, fontWeight: 700 }}>$284</div>
+            <div style={{ fontSize: 24 * u, fontWeight: 700, color: G_TEXT }}>Booking confirmed</div>
+            <div style={{ fontSize: 14 * u, color: G_LIGHT }}>SFO → JFK · Alaska · Tue May 26</div>
+            <div style={{ fontSize: 20 * u, color: G_BLUE, fontWeight: 700 }}>$433</div>
           </div>
         </div>
       )}
