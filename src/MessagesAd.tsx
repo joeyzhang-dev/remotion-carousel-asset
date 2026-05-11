@@ -4255,9 +4255,6 @@ const AppleWalletDesktop: React.FC<
   // Gleam X position drifts from -130% to +130% in the sweep window.
   const gleamX = -130 + sweepP * 260;
 
-  // Aurora ambient glow.
-  const AURORA = "radial-gradient(circle at 25% 30%, rgba(94, 92, 230, 0.45) 0%, transparent 45%), radial-gradient(circle at 75% 70%, rgba(255, 99, 178, 0.35) 0%, transparent 50%), radial-gradient(circle at 50% 100%, rgba(10, 132, 255, 0.4) 0%, transparent 55%)";
-
   return (
     <div
       style={{
@@ -4274,8 +4271,6 @@ const AppleWalletDesktop: React.FC<
         filter: `blur(${0.5 * u}px) brightness(0.98)`,
       }}
     >
-      {/* Aurora backdrop */}
-      <div style={{ position: "absolute", inset: 0, background: AURORA }} />
 
       {/* Floating top header — Folk wordmark left, glassy nav links + avatar right */}
       <div
@@ -4423,7 +4418,7 @@ const AppleWalletDesktop: React.FC<
           </div>
         </div>
 
-        {/* Pay button — gradient pill with glow */}
+        {/* Pay button — solid pill, no gradients */}
         <div
           style={{
             position: "relative",
@@ -4431,33 +4426,18 @@ const AppleWalletDesktop: React.FC<
             transformOrigin: "center",
           }}
         >
-          {/* Outer glow */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              borderRadius: 999,
-              background: isPaid
-                ? "linear-gradient(135deg, #34C759 0%, #00C9A7 100%)"
-                : "linear-gradient(135deg, #007AFF 0%, #5E5CE6 50%, #AF52DE 100%)",
-              filter: `blur(${24 * u}px)`,
-              opacity: 0.55,
-            }}
-          />
           <div
             style={{
               position: "relative",
               padding: `${20 * u}px ${36 * u}px`,
               borderRadius: 999,
-              background: isPaid
-                ? "linear-gradient(135deg, #34C759 0%, #00C9A7 100%)"
-                : "linear-gradient(135deg, #007AFF 0%, #5E5CE6 50%, #AF52DE 100%)",
+              background: isPaid ? "#34C759" : "#007AFF",
               color: "#fff",
               fontSize: 22 * u,
               fontWeight: 700,
               letterSpacing: -0.3 * u,
               textAlign: "center",
-              boxShadow: `inset 0 ${1.5 * u}px 0 rgba(255,255,255,0.4), 0 ${10 * u}px ${24 * u}px rgba(0,0,0,0.35)`,
+              boxShadow: `0 ${10 * u}px ${24 * u}px rgba(0,0,0,0.35)`,
             }}
           >
             {isPaid ? (
