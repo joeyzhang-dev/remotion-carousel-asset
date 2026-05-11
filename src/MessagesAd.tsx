@@ -4491,15 +4491,16 @@ const AppleWalletDesktop: React.FC<
         </div>
       </div>
 
-      {/* Bottom-left — recent transactions on glass cards. Sits under
-          the floating credit-card hero, separate from the right column
-          so there's no positional overlap with the chips/pay button. */}
+      {/* Bottom-left — recent transactions on glass cards. Anchored
+          to a fixed top BELOW the floating credit-card hero (which
+          sits at top:130u + height:290u + float-bob ~6u = ~430u) so
+          the header text never overlaps the card. */}
       <div
         style={{
           position: "absolute",
           left: 100 * u,
           width: 460 * u,
-          bottom: 60 * u,
+          top: 470 * u,
           color: "#fff",
         }}
       >
