@@ -7447,17 +7447,23 @@ const GoogleDocsDesktop: React.FC<
 > = ({ driveFrame, fps, width, height, opacity, turnInScale = 1 }) => {
   const u = width / 1280;
   const driveSec = driveFrame / fps;
-  const totalContentH = height + 1200 * u;
-  const maxScroll = Math.max(0, totalContentH - height);
-  const dwellTarget = Math.min(maxScroll, maxScroll * 0.45);
+  // 2 pages × 1056u tall + gap + spacer ≈ enough to scroll well past
+  // both pages' tops. Allocate a generous totalContentH so the dwell
+  // target lands somewhere on page 2.
+  const pageH = 1056 * u;
+  const totalContentH = pageH * 2 + 200 * u;
+  const visibleH = height - 100 * u; // doc area sits below 100u top bar
+  const maxScroll = Math.max(0, totalContentH - visibleH);
+  // Dwell at ~75% of the available scroll so we end up firmly on page 2.
+  const dwellTarget = Math.min(maxScroll, maxScroll * 0.75);
   let baseScroll = 0;
-  if (driveSec >= 0.8 && driveSec < 3.0) {
-    baseScroll = interpolate(driveSec, [0.8, 3.0], [0, dwellTarget], {
+  if (driveSec >= 0.6 && driveSec < 3.4) {
+    baseScroll = interpolate(driveSec, [0.6, 3.4], [0, dwellTarget], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
       easing: Easing.inOut(Easing.cubic),
     });
-  } else if (driveSec >= 3.0) {
+  } else if (driveSec >= 3.4) {
     baseScroll = dwellTarget;
   }
   const pageY = -baseScroll;
@@ -7627,53 +7633,105 @@ const GoogleDocsDesktop: React.FC<
         <Icon name="plus" size={18 * u} color={D_LIGHT} strokeWidth={1.6} />
       </div>
 
-      {/* Doc page (centered, white, large) */}
+      {/* Clipping container — prevents the scrolling doc from ever
+          showing above the top bar (which sits at y < 100*u). */}
       <div
         style={{
           position: "absolute",
-          left: docMarginX,
-          top: 100 * u + 20 * u,
-          width: docW,
-          transform: `translateY(${pageY}px)`,
+          left: 0,
+          top: 100 * u,
+          right: 50 * u, // leave room for the right sidebar
+          bottom: 0,
+          overflow: "hidden",
         }}
       >
+        {/* Doc pages — TWO 11" pages stacked vertically with a gap.
+            Scrolling translates the whole stack upward. */}
         <div
           style={{
-            background: "#FFFFFF",
-            padding: `${72 * u}px ${96 * u}px`,
-            boxShadow: `0 ${2 * u}px ${10 * u}px rgba(0,0,0,0.08)`,
-            border: `${1 * u}px solid ${D_BORDER}`,
-            fontSize: 13 * u,
-            color: D_TEXT,
-            lineHeight: 1.6,
-            minHeight: 1056 * u, // 11" page
-            fontFamily: "'Times New Roman', 'Georgia', serif",
+            position: "absolute",
+            left: docMarginX,
+            top: 20 * u,
+            width: docW,
+            transform: `translateY(${pageY}px)`,
+            display: "flex",
+            flexDirection: "column",
+            gap: 24 * u,
           }}
         >
-          {/* Title */}
-          <div style={{ fontSize: 22 * u, fontWeight: 700, color: D_TEXT, textAlign: "center", marginBottom: 6 * u, lineHeight: 1.3 }}>
-            {docTitle}
+          {/* PAGE 1 */}
+          <div
+            style={{
+              background: "#FFFFFF",
+              padding: `${72 * u}px ${96 * u}px`,
+              boxShadow: `0 ${2 * u}px ${10 * u}px rgba(0,0,0,0.08)`,
+              border: `${1 * u}px solid ${D_BORDER}`,
+              fontSize: 13 * u,
+              color: D_TEXT,
+              lineHeight: 1.6,
+              minHeight: 1056 * u,
+              fontFamily: "'Times New Roman', 'Georgia', serif",
+            }}
+          >
+            {/* Title */}
+            <div style={{ fontSize: 22 * u, fontWeight: 700, color: D_TEXT, textAlign: "center", marginBottom: 6 * u, lineHeight: 1.3 }}>
+              {docTitle}
+            </div>
+            <div style={{ fontSize: 13 * u, fontStyle: "italic", color: D_LIGHT, textAlign: "center", marginBottom: 28 * u }}>
+              {docSubtitle}
+            </div>
+            {/* First half of paragraphs */}
+            {paragraphs.slice(0, Math.ceil(paragraphs.length / 2)).map((p, i) => (
+              <p
+                key={i}
+                style={{
+                  marginTop: 0,
+                  marginBottom: 12 * u,
+                  textIndent: 28 * u,
+                  color: D_TEXT,
+                  fontSize: 13 * u,
+                  lineHeight: 1.65,
+                  textAlign: "justify",
+                }}
+              >
+                {p}
+              </p>
+            ))}
+            <div style={{ textAlign: "center", marginTop: 36 * u, fontSize: 11 * u, color: D_LIGHT }}>1</div>
           </div>
-          <div style={{ fontSize: 13 * u, fontStyle: "italic", color: D_LIGHT, textAlign: "center", marginBottom: 28 * u }}>
-            {docSubtitle}
+          {/* PAGE 2 */}
+          <div
+            style={{
+              background: "#FFFFFF",
+              padding: `${72 * u}px ${96 * u}px`,
+              boxShadow: `0 ${2 * u}px ${10 * u}px rgba(0,0,0,0.08)`,
+              border: `${1 * u}px solid ${D_BORDER}`,
+              fontSize: 13 * u,
+              color: D_TEXT,
+              lineHeight: 1.6,
+              minHeight: 1056 * u,
+              fontFamily: "'Times New Roman', 'Georgia', serif",
+            }}
+          >
+            {/* Second half of paragraphs */}
+            {paragraphs.slice(Math.ceil(paragraphs.length / 2)).map((p, i) => (
+              <p
+                key={i}
+                style={{
+                  marginTop: 0,
+                  marginBottom: 12 * u,
+                  textIndent: 28 * u,
+                  color: D_TEXT,
+                  fontSize: 13 * u,
+                  lineHeight: 1.65,
+                  textAlign: "justify",
+                }}
+              >
+                {p}
+              </p>
+            ))}
+            <div style={{ textAlign: "center", marginTop: 36 * u, fontSize: 11 * u, color: D_LIGHT }}>2</div>
           </div>
-          {/* Paragraphs */}
-          {paragraphs.map((p, i) => (
-            <p
-              key={i}
-              style={{
-                marginTop: 0,
-                marginBottom: 12 * u,
-                textIndent: 28 * u,
-                color: D_TEXT,
-                fontSize: 13 * u,
-                lineHeight: 1.65,
-                textAlign: "justify",
-              }}
-            >
-              {p}
-            </p>
-          ))}
         </div>
       </div>
     </div>
