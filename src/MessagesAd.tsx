@@ -678,7 +678,6 @@ const InstagramProfileDesktop: React.FC<
   fps,
   width,
   height,
-  scale,
   opacity,
   tappedCellIndex,
   tappedCellScale = 1,
@@ -686,20 +685,24 @@ const InstagramProfileDesktop: React.FC<
   focusedCellIndex,
   focusedCellImage,
 }) => {
-  // Page scroll: hold then ease down toward the focus row, single arc.
-  const driveSec = driveFrame / fps;
-  const navW = 244 * scale;
-  const contentLeft = navW + 80 * scale;
-  const contentMaxW = Math.min(975 * scale, width - contentLeft - 80 * scale);
-  const headerBlockH = 380 * scale;
-  const gridCols = 3;
-  const gridGap = 8 * scale;
+  // Canvas-relative units for desktop scale.
+  const u = width / 1280;
+  // Slim icon-only nav rail like the real Instagram desktop.
+  const navW = 70 * u;
+  const contentLeft = navW + 80 * u;
+  const contentMaxW = Math.min(940 * u, width - contentLeft - 80 * u);
+  const headerBlockH = 280 * u;
+  const highlightsRowH = 130 * u;
+  const tabBarH = 50 * u;
+  const gridCols = 5;
+  const gridGap = 4 * u;
   const cellSize = (contentMaxW - gridGap * (gridCols - 1)) / gridCols;
-  const totalRows = 6;
+  const totalRows = 4;
   const totalContentH =
-    180 * scale + headerBlockH + cellSize * totalRows + gridGap * (totalRows - 1) + 200 * scale;
+    60 * u + headerBlockH + highlightsRowH + tabBarH + cellSize * totalRows + gridGap * (totalRows - 1) + 200 * u;
+  const driveSec = driveFrame / fps;
   const maxScroll = Math.max(0, totalContentH - height);
-  const dwellTarget = Math.min(maxScroll, maxScroll * 0.55);
+  const dwellTarget = Math.min(maxScroll, maxScroll * 0.45);
   const tHoldEnd = 0.8;
   const tScrollEnd = 3.0;
   let baseScroll = 0;
@@ -714,6 +717,17 @@ const InstagramProfileDesktop: React.FC<
   }
   const pageY = -baseScroll;
 
+  // Highlights row data — small circular avatars with labels.
+  const highlights: { label: string; bg: string }[] = [
+    { label: "Highlights", bg: "#000" },
+    { label: "lala", bg: "#7A7373" },
+    { label: "Swappi", bg: "#9DB7DF" },
+    { label: "▼", bg: "#1A1A1A" },
+    { label: "🦋", bg: "#3B5066" },
+    { label: "fits", bg: "#FCE4EC" },
+    { label: "Highlights", bg: "#5B7184" },
+  ];
+
   return (
     <div
       style={{
@@ -727,10 +741,10 @@ const InstagramProfileDesktop: React.FC<
         pointerEvents: "none",
         background: "#FFFFFF",
         fontFamily: FONT_STACK,
-        filter: `blur(${1 * scale}px) brightness(0.99)`,
+        filter: `blur(${0.6 * u}px) brightness(0.99)`,
       }}
     >
-      {/* Left nav rail */}
+      {/* Left slim nav rail — icon-only */}
       <div
         style={{
           position: "absolute",
@@ -738,62 +752,56 @@ const InstagramProfileDesktop: React.FC<
           top: 0,
           width: navW,
           height,
-          borderRight: `${1 * scale}px solid #DBDBDB`,
-          padding: `${36 * scale}px ${20 * scale}px`,
+          borderRight: `${1 * u}px solid #DBDBDB`,
+          paddingTop: 18 * u,
+          paddingBottom: 18 * u,
           display: "flex",
           flexDirection: "column",
-          gap: 12 * scale,
+          alignItems: "center",
+          gap: 10 * u,
         }}
       >
-        {/* Instagram wordmark */}
-        <div
-          style={{
-            fontFamily: "'Billabong', cursive, " + FONT_STACK,
-            fontSize: 44 * scale,
-            fontWeight: 400,
-            color: "#000",
-            paddingLeft: 12 * scale,
-            paddingBottom: 24 * scale,
-            letterSpacing: -0.5 * scale,
-          }}
-        >
-          Instagram
-        </div>
+        {/* Tiny IG mark at top */}
+        <div style={{ width: 28 * u, height: 28 * u, borderRadius: 8 * u, background: "linear-gradient(135deg, #F58529 0%, #DD2A7B 50%, #515BD4 100%)", marginBottom: 16 * u }} />
         {[
-          ["Home", "M3 12 L12 4 L21 12 V20 H14 V14 H10 V20 H3 Z"],
-          ["Search", "circle"],
-          ["Explore", "M21 21 L13 13"],
-          ["Reels", "play"],
-          ["Messages", "M7 8 H17 M7 12 H14"],
-          ["Notifications", "heart"],
-          ["Create", "plus"],
-          ["Profile", "user"],
-        ].map(([label], i) => (
+          { name: "Home", filled: true },
+          { name: "Search" },
+          { name: "Explore" },
+          { name: "Reels" },
+          { name: "Messages", filled: true },
+          { name: "Notifications" },
+          { name: "Create" },
+          { name: "Profile" },
+        ].map((item, i) => (
           <div
             key={i}
             style={{
+              width: 36 * u,
+              height: 36 * u,
               display: "flex",
               alignItems: "center",
-              gap: 16 * scale,
-              padding: `${12 * scale}px`,
-              borderRadius: 10 * scale,
-              fontSize: 16 * scale,
-              fontWeight: label === "Profile" ? 700 : 400,
+              justifyContent: "center",
+              fontSize: 16 * u,
               color: "#000",
             }}
           >
             <div
               style={{
-                width: 24 * scale,
-                height: 24 * scale,
-                borderRadius: label === "Search" ? "50%" : 4 * scale,
-                border: `${2 * scale}px solid #000`,
-                background: label === "Profile" ? "#000" : "transparent",
+                width: 22 * u,
+                height: 22 * u,
+                borderRadius: item.name === "Search" || item.name === "Profile" ? "50%" : 4 * u,
+                border: `${1.6 * u}px solid #000`,
+                background: item.filled ? "#000" : "transparent",
               }}
             />
-            <span>{label}</span>
           </div>
         ))}
+        {/* Bottom hamburger */}
+        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 4 * u }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{ width: 18 * u, height: 2 * u, background: "#000", borderRadius: 999 }} />
+          ))}
+        </div>
       </div>
 
       {/* Scrolling content */}
@@ -806,24 +814,23 @@ const InstagramProfileDesktop: React.FC<
           transform: `translateY(${pageY}px)`,
         }}
       >
-        {/* Top spacer */}
-        <div style={{ height: 80 * scale }} />
-        {/* Profile header — avatar + stats */}
+        <div style={{ height: 28 * u }} />
+        {/* Profile header — avatar + 1-row username/stats/bio cluster */}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: 80 * scale,
-            paddingBottom: 44 * scale,
+            alignItems: "flex-start",
+            gap: 80 * u,
+            paddingBottom: 28 * u,
           }}
         >
           {/* Avatar */}
           <div
             style={{
-              width: 220 * scale,
-              height: 220 * scale,
+              width: 150 * u,
+              height: 150 * u,
               borderRadius: "50%",
-              padding: 4 * scale,
+              padding: 3 * u,
               background:
                 "conic-gradient(from 220deg, #F58529 0%, #DD2A7B 30%, #8134AF 60%, #515BD4 80%, #F58529 100%)",
               flexShrink: 0,
@@ -836,7 +843,7 @@ const InstagramProfileDesktop: React.FC<
                 height: "100%",
                 borderRadius: "50%",
                 background: "#FFFFFF",
-                padding: 3 * scale,
+                padding: 3 * u,
                 boxSizing: "border-box",
               }}
             >
@@ -852,91 +859,141 @@ const InstagramProfileDesktop: React.FC<
               />
             </div>
           </div>
-          {/* Right column — username + buttons + stats */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 18 * scale }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16 * scale }}>
-              <div style={{ fontSize: 30 * scale, fontWeight: 400, color: "#000" }}>
-                _elsacai
+          {/* Right column */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 * u, paddingTop: 8 * u }}>
+            {/* Username + stats inline (matches the screenshot's tight one-row layout) */}
+            <div style={{ display: "flex", alignItems: "center", gap: 28 * u, fontSize: 14 * u, color: "#000" }}>
+              <span style={{ fontSize: 22 * u, fontWeight: 400 }}>_elsacai</span>
+              <span><strong>72</strong> posts</span>
+              <span><strong>6,283</strong> followers</span>
+              <span><strong>2,283</strong> following</span>
+            </div>
+            {/* Bio block */}
+            <div style={{ fontSize: 14 * u, color: "#000", lineHeight: 1.4 }}>
+              <div>probably side questing</div>
+              <div style={{ color: "#0095F6" }}>@joeysixfive | @ditto</div>
+              <div style={{ color: "#0095F6" }}>🔗 tryditto.com</div>
+            </div>
+            {/* "Followed by" row with 3 mini avatars */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 * u, fontSize: 13 * u, color: "#000" }}>
+              <div style={{ display: "flex" }}>
+                {["#F58529", "#DD2A7B", "#515BD4"].map((c, i) => (
+                  <div key={i} style={{ width: 22 * u, height: 22 * u, borderRadius: "50%", background: c, marginLeft: i === 0 ? 0 : -8 * u, border: `${1.5 * u}px solid #fff` }} />
+                ))}
               </div>
+              <span>Followed by <strong>arianrakh</strong>, <strong>im_roy_lee</strong> + 8 more</span>
+            </div>
+            {/* Action buttons row */}
+            <div style={{ display: "flex", gap: 8 * u, marginTop: 4 * u }}>
               <div
                 style={{
-                  padding: `${8 * scale}px ${20 * scale}px`,
-                  borderRadius: 8 * scale,
-                  background: "#0095F6",
+                  flex: 1,
+                  padding: `${8 * u}px 0`,
+                  borderRadius: 8 * u,
+                  background: "#5C58FF",
                   color: "#fff",
-                  fontSize: 16 * scale,
+                  fontSize: 14 * u,
                   fontWeight: 600,
+                  textAlign: "center",
                 }}
               >
                 Follow
               </div>
               <div
                 style={{
-                  padding: `${8 * scale}px ${20 * scale}px`,
-                  borderRadius: 8 * scale,
+                  flex: 1,
+                  padding: `${8 * u}px 0`,
+                  borderRadius: 8 * u,
                   background: "#EFEFEF",
                   color: "#000",
-                  fontSize: 16 * scale,
+                  fontSize: 14 * u,
                   fontWeight: 600,
+                  textAlign: "center",
                 }}
               >
                 Message
               </div>
               <div
                 style={{
-                  padding: `${8 * scale}px ${14 * scale}px`,
-                  borderRadius: 8 * scale,
+                  width: 38 * u,
+                  height: 32 * u,
+                  borderRadius: 8 * u,
                   background: "#EFEFEF",
-                  color: "#000",
-                  fontSize: 18 * scale,
-                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 16 * u,
                 }}
               >
-                +
+                ⚐
               </div>
             </div>
-            <div style={{ display: "flex", gap: 44 * scale, fontSize: 18 * scale }}>
-              <span><strong>72</strong> posts</span>
-              <span><strong>6,187</strong> followers</span>
-              <span><strong>2,287</strong> following</span>
-            </div>
-            <div style={{ fontSize: 18 * scale, color: "#262626", lineHeight: 1.4 }}>
-              <div style={{ fontWeight: 600 }}>Elsa Cai</div>
-              <div>probably side questing</div>
-              <div style={{ color: "#0095F6" }}>@joeysixfive | @ditto</div>
-              <div style={{ color: "#0095F6" }}>tryditto.com</div>
-            </div>
           </div>
+        </div>
+        {/* Highlights row */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 24 * u,
+            paddingBottom: 24 * u,
+          }}
+        >
+          {highlights.map((h, i) => (
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 * u }}>
+              <div
+                style={{
+                  width: 76 * u,
+                  height: 76 * u,
+                  borderRadius: "50%",
+                  background: h.bg,
+                  border: `${1.5 * u}px solid #DBDBDB`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontSize: 28 * u,
+                  overflow: "hidden",
+                }}
+              >
+                {h.label.length === 1 ? h.label : ""}
+              </div>
+              <div style={{ fontSize: 11 * u, color: "#000", maxWidth: 80 * u, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.label}</div>
+            </div>
+          ))}
         </div>
         {/* Tab bar */}
         <div
           style={{
-            borderTop: `${1 * scale}px solid #DBDBDB`,
+            borderTop: `${1 * u}px solid #DBDBDB`,
             display: "flex",
             justifyContent: "center",
-            gap: 60 * scale,
-            paddingTop: 16 * scale,
-            marginBottom: 24 * scale,
+            gap: 60 * u,
+            paddingTop: 14 * u,
+            marginBottom: 14 * u,
           }}
         >
-          {["POSTS", "REELS", "TAGGED"].map((label, i) => (
+          {[
+            { l: "▦", active: true },
+            { l: "🎬" },
+            { l: "👤" },
+          ].map((t, i) => (
             <div
-              key={label}
+              key={i}
               style={{
-                fontSize: 14 * scale,
+                fontSize: 14 * u,
                 fontWeight: 600,
-                color: i === 0 ? "#000" : "#8E8E8E",
-                letterSpacing: 1 * scale,
-                paddingTop: 16 * scale,
-                borderTop: i === 0 ? `${2 * scale}px solid #000` : "none",
-                marginTop: i === 0 ? -1 * scale : 0,
+                color: t.active ? "#000" : "#8E8E8E",
+                paddingTop: 14 * u,
+                borderTop: t.active ? `${1 * u}px solid #000` : "none",
+                marginTop: t.active ? -1 * u : 0,
               }}
             >
-              {label}
+              {t.l}
             </div>
           ))}
         </div>
-        {/* Post grid */}
+        {/* 5-col post grid */}
         <div
           style={{
             display: "grid",
@@ -970,6 +1027,37 @@ const InstagramProfileDesktop: React.FC<
             );
           })}
         </div>
+      </div>
+
+      {/* Floating Messages chat tab — bottom-right corner */}
+      <div
+        style={{
+          position: "absolute",
+          right: 32 * u,
+          bottom: 0,
+          width: 240 * u,
+          padding: `${8 * u}px ${14 * u}px`,
+          borderTopLeftRadius: 12 * u,
+          borderTopRightRadius: 12 * u,
+          background: "#fff",
+          border: `${1 * u}px solid #DBDBDB`,
+          borderBottom: "none",
+          boxShadow: `0 ${-2 * u}px ${8 * u}px rgba(0,0,0,0.06)`,
+          display: "flex",
+          alignItems: "center",
+          gap: 10 * u,
+          fontSize: 13 * u,
+          fontWeight: 600,
+          color: "#000",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 * u }}>
+          <div style={{ width: 4 * u, height: 4 * u, borderRadius: "50%", background: "#FF3040" }} />
+        </div>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 * u }}>
+          <span style={{ color: "#000" }}>✉</span> Messages
+        </span>
+        <div style={{ marginLeft: "auto", color: "#8E8E8E", fontWeight: 400 }}>⌃</div>
       </div>
     </div>
   );
@@ -5431,25 +5519,179 @@ type GmailInboxProps = {
 
 const GmailInboxDesktop: React.FC<
   Omit<GmailInboxProps, "variant">
-> = ({ width, height, scale, opacity, replyAllScale = 1, replySentOpacity = 0 }) => {
-  const SIDEBAR_W = 260 * scale;
-  const INBOX_W = 380 * scale;
+> = ({ driveFrame, fps, width, height, opacity, replyAllScale = 1, replySentOpacity = 0 }) => {
+  const u = width / 1280;
+  const SIDEBAR_W = 240 * u;
+  const INBOX_W = 360 * u;
   const G_BG = "#F6F8FC";
   const G_TEXT = "#202124";
   const G_LIGHT = "#5F6368";
   const G_BLUE = "#1A73E8";
 
-  type Mail = { name: string; subject: string; snippet: string; time: string; unread: boolean };
+  // Extended email set with full bodies + replies for the cycling.
+  type Mail = {
+    name: string;
+    initial: string;
+    color: string;
+    senderEmail: string;
+    subject: string;
+    snippet: string;
+    time: string;
+    unread: boolean;
+    greeting: string;
+    paragraphs: string[];
+    signoff: string;
+    signature: string[];
+    reply: string;
+  };
   const mails: Mail[] = [
-    { name: "GitHub", subject: "[acme/api] Pull request #2841 needs review", snippet: "Ben Wallace opened a pull request requiring review...", time: "10:42 AM", unread: true },
-    { name: "Mom", subject: "Sunday dinner — bringing your sister?", snippet: "Hi sweetie, just wanted to check in about Sunday...", time: "9:15 AM", unread: true },
-    { name: "Kevin Lee", subject: "Friday's design review — moving to 3pm?", snippet: "Quick ask — can we push Friday's design review...", time: "8:48 AM", unread: true },
-    { name: "Jenna Park", subject: "RE: dinner Friday? + Becca's birthday", snippet: "yessss I'm so in for Friday — 7:30 at Maialino...", time: "Yesterday", unread: false },
-    { name: "Stripe", subject: "Receipt from Folk", snippet: "Amount: $20.00 USD — Card: Visa ···· 4829", time: "Yesterday", unread: false },
-    { name: "Linear", subject: "5 new issues assigned to you", snippet: "BUG-318, FEAT-202, TASK-119, REL-77, FIX-44", time: "Mon", unread: false },
-    { name: "Notion", subject: "Comment on \"Q2 roadmap\"", snippet: "Priya: \"can we slot in the auth migration before...\"", time: "Mon", unread: false },
-    { name: "Vercel", subject: "Production Deployment Ready", snippet: "main · 7e3c2f4 · Build succeeded in 1m 42s", time: "Sun", unread: false },
+    {
+      name: "Mom",
+      initial: "M",
+      color: "#EA4335",
+      senderEmail: "mom@gmail.com",
+      subject: "Sunday dinner — bringing your sister?",
+      snippet: "Hi sweetie, just wanted to check in about Sunday...",
+      time: "9:15 AM",
+      unread: true,
+      greeting: "Hi sweetie,",
+      paragraphs: [
+        "Just wanted to check in about Sunday dinner. Are you bringing your sister, and do you remember if she's still doing the no-gluten thing?",
+        "Aunt Carol is coming too, so it'll be the four of us plus your dad. He says hi and to tell you the Niners are looking better than they have in years.",
+        "Drive safe if you're coming — they're saying maybe rain Saturday.",
+      ],
+      signoff: "Love,",
+      signature: ["Mom", "xoxo"],
+      reply: "Yes, see you Sunday at 6! Will text Aunt Carol tonight.",
+    },
+    {
+      name: "GitHub",
+      initial: "G",
+      color: "#1A73E8",
+      senderEmail: "noreply@github.com",
+      subject: "[acme/api] Pull request #2841 needs your review",
+      snippet: "Ben Wallace (@ben-w) opened a pull request requiring review...",
+      time: "10:42 AM",
+      unread: true,
+      greeting: "Hi @joey,",
+      paragraphs: [
+        "Ben Wallace (@ben-w) opened a pull request that requires review from your team:",
+        "feat(orders): add idempotency keys to checkout endpoint · 12 files changed, +384 −127 · branch feat/idempotent-checkout → main",
+        "This PR introduces idempotency keys on POST /api/v1/orders to prevent duplicate charges when the client retries on flaky network. Includes new middleware, DB migration, and integration tests.",
+      ],
+      signoff: "—",
+      signature: ["GitHub", "github.com/acme/api/pull/2841"],
+      reply: "Reviewed and approved. Migration looks safe. LGTM.",
+    },
+    {
+      name: "Kevin Lee",
+      initial: "K",
+      color: "#1A73E8",
+      senderEmail: "kevin@studiolab.design",
+      subject: "Friday's design review — moving to 3pm?",
+      snippet: "Quick ask — can we push Friday's design review to 3pm?",
+      time: "8:48 AM",
+      unread: true,
+      greeting: "Hey Joey,",
+      paragraphs: [
+        "Quick ask — can we push Friday's design review to 3pm instead of noon? Something came up at my kid's school and I have to do pickup at 11:30.",
+        "If 3pm doesn't work for you, I can also do Thursday afternoon or Monday morning of next week. Whatever's easiest.",
+        "We've got the new flow mockups ready and I really want to get your feedback before we send them to the dev team.",
+      ],
+      signoff: "Cheers,",
+      signature: ["Kevin", "Design Lead · Studio Lab"],
+      reply: "3pm works perfectly — calendar updated. Will review the flow beforehand.",
+    },
+    {
+      name: "Jenna Park",
+      initial: "J",
+      color: "#0F9D58",
+      senderEmail: "jenna.park@gmail.com",
+      subject: "RE: dinner Friday? + Becca's birthday plan",
+      snippet: "yessss I'm so in for Friday — 7:30 at Maialino...",
+      time: "Yesterday",
+      unread: false,
+      greeting: "yo,",
+      paragraphs: [
+        "yessss I'm so in for Friday — 7:30 at Maialino works perfectly. you handling the reservation or want me to grab it?",
+        "also TOTALLY unrelated but Becca's birthday is in 3 weeks and a few of us are trying to plan something. i'm thinking dinner at my place + maybe karaoke after?",
+        "if you're in i'm gonna start a thread with the usual suspects (sam, raj, mike, lisa). let me know!",
+      ],
+      signoff: "xx",
+      signature: ["jenna"],
+      reply: "I'll grab the res. Down for Becca's — count me in!",
+    },
+    {
+      name: "Stripe",
+      initial: "S",
+      color: "#635BFF",
+      senderEmail: "receipts@stripe.com",
+      subject: "Receipt from Folk",
+      snippet: "Amount: $20.00 USD — Card: Visa ···· 4829",
+      time: "Yesterday",
+      unread: false,
+      greeting: "Receipt for your records.",
+      paragraphs: [
+        "Amount paid: $20.00 USD",
+        "Date paid: May 9, 2026 at 10:14 AM PST",
+        "Payment method: Visa ···· 4829",
+        "Description: Folk subscription · Pro plan · Monthly",
+      ],
+      signoff: "—",
+      signature: ["Stripe", "stripe.com"],
+      reply: "Filed for expense — auto-tagged.",
+    },
+    {
+      name: "Linear",
+      initial: "L",
+      color: "#5E6AD2",
+      senderEmail: "notifications@linear.app",
+      subject: "5 new issues assigned to you",
+      snippet: "BUG-318, FEAT-202, TASK-119, REL-77, FIX-44",
+      time: "Mon",
+      unread: false,
+      greeting: "Hi Joey,",
+      paragraphs: [
+        "5 new issues have been assigned to you in the past 24 hours:",
+        "BUG-318: Image upload fails for files > 5MB on Safari",
+        "FEAT-202: Add bulk-select to inbox view",
+        "TASK-119: Migrate webhooks to v2 API",
+        "REL-77: Cut release notes for 4.7.0",
+        "FIX-44: Off-by-one in pagination cursor",
+      ],
+      signoff: "—",
+      signature: ["Linear", "linear.app/inbox"],
+      reply: "Triaged — moving BUG-318 to in-progress, rest are queued.",
+    },
   ];
+
+  // Cycle through emails — each gets ~2.2s of focus, then we advance.
+  // Within each window: select email + slide-in body, then type reply,
+  // then "send" reply (highlight + clear), then next.
+  const driveSec = driveFrame / fps;
+  const perEmail = 2.4;
+  const cycleStart = 0.6;
+  const idxFloat = Math.max(0, (driveSec - cycleStart) / perEmail);
+  const activeIdx = Math.min(mails.length - 1, Math.floor(idxFloat));
+  const t = idxFloat - activeIdx; // 0..1 inside the email
+  const active = mails[activeIdx];
+
+  // Per-email phases:
+  //   0.0 - 0.10: header settle
+  //   0.10 - 0.45: typing reply chars
+  //   0.45 - 0.65: cursor blink + send button highlight
+  //   0.65 - 0.85: "sent" pulse
+  //   0.85 - 1.00: fade-out toward next email
+  const replyVisibleChars = (() => {
+    if (t < 0.1) return 0;
+    if (t > 0.45) return active.reply.length;
+    const p = (t - 0.1) / 0.35;
+    return Math.floor(p * active.reply.length);
+  })();
+  const replyVisible = active.reply.slice(0, replyVisibleChars);
+  const isSending = t > 0.65 && t < 0.85;
+  const cursorOn = Math.floor(driveFrame / Math.round(fps * 0.5)) % 2 === 0;
+  const showCursor = t > 0.05 && t < 0.7;
 
   return (
     <div
@@ -5464,30 +5706,40 @@ const GmailInboxDesktop: React.FC<
         pointerEvents: "none",
         background: G_BG,
         fontFamily: FONT_STACK,
-        filter: `blur(${1 * scale}px) brightness(0.99)`,
+        filter: `blur(${0.5 * u}px) brightness(0.99)`,
       }}
     >
-      {/* Top bar */}
+      {/* Top bar — Gmail */}
       <div
         style={{
-          height: 70 * scale,
-          paddingLeft: 24 * scale,
-          paddingRight: 24 * scale,
+          height: 60 * u,
+          paddingLeft: 22 * u,
+          paddingRight: 22 * u,
           display: "flex",
           alignItems: "center",
-          gap: 24 * scale,
+          gap: 18 * u,
           background: "#fff",
-          borderBottom: `${1 * scale}px solid #E0E4EB`,
+          borderBottom: `${1 * u}px solid #E0E4EB`,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 6 * scale }}>
-          <span style={{ fontSize: 26 * scale, color: "#EA4335" }}>M</span>
-          <span style={{ fontSize: 22 * scale, color: G_TEXT, fontWeight: 400 }}>Gmail</span>
+        {/* Hamburger */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 * u }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{ width: 22 * u, height: 2.5 * u, background: G_LIGHT, borderRadius: 999 }} />
+          ))}
         </div>
-        <div style={{ flex: 1, maxWidth: 700 * scale, height: 48 * scale, background: "#EAF1FB", borderRadius: 10 * scale, display: "flex", alignItems: "center", paddingLeft: 18 * scale, fontSize: 16 * scale, color: G_LIGHT }}>
-          Search mail
+        {/* Gmail logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 * u }}>
+          <span style={{ fontSize: 24 * u, color: "#EA4335" }}>M</span>
+          <span style={{ fontSize: 20 * u, color: G_TEXT, fontWeight: 400 }}>Gmail</span>
         </div>
-        <div style={{ width: 44 * scale, height: 44 * scale, borderRadius: "50%", background: "#34A853", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 * scale, fontWeight: 600 }}>J</div>
+        <div style={{ flex: 1, maxWidth: 720 * u, height: 44 * u, background: "#EAF1FB", borderRadius: 10 * u, display: "flex", alignItems: "center", paddingLeft: 16 * u, fontSize: 15 * u, color: G_LIGHT, gap: 10 * u }}>
+          <span>🔍</span> Search mail
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 * u, color: G_LIGHT, fontSize: 18 * u }}>
+          <span>?</span><span>⚙</span><span>▢</span>
+        </div>
+        <div style={{ width: 38 * u, height: 38 * u, borderRadius: "50%", background: "#34A853", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 * u, fontWeight: 600 }}>J</div>
       </div>
 
       {/* Sidebar */}
@@ -5495,145 +5747,233 @@ const GmailInboxDesktop: React.FC<
         style={{
           position: "absolute",
           left: 0,
-          top: 70 * scale,
+          top: 60 * u,
           width: SIDEBAR_W,
           bottom: 0,
-          padding: 16 * scale,
+          padding: `${14 * u}px ${10 * u}px`,
         }}
       >
         <div
           style={{
             background: "#C2E7FF",
-            borderRadius: 16 * scale,
-            padding: `${14 * scale}px ${20 * scale}px`,
-            fontSize: 16 * scale,
+            borderRadius: 16 * u,
+            padding: `${12 * u}px ${22 * u}px`,
+            fontSize: 14 * u,
             color: G_TEXT,
             fontWeight: 500,
-            display: "inline-block",
-            marginBottom: 18 * scale,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8 * u,
+            marginBottom: 16 * u,
           }}
         >
-          ✏️ Compose
+          ✏ Compose
         </div>
         {[
-          { l: "Inbox", c: "47" },
-          { l: "Starred" },
-          { l: "Snoozed" },
-          { l: "Sent" },
-          { l: "Drafts", c: "3" },
-          { l: "Important" },
-          { l: "All Mail" },
-        ].map((row, i) => (
+          { l: "Inbox", c: "47", icon: "📥", active: true },
+          { l: "Starred", icon: "☆" },
+          { l: "Snoozed", icon: "⏰" },
+          { l: "Sent", icon: "↗" },
+          { l: "Drafts", c: "3", icon: "📝" },
+          { l: "Important", icon: "ⓘ" },
+          { l: "All Mail", icon: "✉" },
+          { l: "Spam", icon: "⚠" },
+          { l: "Trash", icon: "🗑" },
+        ].map((row) => (
           <div
             key={row.l}
             style={{
               display: "flex",
               alignItems: "center",
-              padding: `${10 * scale}px ${20 * scale}px`,
+              padding: `${8 * u}px ${20 * u}px`,
               borderRadius: 999,
-              background: i === 0 ? "#D3E3FD" : "transparent",
-              fontSize: 14 * scale,
+              background: row.active ? "#D3E3FD" : "transparent",
+              fontSize: 13 * u,
               color: G_TEXT,
-              fontWeight: i === 0 ? 600 : 400,
-              marginBottom: 2 * scale,
+              fontWeight: row.active ? 700 : 400,
+              marginBottom: 2 * u,
+              gap: 12 * u,
             }}
           >
+            <span style={{ width: 18 * u, fontSize: 14 * u }}>{row.icon}</span>
             <span style={{ flex: 1 }}>{row.l}</span>
-            {row.c && <span>{row.c}</span>}
+            {row.c && <span style={{ fontSize: 12 * u }}>{row.c}</span>}
           </div>
         ))}
       </div>
 
-      {/* Inbox column */}
+      {/* Inbox column — emails list with active highlighted */}
       <div
         style={{
           position: "absolute",
           left: SIDEBAR_W,
-          top: 70 * scale,
+          top: 60 * u,
           width: INBOX_W,
           bottom: 0,
           background: "#fff",
-          borderLeft: `${1 * scale}px solid #E0E4EB`,
-          borderRight: `${1 * scale}px solid #E0E4EB`,
+          borderLeft: `${1 * u}px solid #E0E4EB`,
+          borderRight: `${1 * u}px solid #E0E4EB`,
           overflow: "hidden",
         }}
       >
-        {mails.map((m, i) => (
-          <div
-            key={i}
-            style={{
-              padding: `${14 * scale}px ${20 * scale}px`,
-              borderBottom: `${1 * scale}px solid #F0F2F5`,
-              background: i === 0 ? "#F0F7FF" : "transparent",
-              cursor: "pointer",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 * scale }}>
-              <div style={{ fontSize: 15 * scale, fontWeight: m.unread ? 700 : 500, color: G_TEXT }}>{m.name}</div>
-              <div style={{ fontSize: 13 * scale, color: G_LIGHT }}>{m.time}</div>
+        {/* Mini toolbar */}
+        <div style={{ height: 44 * u, padding: `0 ${16 * u}px`, display: "flex", alignItems: "center", gap: 14 * u, color: G_LIGHT, fontSize: 14 * u, borderBottom: `${1 * u}px solid #F0F2F5` }}>
+          <span>☐</span><span>↻</span><span>⋯</span>
+          <div style={{ flex: 1 }} />
+          <span style={{ fontSize: 12 * u }}>1–47 of 4,283</span>
+        </div>
+        {mails.map((m, i) => {
+          const isActive = i === activeIdx;
+          return (
+            <div
+              key={i}
+              style={{
+                padding: `${12 * u}px ${16 * u}px`,
+                borderBottom: `${1 * u}px solid #F0F2F5`,
+                background: isActive ? "#E8F0FE" : "transparent",
+                borderLeft: isActive ? `${3 * u}px solid ${G_BLUE}` : `${3 * u}px solid transparent`,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 * u }}>
+                <div style={{ fontSize: 15 * u, fontWeight: m.unread ? 700 : 500, color: G_TEXT }}>{m.name}</div>
+                <div style={{ fontSize: 12 * u, color: G_LIGHT }}>{m.time}</div>
+              </div>
+              <div style={{ fontSize: 14 * u, color: G_TEXT, fontWeight: m.unread ? 600 : 400, marginBottom: 2 * u, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.subject}</div>
+              <div style={{ fontSize: 12 * u, color: G_LIGHT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.snippet}</div>
             </div>
-            <div style={{ fontSize: 14 * scale, color: G_TEXT, fontWeight: m.unread ? 600 : 400, marginBottom: 2 * scale, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.subject}</div>
-            <div style={{ fontSize: 13 * scale, color: G_LIGHT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.snippet}</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Reading pane */}
+      {/* Reading pane — BIG */}
       <div
         style={{
           position: "absolute",
           left: SIDEBAR_W + INBOX_W,
           right: 0,
-          top: 70 * scale,
+          top: 60 * u,
           bottom: 0,
-          padding: 32 * scale,
+          padding: `${24 * u}px ${36 * u}px`,
           overflow: "hidden",
         }}
       >
-        <div style={{ fontSize: 24 * scale, fontWeight: 500, color: G_TEXT, marginBottom: 14 * scale, lineHeight: 1.3 }}>
-          [acme/api] Pull request #2841 needs your review
+        {/* Toolbar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14 * u, color: G_LIGHT, fontSize: 18 * u, marginBottom: 14 * u }}>
+          <span>←</span><span>📁</span><span>⚠</span><span>🗑</span>
+          <div style={{ width: 1 * u, height: 20 * u, background: "#E0E4EB" }} />
+          <span>📧</span><span>⏰</span><span>✓</span><span>+</span>
+          <div style={{ flex: 1 }} />
+          <span style={{ fontSize: 13 * u }}>1 of 47</span>
+          <span>‹</span><span>›</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 * scale, marginBottom: 18 * scale }}>
-          <div style={{ width: 44 * scale, height: 44 * scale, borderRadius: "50%", background: "#1A73E8", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 * scale, fontWeight: 600 }}>G</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15 * scale, color: G_TEXT, fontWeight: 600 }}>GitHub <span style={{ color: G_LIGHT, fontWeight: 400 }}>&lt;noreply@github.com&gt;</span></div>
-            <div style={{ fontSize: 13 * scale, color: G_LIGHT }}>to me</div>
+        {/* Subject + sender */}
+        <div style={{ fontSize: 28 * u, fontWeight: 500, color: G_TEXT, marginBottom: 18 * u, lineHeight: 1.25 }}>
+          {active.subject}
+          <span style={{ marginLeft: 12 * u, fontSize: 18 * u, color: G_LIGHT }}>Inbox ×</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 * u, marginBottom: 22 * u }}>
+          <div
+            style={{
+              width: 50 * u,
+              height: 50 * u,
+              borderRadius: "50%",
+              background: active.color,
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 22 * u,
+              fontWeight: 600,
+            }}
+          >
+            {active.initial}
           </div>
-          <div style={{ fontSize: 13 * scale, color: G_LIGHT }}>10:42 AM (5 minutes ago)</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 17 * u, color: G_TEXT, fontWeight: 600 }}>
+              {active.name}{" "}
+              <span style={{ color: G_LIGHT, fontWeight: 400, fontSize: 14 * u }}>&lt;{active.senderEmail}&gt;</span>
+            </div>
+            <div style={{ fontSize: 13 * u, color: G_LIGHT }}>to me ▾</div>
+          </div>
+          <div style={{ fontSize: 13 * u, color: G_LIGHT }}>{active.time} (just now)</div>
+          <div style={{ display: "flex", gap: 12 * u, fontSize: 18 * u, color: G_LIGHT }}>
+            <span>☆</span><span>↶</span><span>⋮</span>
+          </div>
         </div>
-        <div style={{ fontSize: 16 * scale, color: G_TEXT, lineHeight: 1.6 }}>
-          <p>Hi @joey,</p>
-          <p>Ben Wallace (@ben-w) opened a pull request that requires review from your team:</p>
-          <p style={{ background: "#F6F8FC", padding: 12 * scale, borderRadius: 6 * scale, fontFamily: "monospace", fontSize: 14 * scale }}>
-            feat(orders): add idempotency keys to checkout endpoint<br/>
-            12 files changed, +384 −127 · branch feat/idempotent-checkout → main
-          </p>
-          <p>This PR introduces idempotency keys on POST /api/v1/orders to prevent duplicate charges when the client retries on flaky network.</p>
-          <p style={{ color: G_LIGHT, fontStyle: "italic" }}>"This is the fix for the duplicate-order bug from incident #4421. I'd love a second pair of eyes on the migration."</p>
+        {/* Body */}
+        <div style={{ fontSize: 17 * u, color: G_TEXT, lineHeight: 1.65 }}>
+          <div style={{ marginBottom: 12 * u }}>{active.greeting}</div>
+          {active.paragraphs.map((p, i) => (
+            <div key={i} style={{ marginBottom: 12 * u }}>{p}</div>
+          ))}
+          <div style={{ marginTop: 18 * u, color: G_LIGHT }}>{active.signoff}</div>
+          {active.signature.map((s, i) => (
+            <div key={i} style={{ color: G_LIGHT, fontSize: 15 * u }}>{s}</div>
+          ))}
         </div>
-        {/* Reply All button */}
+
+        {/* Reply composition area — fixed at bottom of reading pane */}
         <div
           style={{
-            marginTop: 28 * scale,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8 * scale,
-            padding: `${10 * scale}px ${22 * scale}px`,
-            border: `${1 * scale}px solid #DADCE0`,
-            borderRadius: 999,
-            fontSize: 15 * scale,
-            color: G_BLUE,
+            position: "absolute",
+            left: 36 * u,
+            right: 36 * u,
+            bottom: 24 * u,
+            border: `${1 * u}px solid #E0E4EB`,
+            borderRadius: 12 * u,
             background: "#fff",
-            transform: `scale(${replyAllScale})`,
-            transformOrigin: "center",
-            boxShadow: replyAllScale !== 1 ? `0 ${4 * scale}px ${12 * scale}px rgba(26, 115, 232, 0.2)` : undefined,
+            boxShadow: `0 ${2 * u}px ${10 * u}px rgba(0,0,0,0.05)`,
+            padding: `${14 * u}px ${18 * u}px`,
           }}
         >
-          ↶ Reply all
+          <div style={{ display: "flex", alignItems: "center", gap: 10 * u, marginBottom: 10 * u, fontSize: 13 * u, color: G_LIGHT }}>
+            <span>↶</span> Reply to <strong style={{ color: G_TEXT }}>{active.name}</strong>
+          </div>
+          <div style={{ minHeight: 36 * u, fontSize: 16 * u, color: G_TEXT, display: "flex", alignItems: "center" }}>
+            <span>{replyVisible}</span>
+            {showCursor && (
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 2 * u,
+                  height: 18 * u,
+                  background: G_BLUE,
+                  marginLeft: 2 * u,
+                  opacity: cursorOn ? 1 : 0,
+                  transform: "translateY(2px)",
+                }}
+              />
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 * u, marginTop: 10 * u }}>
+            <div
+              style={{
+                padding: `${8 * u}px ${22 * u}px`,
+                borderRadius: 6 * u,
+                background: isSending ? "#0E5BBF" : G_BLUE,
+                color: "#fff",
+                fontSize: 14 * u,
+                fontWeight: 500,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8 * u,
+                transform: `scale(${isSending ? 1.05 : replyAllScale})`,
+                transformOrigin: "center",
+                boxShadow: isSending ? `0 ${4 * u}px ${12 * u}px rgba(26, 115, 232, 0.45)` : undefined,
+              }}
+            >
+              {isSending ? "Sending…" : "Send"} ▾
+            </div>
+            <div style={{ display: "flex", gap: 12 * u, color: G_LIGHT, fontSize: 16 * u }}>
+              <span>𝐀</span><span>📎</span><span>🔗</span><span>😀</span><span>🖼</span>
+            </div>
+            <div style={{ flex: 1 }} />
+            <div style={{ color: G_LIGHT, fontSize: 16 * u }}>🗑</div>
+          </div>
         </div>
       </div>
 
-      {/* Reply sent confirmation */}
+      {/* "Replied to 47 emails" overlay */}
       {replySentOpacity > 0 && (
         <div
           style={{
@@ -5649,9 +5989,13 @@ const GmailInboxDesktop: React.FC<
             opacity: replySentOpacity,
           }}
         >
-          <div style={{ width: width * 0.4, background: "#fff", borderRadius: 16 * scale, padding: 36 * scale, textAlign: "center" }}>
-            <div style={{ fontSize: 64 * scale, color: G_BLUE }}>✓</div>
-            <div style={{ fontSize: 24 * scale, fontWeight: 700, color: G_TEXT, marginTop: 12 * scale }}>Replied to 47 emails</div>
+          <div style={{ width: width * 0.32, background: "#fff", borderRadius: 18 * u, padding: 36 * u, textAlign: "center", boxShadow: `0 ${20 * u}px ${60 * u}px rgba(0,0,0,0.35)` }}>
+            <svg width={120 * u} height={120 * u} viewBox="0 0 100 100" fill="none">
+              <circle cx="50" cy="50" r="44" stroke={G_BLUE} strokeWidth="4.5" fill="none" />
+              <path d="M30 52 L44 66 L72 36" stroke={G_BLUE} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
+            <div style={{ fontSize: 28 * u, fontWeight: 700, color: G_TEXT, marginTop: 14 * u }}>Replied to 47 emails</div>
+            <div style={{ fontSize: 15 * u, color: G_LIGHT, marginTop: 4 * u }}>Folk handled your inbox</div>
           </div>
         </div>
       )}
