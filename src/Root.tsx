@@ -2,7 +2,7 @@ import "./index.css";
 import { Composition } from "remotion";
 import { AppCarousel } from "./AppCarousel";
 import { AIOrgChart } from "./AIOrgChart";
-import { MessagesAd, MessagesAdHorizontal } from "./MessagesAd";
+import { MessagesAd, MessagesAdHorizontal, MessagesAdDesktop } from "./MessagesAd";
 import { Showcase } from "./Showcase";
 import { Notification } from "./Notification";
 
@@ -82,6 +82,25 @@ export const RemotionRoot: React.FC = () => {
         fps={60}
         width={3840}
         height={2160}
+      />
+
+      {/* Desktop variant — full 16:9 canvas with desktop-style app
+          backgrounds and bubbles centered. */}
+      <Composition
+        id="master-16x9-desktop"
+        component={MessagesAdDesktop}
+        durationInFrames={2130}
+        fps={60}
+        width={3840}
+        height={2160}
+      />
+      <Composition
+        id="preview-16x9-desktop"
+        component={MessagesAdDesktop}
+        durationInFrames={1065}
+        fps={30}
+        width={1920}
+        height={1080}
       />
     </>
   );

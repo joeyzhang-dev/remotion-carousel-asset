@@ -129,6 +129,14 @@ const measureTextEm = (text: string): number => {
   return sum;
 };
 
+/**
+ * Visual variant for app backgrounds. "mobile" renders the original
+ * iOS/iPhone-shaped UI inside the canvas; "desktop" renders a
+ * macOS/web-style UI (browser frame, sidebars, multi-column layouts)
+ * for use inside the wider 16:9 desktop composition.
+ */
+type Variant = "mobile" | "desktop";
+
 type SceneProps = {
   scale: number;
   width: number;
@@ -139,6 +147,8 @@ type SceneProps = {
   fadeOutAtSec?: number;
   /** Total length of this sequence in seconds; needed to compute fade-out window. */
   durationSec?: number;
+  /** Visual variant — defaults to "mobile". */
+  variant?: Variant;
 };
 
 /**
@@ -569,6 +579,7 @@ type InstagramProfileProps = {
    * the cycling PROFILE_GRID_IMAGES would otherwise put there. */
   focusedCellIndex?: number;
   focusedCellImage?: string;
+  variant?: Variant;
 };
 
 // Placeholder colors for each grid cell. The user will swap these for
@@ -654,7 +665,15 @@ const cellLayoutX = (
   return col * (layout.cellSize + layout.gridGap) + layout.cellSize / 2;
 };
 
-const InstagramProfile: React.FC<InstagramProfileProps> = ({
+/**
+ * Desktop (web) layout of the Instagram profile background. Renders a
+ * full-canvas IG.com page: left nav rail + centered profile section
+ * + 3-col post grid below. Used in the 16:9 desktop variant of the
+ * messages ad.
+ */
+const InstagramProfileDesktop: React.FC<
+  Omit<InstagramProfileProps, "variant">
+> = ({
   driveFrame,
   fps,
   width,
@@ -667,6 +686,326 @@ const InstagramProfile: React.FC<InstagramProfileProps> = ({
   focusedCellIndex,
   focusedCellImage,
 }) => {
+  // Page scroll: hold then ease down toward the focus row, single arc.
+  const driveSec = driveFrame / fps;
+  const navW = 244 * scale;
+  const contentLeft = navW + 80 * scale;
+  const contentMaxW = Math.min(975 * scale, width - contentLeft - 80 * scale);
+  const headerBlockH = 380 * scale;
+  const gridCols = 3;
+  const gridGap = 8 * scale;
+  const cellSize = (contentMaxW - gridGap * (gridCols - 1)) / gridCols;
+  const totalRows = 6;
+  const totalContentH =
+    180 * scale + headerBlockH + cellSize * totalRows + gridGap * (totalRows - 1) + 200 * scale;
+  const maxScroll = Math.max(0, totalContentH - height);
+  const dwellTarget = Math.min(maxScroll, maxScroll * 0.55);
+  const tHoldEnd = 0.8;
+  const tScrollEnd = 3.0;
+  let baseScroll = 0;
+  if (driveSec >= tHoldEnd && driveSec < tScrollEnd) {
+    baseScroll = interpolate(driveSec, [tHoldEnd, tScrollEnd], [0, dwellTarget], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    });
+  } else if (driveSec >= tScrollEnd) {
+    baseScroll = dwellTarget;
+  }
+  const pageY = -baseScroll;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        overflow: "hidden",
+        opacity,
+        pointerEvents: "none",
+        background: "#FFFFFF",
+        fontFamily: FONT_STACK,
+        filter: `blur(${1 * scale}px) brightness(0.99)`,
+      }}
+    >
+      {/* Left nav rail */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: navW,
+          height,
+          borderRight: `${1 * scale}px solid #DBDBDB`,
+          padding: `${36 * scale}px ${20 * scale}px`,
+          display: "flex",
+          flexDirection: "column",
+          gap: 12 * scale,
+        }}
+      >
+        {/* Instagram wordmark */}
+        <div
+          style={{
+            fontFamily: "'Billabong', cursive, " + FONT_STACK,
+            fontSize: 44 * scale,
+            fontWeight: 400,
+            color: "#000",
+            paddingLeft: 12 * scale,
+            paddingBottom: 24 * scale,
+            letterSpacing: -0.5 * scale,
+          }}
+        >
+          Instagram
+        </div>
+        {[
+          ["Home", "M3 12 L12 4 L21 12 V20 H14 V14 H10 V20 H3 Z"],
+          ["Search", "circle"],
+          ["Explore", "M21 21 L13 13"],
+          ["Reels", "play"],
+          ["Messages", "M7 8 H17 M7 12 H14"],
+          ["Notifications", "heart"],
+          ["Create", "plus"],
+          ["Profile", "user"],
+        ].map(([label], i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 16 * scale,
+              padding: `${12 * scale}px`,
+              borderRadius: 10 * scale,
+              fontSize: 16 * scale,
+              fontWeight: label === "Profile" ? 700 : 400,
+              color: "#000",
+            }}
+          >
+            <div
+              style={{
+                width: 24 * scale,
+                height: 24 * scale,
+                borderRadius: label === "Search" ? "50%" : 4 * scale,
+                border: `${2 * scale}px solid #000`,
+                background: label === "Profile" ? "#000" : "transparent",
+              }}
+            />
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Scrolling content */}
+      <div
+        style={{
+          position: "absolute",
+          left: contentLeft,
+          top: 0,
+          width: contentMaxW,
+          transform: `translateY(${pageY}px)`,
+        }}
+      >
+        {/* Top spacer */}
+        <div style={{ height: 80 * scale }} />
+        {/* Profile header — avatar + stats */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 80 * scale,
+            paddingBottom: 44 * scale,
+          }}
+        >
+          {/* Avatar */}
+          <div
+            style={{
+              width: 220 * scale,
+              height: 220 * scale,
+              borderRadius: "50%",
+              padding: 4 * scale,
+              background:
+                "conic-gradient(from 220deg, #F58529 0%, #DD2A7B 30%, #8134AF 60%, #515BD4 80%, #F58529 100%)",
+              flexShrink: 0,
+              boxSizing: "border-box",
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "50%",
+                background: "#FFFFFF",
+                padding: 3 * scale,
+                boxSizing: "border-box",
+              }}
+            >
+              <Img
+                src={staticFile("elsa-profile.jpg")}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+            </div>
+          </div>
+          {/* Right column — username + buttons + stats */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 18 * scale }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 * scale }}>
+              <div style={{ fontSize: 30 * scale, fontWeight: 400, color: "#000" }}>
+                _elsacai
+              </div>
+              <div
+                style={{
+                  padding: `${8 * scale}px ${20 * scale}px`,
+                  borderRadius: 8 * scale,
+                  background: "#0095F6",
+                  color: "#fff",
+                  fontSize: 16 * scale,
+                  fontWeight: 600,
+                }}
+              >
+                Follow
+              </div>
+              <div
+                style={{
+                  padding: `${8 * scale}px ${20 * scale}px`,
+                  borderRadius: 8 * scale,
+                  background: "#EFEFEF",
+                  color: "#000",
+                  fontSize: 16 * scale,
+                  fontWeight: 600,
+                }}
+              >
+                Message
+              </div>
+              <div
+                style={{
+                  padding: `${8 * scale}px ${14 * scale}px`,
+                  borderRadius: 8 * scale,
+                  background: "#EFEFEF",
+                  color: "#000",
+                  fontSize: 18 * scale,
+                  fontWeight: 700,
+                }}
+              >
+                +
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 44 * scale, fontSize: 18 * scale }}>
+              <span><strong>72</strong> posts</span>
+              <span><strong>6,187</strong> followers</span>
+              <span><strong>2,287</strong> following</span>
+            </div>
+            <div style={{ fontSize: 18 * scale, color: "#262626", lineHeight: 1.4 }}>
+              <div style={{ fontWeight: 600 }}>Elsa Cai</div>
+              <div>probably side questing</div>
+              <div style={{ color: "#0095F6" }}>@joeysixfive | @ditto</div>
+              <div style={{ color: "#0095F6" }}>tryditto.com</div>
+            </div>
+          </div>
+        </div>
+        {/* Tab bar */}
+        <div
+          style={{
+            borderTop: `${1 * scale}px solid #DBDBDB`,
+            display: "flex",
+            justifyContent: "center",
+            gap: 60 * scale,
+            paddingTop: 16 * scale,
+            marginBottom: 24 * scale,
+          }}
+        >
+          {["POSTS", "REELS", "TAGGED"].map((label, i) => (
+            <div
+              key={label}
+              style={{
+                fontSize: 14 * scale,
+                fontWeight: 600,
+                color: i === 0 ? "#000" : "#8E8E8E",
+                letterSpacing: 1 * scale,
+                paddingTop: 16 * scale,
+                borderTop: i === 0 ? `${2 * scale}px solid #000` : "none",
+                marginTop: i === 0 ? -1 * scale : 0,
+              }}
+            >
+              {label}
+            </div>
+          ))}
+        </div>
+        {/* Post grid */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${gridCols}, ${cellSize}px)`,
+            gap: gridGap,
+          }}
+        >
+          {Array.from({ length: gridCols * totalRows }).map((_, idx) => {
+            const isTapped = idx === tappedCellIndex;
+            const imgSrc =
+              idx === focusedCellIndex && focusedCellImage
+                ? focusedCellImage
+                : PROFILE_GRID_IMAGES[idx % PROFILE_GRID_IMAGES.length];
+            return (
+              <div
+                key={idx}
+                style={{
+                  width: cellSize,
+                  height: cellSize,
+                  background: PROFILE_GRID_COLORS[idx % PROFILE_GRID_COLORS.length],
+                  overflow: "hidden",
+                  transform: isTapped ? `scale(${tappedCellScale})` : undefined,
+                  opacity: isTapped ? tappedCellOpacity : 1,
+                }}
+              >
+                <Img
+                  src={staticFile(imgSrc)}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const InstagramProfile: React.FC<InstagramProfileProps> = ({
+  driveFrame,
+  fps,
+  width,
+  height,
+  scale,
+  opacity,
+  tappedCellIndex,
+  tappedCellScale = 1,
+  tappedCellOpacity = 1,
+  focusedCellIndex,
+  focusedCellImage,
+  variant = "mobile",
+}) => {
+  if (variant === "desktop") {
+    return (
+      <InstagramProfileDesktop
+        driveFrame={driveFrame}
+        fps={fps}
+        width={width}
+        height={height}
+        scale={scale}
+        opacity={opacity}
+        tappedCellIndex={tappedCellIndex}
+        tappedCellScale={tappedCellScale}
+        tappedCellOpacity={tappedCellOpacity}
+        focusedCellIndex={focusedCellIndex}
+        focusedCellImage={focusedCellImage}
+      />
+    );
+  }
   // Geometry derived from the shared helper so the parent can compute
   // matching screen positions for the dwell-cell flight animation.
   const layout = computeProfileLayout(width, scale);
@@ -1126,6 +1465,271 @@ type AmazonProductProps = {
   /** Optional scale to apply to the Buy Now button (for the
    * "agent taps Buy Now" feedback animation). Defaults to 1. */
   buyButtonScale?: number;
+  variant?: Variant;
+};
+
+const AmazonProductDesktop: React.FC<
+  Omit<AmazonProductProps, "variant">
+> = ({ driveFrame, fps, width, height, scale, opacity, buyButtonScale = 1 }) => {
+  const driveSec = driveFrame / fps;
+  const totalContentH = height + 600 * scale;
+  const maxScroll = Math.max(0, totalContentH - height);
+  const dwellTarget = Math.min(maxScroll, maxScroll * 0.4);
+  let baseScroll = 0;
+  if (driveSec >= 0.8 && driveSec < 3.0) {
+    baseScroll = interpolate(driveSec, [0.8, 3.0], [0, dwellTarget], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    });
+  } else if (driveSec >= 3.0) {
+    baseScroll = dwellTarget;
+  }
+  const pageY = -baseScroll;
+
+  const NAV_BG = "#131A22";
+  const NAV_LINK = "#FFFFFF";
+  const AMAZON_ORANGE = "#FF9900";
+  const AMAZON_YELLOW = "#FFD814";
+  const SUB_NAV_BG = "#232F3E";
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        overflow: "hidden",
+        opacity,
+        pointerEvents: "none",
+        background: "#FFFFFF",
+        fontFamily: FONT_STACK,
+        filter: `blur(${1 * scale}px) brightness(0.99)`,
+      }}
+    >
+      {/* Top nav bar */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width,
+          height: 90 * scale,
+          background: NAV_BG,
+          display: "flex",
+          alignItems: "center",
+          paddingLeft: 32 * scale,
+          paddingRight: 32 * scale,
+          gap: 24 * scale,
+        }}
+      >
+        <div
+          style={{
+            color: NAV_LINK,
+            fontSize: 36 * scale,
+            fontWeight: 700,
+            letterSpacing: -1 * scale,
+          }}
+        >
+          amazon
+        </div>
+        <div
+          style={{
+            color: NAV_LINK,
+            fontSize: 14 * scale,
+            opacity: 0.85,
+          }}
+        >
+          Deliver to<br/><strong style={{fontSize: 16 * scale}}>San Francisco 94110</strong>
+        </div>
+        <div
+          style={{
+            flex: 1,
+            height: 50 * scale,
+            background: "#fff",
+            borderRadius: 6 * scale,
+            display: "flex",
+            alignItems: "center",
+            paddingLeft: 16 * scale,
+            fontSize: 16 * scale,
+            color: "#888",
+          }}
+        >
+          red rose bouquet pink ribbon
+        </div>
+        <div style={{ color: NAV_LINK, fontSize: 14 * scale }}>
+          Hello, Joey<br/><strong style={{fontSize: 16 * scale}}>Account & Lists</strong>
+        </div>
+        <div style={{ color: NAV_LINK, fontSize: 14 * scale }}>
+          Returns<br/><strong style={{fontSize: 16 * scale}}>& Orders</strong>
+        </div>
+        <div style={{ color: NAV_LINK, fontSize: 18 * scale, fontWeight: 700 }}>Cart</div>
+      </div>
+      {/* Sub nav */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 90 * scale,
+          width,
+          height: 50 * scale,
+          background: SUB_NAV_BG,
+          display: "flex",
+          alignItems: "center",
+          gap: 24 * scale,
+          paddingLeft: 32 * scale,
+          color: NAV_LINK,
+          fontSize: 16 * scale,
+        }}
+      >
+        {["All", "Today's Deals", "Customer Service", "Registry", "Gift Cards", "Sell"].map((l) => (
+          <span key={l}>{l}</span>
+        ))}
+      </div>
+
+      {/* Scrolling content */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 160 * scale,
+          width,
+          transform: `translateY(${pageY}px)`,
+        }}
+      >
+        {/* Breadcrumb */}
+        <div style={{ padding: `${16 * scale}px ${48 * scale}px`, fontSize: 14 * scale, color: "#0066C0" }}>
+          Home & Kitchen › Home Décor › Artificial Flowers › Bouquets › <strong style={{ color: "#000" }}>FloraVie Red Rose Bouquet</strong>
+        </div>
+        {/* Two-column product layout */}
+        <div
+          style={{
+            display: "flex",
+            gap: 36 * scale,
+            paddingLeft: 48 * scale,
+            paddingRight: 48 * scale,
+          }}
+        >
+          {/* LEFT: gallery */}
+          <div style={{ width: width * 0.4, display: "flex", flexDirection: "column", gap: 16 * scale }}>
+            <div
+              style={{
+                width: "100%",
+                aspectRatio: "1",
+                background: "#F0F0EB",
+                borderRadius: 4 * scale,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: `${1 * scale}px solid #E7E7E7`,
+              }}
+            >
+              <Img
+                src={staticFile("roses-bouquet.jpg")}
+                style={{ width: "85%", height: "85%", objectFit: "contain" }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 8 * scale }}>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: 70 * scale,
+                    height: 70 * scale,
+                    border: i === 0 ? `${2 * scale}px solid #E47911` : `${1 * scale}px solid #DDD`,
+                    borderRadius: 4 * scale,
+                    background: ["#FCE4EC", "#C2185B", "#7A4F36", "#FFB6C1", "#000000"][i],
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+          {/* CENTER: title + rating + price + buy */}
+          <div style={{ flex: 1, paddingTop: 8 * scale }}>
+            <div style={{ fontSize: 14 * scale, color: "#0066C0", marginBottom: 6 * scale }}>
+              Visit the FloraVie Store
+            </div>
+            <div style={{ fontSize: 32 * scale, fontWeight: 400, color: "#0F1111", lineHeight: 1.2, marginBottom: 12 * scale }}>
+              FloraVie Fresh Red Rose Bouquet (8 Stems) — Pink Ribbon Wrap, Same-Day Delivery
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 * scale, marginBottom: 12 * scale }}>
+              <div style={{ display: "flex", gap: 2 * scale }}>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div key={i} style={{ width: 22 * scale, height: 22 * scale, background: AMAZON_ORANGE, clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)" }} />
+                ))}
+              </div>
+              <span style={{ fontSize: 14 * scale, color: "#0066C0" }}>8,427 ratings</span>
+            </div>
+            <div style={{ borderTop: `${1 * scale}px solid #E7E7E7`, paddingTop: 16 * scale }}>
+              <div style={{ fontSize: 14 * scale, color: "#565959", textDecoration: "line-through" }}>List Price: $24.99</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6 * scale, marginTop: 4 * scale }}>
+                <span style={{ fontSize: 18 * scale, color: "#B12704" }}>$</span>
+                <span style={{ fontSize: 48 * scale, color: "#B12704", fontWeight: 400, lineHeight: 1 }}>17</span>
+                <span style={{ fontSize: 22 * scale, color: "#B12704" }}>.49</span>
+              </div>
+              <div style={{ fontSize: 14 * scale, color: "#565959", marginTop: 6 * scale }}>FREE delivery <strong>tomorrow</strong></div>
+            </div>
+          </div>
+          {/* RIGHT: buy box */}
+          <div style={{ width: 260 * scale, border: `${1 * scale}px solid #D5D9D9`, borderRadius: 8 * scale, padding: 18 * scale, height: "fit-content" }}>
+            <div style={{ fontSize: 22 * scale, color: "#B12704", fontWeight: 400 }}>$17.49</div>
+            <div style={{ fontSize: 14 * scale, color: "#565959", marginTop: 6 * scale }}>FREE Returns</div>
+            <div style={{ fontSize: 14 * scale, color: "#0F1111", marginTop: 14 * scale, lineHeight: 1.4 }}>
+              <div style={{ color: "#007600", fontWeight: 600 }}>In Stock</div>
+              <div style={{ marginTop: 8 * scale }}>Qty: <span style={{ background: "#F0F2F2", padding: "2px 8px", borderRadius: 4 * scale }}>1 ▾</span></div>
+            </div>
+            <div
+              style={{
+                marginTop: 14 * scale,
+                padding: `${10 * scale}px`,
+                borderRadius: 999,
+                background: AMAZON_YELLOW,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 14 * scale,
+                fontWeight: 500,
+                color: "#0F1111",
+                border: `${1 * scale}px solid #FCD200`,
+              }}
+            >
+              Add to Cart
+            </div>
+            <div
+              style={{
+                marginTop: 8 * scale,
+                padding: `${10 * scale}px`,
+                borderRadius: 999,
+                background: AMAZON_ORANGE,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 14 * scale,
+                fontWeight: 500,
+                color: "#0F1111",
+                border: `${1 * scale}px solid #FF8F00`,
+                transform: `scale(${buyButtonScale})`,
+                transformOrigin: "center",
+              }}
+            >
+              Buy Now
+            </div>
+          </div>
+        </div>
+        {/* Description block */}
+        <div style={{ padding: `${36 * scale}px ${48 * scale}px`, fontSize: 14 * scale, color: "#565959", lineHeight: 1.6 }}>
+          <div style={{ fontSize: 18 * scale, color: "#0F1111", fontWeight: 700, marginBottom: 8 * scale }}>About this item</div>
+          • 8 fresh-cut red roses, individually wrapped<br/>
+          • Pink ribbon and kraft paper presentation<br/>
+          • Same-day delivery available within local zones<br/>
+          • Includes complimentary care card and floral preservative<br/>
+          • Hand-arranged for date-night, anniversary, or just-because moments
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const AmazonProduct: React.FC<AmazonProductProps> = ({
@@ -1136,7 +1740,21 @@ const AmazonProduct: React.FC<AmazonProductProps> = ({
   scale,
   opacity,
   buyButtonScale = 1,
+  variant = "mobile",
 }) => {
+  if (variant === "desktop") {
+    return (
+      <AmazonProductDesktop
+        driveFrame={driveFrame}
+        fps={fps}
+        width={width}
+        height={height}
+        scale={scale}
+        opacity={opacity}
+        buyButtonScale={buyButtonScale}
+      />
+    );
+  }
   // Layout dimensions
   const padX = 28 * scale;
   const navHeight = 110 * scale;
@@ -1692,6 +2310,245 @@ type FlightSearchProps = {
   scrollFreezeAtSec?: number;
   /** Opacity for the "Booking confirmed" overlay (0..1). */
   bookingConfirmOpacity?: number;
+  variant?: Variant;
+};
+
+const FlightSearchDesktop: React.FC<
+  Omit<FlightSearchProps, "variant">
+> = ({
+  driveFrame,
+  fps,
+  width,
+  height,
+  scale,
+  opacity,
+  cardTapScale = 1,
+  tappedCardIndex = -1,
+  bookingConfirmOpacity = 0,
+}) => {
+  const driveSec = driveFrame / fps;
+  const totalContentH = height + 700 * scale;
+  const maxScroll = Math.max(0, totalContentH - height);
+  const dwellTarget = Math.min(maxScroll, maxScroll * 0.5);
+  let baseScroll = 0;
+  if (driveSec >= 0.8 && driveSec < 3.0) {
+    baseScroll = interpolate(driveSec, [0.8, 3.0], [0, dwellTarget], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    });
+  } else if (driveSec >= 3.0) {
+    baseScroll = dwellTarget;
+  }
+  const pageY = -baseScroll;
+
+  const G_TEXT = "#202124";
+  const G_LIGHT = "#5F6368";
+  const G_BORDER = "#DADCE0";
+  const G_GREEN = "#188038";
+  const G_BLUE = "#1A73E8";
+  const G_BG = "#FFFFFF";
+
+  type Row = { airline: string; color: string; times: string; duration: string; stops: string; emissions: string; price: string };
+  const rows: Row[] = [
+    { airline: "United", color: "#0033A0", times: "8:35 AM – 5:14 PM", duration: "5h 39min", stops: "Nonstop", emissions: "−15% emissions", price: "$284" },
+    { airline: "Delta", color: "#003A70", times: "11:50 AM – 8:30 PM", duration: "5h 40min", stops: "Nonstop", emissions: "−12%", price: "$298" },
+    { airline: "Alaska", color: "#01426A", times: "6:45 AM – 3:22 PM", duration: "5h 37min", stops: "Nonstop", emissions: "Avg", price: "$312" },
+    { airline: "American", color: "#9DA6AB", times: "2:30 PM – 11:08 PM", duration: "5h 38min", stops: "Nonstop", emissions: "+8%", price: "$324" },
+    { airline: "JetBlue", color: "#0067C5", times: "9:00 AM – 5:55 PM", duration: "5h 55min", stops: "Nonstop", emissions: "−18%", price: "$348" },
+    { airline: "Spirit", color: "#FFE600", times: "5:55 AM – 3:08 PM", duration: "6h 13min", stops: "1 stop", emissions: "+12%", price: "$386" },
+    { airline: "Frontier", color: "#005C3F", times: "7:14 PM – 4:47 AM+1", duration: "6h 33min", stops: "1 stop", emissions: "Avg", price: "$402" },
+  ];
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        overflow: "hidden",
+        opacity,
+        pointerEvents: "none",
+        background: G_BG,
+        fontFamily: FONT_STACK,
+        filter: `blur(${1 * scale}px) brightness(0.99)`,
+      }}
+    >
+      {/* Top bar — Google Flights style */}
+      <div
+        style={{
+          height: 80 * scale,
+          paddingLeft: 32 * scale,
+          paddingRight: 32 * scale,
+          display: "flex",
+          alignItems: "center",
+          gap: 24 * scale,
+          borderBottom: `${1 * scale}px solid ${G_BORDER}`,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 * scale }}>
+          {[
+            "#4285F4",
+            "#EA4335",
+            "#FBBC05",
+            "#4285F4",
+            "#34A853",
+            "#EA4335",
+          ].map((c, i) => (
+            <span key={i} style={{ fontSize: 30 * scale, color: c, fontWeight: 500 }}>
+              {"Google"[i]}
+            </span>
+          ))}
+          <span style={{ fontSize: 24 * scale, color: G_TEXT, fontWeight: 400, marginLeft: 6 * scale }}>Flights</span>
+        </div>
+        <div style={{ flex: 1 }} />
+        <div style={{ display: "flex", gap: 22 * scale, fontSize: 16 * scale, color: G_TEXT }}>
+          <span>Travel</span>
+          <span>Explore</span>
+          <span>Flights</span>
+          <span>Hotels</span>
+          <span>Trips</span>
+        </div>
+      </div>
+      {/* Search row card */}
+      <div
+        style={{
+          margin: `${24 * scale}px ${48 * scale}px`,
+          padding: 24 * scale,
+          border: `${1 * scale}px solid ${G_BORDER}`,
+          borderRadius: 12 * scale,
+          boxShadow: `0 ${1 * scale}px ${3 * scale}px rgba(0,0,0,0.08)`,
+          display: "flex",
+          gap: 12 * scale,
+          alignItems: "center",
+        }}
+      >
+        <div style={{ display: "flex", gap: 12 * scale, fontSize: 14 * scale, color: G_TEXT }}>
+          <span>⇄ Round trip ▾</span>
+          <span>1 passenger ▾</span>
+          <span>Economy ▾</span>
+        </div>
+        <div style={{ flex: 1, display: "flex", gap: 12 * scale }}>
+          {["San Francisco (SFO)", "New York (JFK)", "Fri, May 14", "Fri, May 21"].map((p, i) => (
+            <div
+              key={i}
+              style={{
+                flex: 1,
+                height: 56 * scale,
+                border: `${1 * scale}px solid ${G_BORDER}`,
+                borderRadius: 6 * scale,
+                display: "flex",
+                alignItems: "center",
+                paddingLeft: 14 * scale,
+                fontSize: 16 * scale,
+                color: G_TEXT,
+              }}
+            >
+              {p}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Section header */}
+      <div style={{ paddingLeft: 48 * scale, paddingRight: 48 * scale, paddingBottom: 16 * scale, fontSize: 22 * scale, fontWeight: 500, color: G_TEXT }}>
+        Best departing flights
+      </div>
+
+      {/* Scrolling table */}
+      <div
+        style={{
+          position: "absolute",
+          left: 48 * scale,
+          right: 48 * scale,
+          top: 320 * scale,
+          transform: `translateY(${pageY}px)`,
+        }}
+      >
+        {rows.map((r, i) => {
+          const isTapped = i === tappedCardIndex;
+          return (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                padding: `${20 * scale}px ${24 * scale}px`,
+                borderBottom: `${1 * scale}px solid ${G_BORDER}`,
+                gap: 24 * scale,
+                background: isTapped ? "#F0F7FF" : "transparent",
+                transform: isTapped ? `scale(${cardTapScale})` : undefined,
+                transformOrigin: "center",
+              }}
+            >
+              <div style={{ width: 36 * scale, height: 36 * scale, borderRadius: "50%", background: r.color, flexShrink: 0 }} />
+              <div style={{ width: 220 * scale, fontSize: 18 * scale, color: G_TEXT, fontWeight: 500 }}>{r.times}</div>
+              <div style={{ flex: 1, fontSize: 14 * scale, color: G_LIGHT }}>{r.airline}</div>
+              <div style={{ width: 140 * scale, fontSize: 16 * scale, color: G_TEXT }}>{r.duration}<br/><span style={{fontSize: 13 * scale, color: G_LIGHT}}>SFO–JFK</span></div>
+              <div style={{ width: 120 * scale, fontSize: 16 * scale, color: G_TEXT }}>{r.stops}</div>
+              <div style={{ width: 160 * scale, fontSize: 14 * scale, color: G_GREEN }}>{r.emissions}</div>
+              <div style={{ width: 100 * scale, fontSize: 22 * scale, color: G_GREEN, fontWeight: 600, textAlign: "right" }}>{r.price}</div>
+              <div style={{ fontSize: 18 * scale, color: G_LIGHT }}>›</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Booking confirmation overlay */}
+      {bookingConfirmOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.45)",
+            opacity: bookingConfirmOpacity,
+          }}
+        >
+          <div
+            style={{
+              width: width * 0.4,
+              background: "#fff",
+              borderRadius: 16 * scale,
+              padding: 40 * scale,
+              fontFamily: FONT_STACK,
+              boxShadow: `0 ${20 * scale}px ${60 * scale}px rgba(0,0,0,0.35)`,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 16 * scale,
+            }}
+          >
+            <div
+              style={{
+                width: 90 * scale,
+                height: 90 * scale,
+                borderRadius: "50%",
+                background: G_GREEN,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontSize: 50 * scale,
+              }}
+            >
+              ✓
+            </div>
+            <div style={{ fontSize: 28 * scale, fontWeight: 700, color: G_TEXT }}>Booking confirmed</div>
+            <div style={{ fontSize: 16 * scale, color: G_LIGHT }}>SFO → JFK · United · Fri May 14</div>
+            <div style={{ fontSize: 22 * scale, color: G_BLUE, fontWeight: 700 }}>$284</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const FlightSearch: React.FC<FlightSearchProps> = ({
@@ -1705,7 +2562,24 @@ const FlightSearch: React.FC<FlightSearchProps> = ({
   tappedCardIndex = -1,
   scrollFreezeAtSec,
   bookingConfirmOpacity = 0,
+  variant = "mobile",
 }) => {
+  if (variant === "desktop") {
+    return (
+      <FlightSearchDesktop
+        driveFrame={driveFrame}
+        fps={fps}
+        width={width}
+        height={height}
+        scale={scale}
+        opacity={opacity}
+        cardTapScale={cardTapScale}
+        tappedCardIndex={tappedCardIndex}
+        scrollFreezeAtSec={scrollFreezeAtSec}
+        bookingConfirmOpacity={bookingConfirmOpacity}
+      />
+    );
+  }
   // Mobile-scaled layout: bigger fonts, more vertical breathing
   // room. Cards stack vertically (no desktop-style multi-column row)
   // so each one reads as a tappable list item rather than a table
@@ -2704,6 +3578,224 @@ type AppleWalletProps = {
    * the wallet exits.
    */
   paidLatched?: boolean;
+  variant?: Variant;
+};
+
+const AppleWalletDesktop: React.FC<
+  Omit<AppleWalletProps, "variant">
+> = ({
+  width,
+  height,
+  scale,
+  opacity,
+  payButtonScale = 1,
+  paymentConfirmOpacity = 0,
+  paidLatched = false,
+}) => {
+  const isPaid = paidLatched || paymentConfirmOpacity > 0.4;
+  const liveCountdown = interpolate(paymentConfirmOpacity, [0, 0.6], [2847.13, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const balanceCountdown = paidLatched ? 0 : liveCountdown;
+  const balanceText = `$${balanceCountdown.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+
+  const SIDEBAR_W = 280 * scale;
+  const CHASE_BLUE = "#117ACA";
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        overflow: "hidden",
+        opacity,
+        pointerEvents: "none",
+        background: "#F2F4F7",
+        fontFamily: FONT_STACK,
+        filter: `blur(${1 * scale}px) brightness(0.99)`,
+      }}
+    >
+      {/* Top Chase nav */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width,
+          height: 70 * scale,
+          background: CHASE_BLUE,
+          display: "flex",
+          alignItems: "center",
+          paddingLeft: 32 * scale,
+          paddingRight: 32 * scale,
+          color: "#fff",
+          fontSize: 22 * scale,
+          fontWeight: 700,
+          letterSpacing: -0.4 * scale,
+          gap: 32 * scale,
+        }}
+      >
+        CHASE
+        <span style={{ fontSize: 16 * scale, fontWeight: 400, opacity: 0.9 }}>Accounts</span>
+        <span style={{ fontSize: 16 * scale, fontWeight: 400, opacity: 0.9 }}>Pay & transfer</span>
+        <span style={{ fontSize: 16 * scale, fontWeight: 400, opacity: 0.9 }}>Plan & track</span>
+        <span style={{ fontSize: 16 * scale, fontWeight: 400, opacity: 0.9 }}>Investments</span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: 14 * scale, fontWeight: 400 }}>Hello, Joey</span>
+        <span style={{ fontSize: 14 * scale, fontWeight: 400 }}>Sign out</span>
+      </div>
+
+      {/* Sidebar with cards list */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 70 * scale,
+          width: SIDEBAR_W,
+          bottom: 0,
+          background: "#FFFFFF",
+          borderRight: `${1 * scale}px solid #E0E4EB`,
+          padding: 24 * scale,
+          display: "flex",
+          flexDirection: "column",
+          gap: 14 * scale,
+        }}
+      >
+        <div style={{ fontSize: 14 * scale, color: "#5F6677", fontWeight: 600, letterSpacing: 1 * scale }}>YOUR CARDS</div>
+        {[{ name: "Sapphire Reserve", num: "4829", active: true }, { name: "Freedom Unlimited", num: "1147", active: false }, { name: "Slate Edge", num: "8821", active: false }].map((c) => (
+          <div
+            key={c.num}
+            style={{
+              padding: 14 * scale,
+              borderRadius: 10 * scale,
+              border: `${c.active ? 2 * scale : 1 * scale}px solid ${c.active ? CHASE_BLUE : "#E0E4EB"}`,
+              background: c.active ? "#F0F7FF" : "#FFFFFF",
+              fontSize: 14 * scale,
+              color: "#1A1F2E",
+            }}
+          >
+            <div style={{ fontWeight: 600 }}>{c.name}</div>
+            <div style={{ fontSize: 13 * scale, color: "#5F6677", marginTop: 2 * scale }}>···· {c.num}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Main content area */}
+      <div
+        style={{
+          position: "absolute",
+          left: SIDEBAR_W,
+          right: 0,
+          top: 70 * scale,
+          bottom: 0,
+          padding: `${36 * scale}px ${48 * scale}px`,
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ fontSize: 32 * scale, fontWeight: 600, color: "#1A1F2E", marginBottom: 24 * scale }}>
+          Sapphire Reserve · ···· 4829
+        </div>
+        <div style={{ display: "flex", gap: 32 * scale, alignItems: "flex-start" }}>
+          {/* Card visual */}
+          <div
+            style={{
+              width: 480 * scale,
+              height: 302 * scale,
+              borderRadius: 20 * scale,
+              background: "linear-gradient(135deg, #1F2228 0%, #3A3F47 28%, #6E7682 52%, #2D3138 78%, #14161A 100%)",
+              boxShadow: `0 ${20 * scale}px ${40 * scale}px rgba(0,0,0,0.3)`,
+              padding: 24 * scale,
+              color: "#FFFFFF",
+              position: "relative",
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ position: "absolute", left: 24 * scale, top: 24 * scale }}>
+              <Img
+                src={staticFile("folk-mark.png")}
+                style={{ width: 80 * scale, height: 80 * scale, filter: "brightness(0) invert(1)" }}
+              />
+            </div>
+            <div style={{ position: "absolute", left: 32 * scale, bottom: 32 * scale, fontSize: 22 * scale, fontWeight: 600, letterSpacing: 1.5 * scale }}>JOEY ZHANG</div>
+            <div style={{ position: "absolute", right: 32 * scale, bottom: 32 * scale, fontSize: 14 * scale, opacity: 0.7, fontFamily: "monospace", letterSpacing: 3 * scale }}>···· 4829</div>
+          </div>
+          {/* Right side — balance + actions */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 * scale }}>
+            <div style={{ background: "#FFFFFF", borderRadius: 12 * scale, padding: 24 * scale, boxShadow: `0 ${1 * scale}px ${4 * scale}px rgba(0,0,0,0.08)` }}>
+              <div style={{ fontSize: 14 * scale, color: "#5F6677", fontWeight: 500 }}>Statement balance · Due May 22</div>
+              <div style={{ fontSize: 48 * scale, fontWeight: 700, color: "#1A1F2E", marginTop: 4 * scale, fontVariantNumeric: "tabular-nums" }}>{balanceText}</div>
+              <div style={{ fontSize: 14 * scale, color: "#5F6677", marginTop: 4 * scale }}>{isPaid ? "$7,847.13 Available Credit" : "$5,000.00 Available Credit"}</div>
+              <div style={{ marginTop: 12 * scale, display: "inline-block", padding: `${6 * scale}px ${14 * scale}px`, borderRadius: 999, background: isPaid ? "#E6F4EA" : "#FEE7E5", color: isPaid ? "#1B6E2C" : "#B91C1C", fontSize: 13 * scale, fontWeight: 600 }}>
+                {isPaid ? "✓ Paid" : "● Past due"}
+              </div>
+            </div>
+            <div
+              style={{
+                background: isPaid ? "#34C759" : "#1C1C1E",
+                color: "#fff",
+                padding: `${16 * scale}px ${28 * scale}px`,
+                borderRadius: 999,
+                fontSize: 18 * scale,
+                fontWeight: 600,
+                textAlign: "center",
+                transform: `scale(${payButtonScale})`,
+                transformOrigin: "center",
+                boxShadow: `0 ${6 * scale}px ${16 * scale}px rgba(0,0,0,0.18)`,
+              }}
+            >
+              {isPaid ? "✓ Paid" : `Pay ${balanceText}`}
+            </div>
+          </div>
+        </div>
+
+        {/* Transactions */}
+        <div style={{ marginTop: 36 * scale, background: "#FFFFFF", borderRadius: 12 * scale, padding: 24 * scale, boxShadow: `0 ${1 * scale}px ${4 * scale}px rgba(0,0,0,0.08)` }}>
+          <div style={{ fontSize: 18 * scale, fontWeight: 700, color: "#1A1F2E", marginBottom: 14 * scale }}>Latest transactions</div>
+          {[
+            { name: "Whole Foods", date: "May 7", amount: "$42.18" },
+            { name: "Uber", date: "May 6", amount: "$14.50" },
+            { name: "Spotify", date: "May 5", amount: "$9.99" },
+            { name: "LA Fitness", date: "May 4", amount: "$39.99" },
+            { name: "Apple Store", date: "Apr 30", amount: "$29.83" },
+          ].map((tx, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", padding: `${10 * scale}px 0`, borderBottom: i < 4 ? `${1 * scale}px solid #F0F2F5` : "none", fontSize: 16 * scale }}>
+              <div style={{ flex: 1, color: "#1A1F2E" }}>{tx.name}</div>
+              <div style={{ width: 140 * scale, color: "#5F6677" }}>{tx.date}</div>
+              <div style={{ width: 100 * scale, textAlign: "right", color: "#1A1F2E", fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>{tx.amount}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Confirm overlay */}
+      {paymentConfirmOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            background: "rgba(0,0,0,0.45)",
+            opacity: paymentConfirmOpacity,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div style={{ width: width * 0.4, background: "#fff", borderRadius: 16 * scale, padding: 40 * scale, display: "flex", flexDirection: "column", alignItems: "center", gap: 16 * scale }}>
+            <svg width={120 * scale} height={120 * scale} viewBox="0 0 100 100" fill="none">
+              <circle cx="50" cy="50" r="44" stroke="#0A84FF" strokeWidth="4.5" fill="none" />
+              <path d="M30 52 L44 66 L72 36" stroke="#0A84FF" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
+            <div style={{ fontSize: 28 * scale, fontWeight: 600, color: "#000" }}>Done</div>
+            <div style={{ fontSize: 16 * scale, color: "#666" }}>Payment of $2,847.13 sent to Chase Sapphire</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const AppleWallet: React.FC<AppleWalletProps> = ({
@@ -2716,7 +3808,23 @@ const AppleWallet: React.FC<AppleWalletProps> = ({
   payButtonScale = 1,
   paymentConfirmOpacity = 0,
   paidLatched = false,
+  variant = "mobile",
 }) => {
+  if (variant === "desktop") {
+    return (
+      <AppleWalletDesktop
+        driveFrame={driveFrame}
+        fps={fps}
+        width={width}
+        height={height}
+        scale={scale}
+        opacity={opacity}
+        payButtonScale={payButtonScale}
+        paymentConfirmOpacity={paymentConfirmOpacity}
+        paidLatched={paidLatched}
+      />
+    );
+  }
   // ── Layout constants ────────────────────────────────────────────
   const padX = 32 * scale;
   const titleBarH = 96 * scale;
@@ -3867,6 +4975,237 @@ type GmailInboxProps = {
   replyAllScale?: number;
   /** Opacity for the "Replied" confirmation overlay. */
   replySentOpacity?: number;
+  variant?: Variant;
+};
+
+const GmailInboxDesktop: React.FC<
+  Omit<GmailInboxProps, "variant">
+> = ({ width, height, scale, opacity, replyAllScale = 1, replySentOpacity = 0 }) => {
+  const SIDEBAR_W = 260 * scale;
+  const INBOX_W = 380 * scale;
+  const G_BG = "#F6F8FC";
+  const G_TEXT = "#202124";
+  const G_LIGHT = "#5F6368";
+  const G_BLUE = "#1A73E8";
+
+  type Mail = { name: string; subject: string; snippet: string; time: string; unread: boolean };
+  const mails: Mail[] = [
+    { name: "GitHub", subject: "[acme/api] Pull request #2841 needs review", snippet: "Ben Wallace opened a pull request requiring review...", time: "10:42 AM", unread: true },
+    { name: "Mom", subject: "Sunday dinner — bringing your sister?", snippet: "Hi sweetie, just wanted to check in about Sunday...", time: "9:15 AM", unread: true },
+    { name: "Kevin Lee", subject: "Friday's design review — moving to 3pm?", snippet: "Quick ask — can we push Friday's design review...", time: "8:48 AM", unread: true },
+    { name: "Jenna Park", subject: "RE: dinner Friday? + Becca's birthday", snippet: "yessss I'm so in for Friday — 7:30 at Maialino...", time: "Yesterday", unread: false },
+    { name: "Stripe", subject: "Receipt from Folk", snippet: "Amount: $20.00 USD — Card: Visa ···· 4829", time: "Yesterday", unread: false },
+    { name: "Linear", subject: "5 new issues assigned to you", snippet: "BUG-318, FEAT-202, TASK-119, REL-77, FIX-44", time: "Mon", unread: false },
+    { name: "Notion", subject: "Comment on \"Q2 roadmap\"", snippet: "Priya: \"can we slot in the auth migration before...\"", time: "Mon", unread: false },
+    { name: "Vercel", subject: "Production Deployment Ready", snippet: "main · 7e3c2f4 · Build succeeded in 1m 42s", time: "Sun", unread: false },
+  ];
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        overflow: "hidden",
+        opacity,
+        pointerEvents: "none",
+        background: G_BG,
+        fontFamily: FONT_STACK,
+        filter: `blur(${1 * scale}px) brightness(0.99)`,
+      }}
+    >
+      {/* Top bar */}
+      <div
+        style={{
+          height: 70 * scale,
+          paddingLeft: 24 * scale,
+          paddingRight: 24 * scale,
+          display: "flex",
+          alignItems: "center",
+          gap: 24 * scale,
+          background: "#fff",
+          borderBottom: `${1 * scale}px solid #E0E4EB`,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6 * scale }}>
+          <span style={{ fontSize: 26 * scale, color: "#EA4335" }}>M</span>
+          <span style={{ fontSize: 22 * scale, color: G_TEXT, fontWeight: 400 }}>Gmail</span>
+        </div>
+        <div style={{ flex: 1, maxWidth: 700 * scale, height: 48 * scale, background: "#EAF1FB", borderRadius: 10 * scale, display: "flex", alignItems: "center", paddingLeft: 18 * scale, fontSize: 16 * scale, color: G_LIGHT }}>
+          Search mail
+        </div>
+        <div style={{ width: 44 * scale, height: 44 * scale, borderRadius: "50%", background: "#34A853", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 * scale, fontWeight: 600 }}>J</div>
+      </div>
+
+      {/* Sidebar */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 70 * scale,
+          width: SIDEBAR_W,
+          bottom: 0,
+          padding: 16 * scale,
+        }}
+      >
+        <div
+          style={{
+            background: "#C2E7FF",
+            borderRadius: 16 * scale,
+            padding: `${14 * scale}px ${20 * scale}px`,
+            fontSize: 16 * scale,
+            color: G_TEXT,
+            fontWeight: 500,
+            display: "inline-block",
+            marginBottom: 18 * scale,
+          }}
+        >
+          ✏️ Compose
+        </div>
+        {[
+          { l: "Inbox", c: "47" },
+          { l: "Starred" },
+          { l: "Snoozed" },
+          { l: "Sent" },
+          { l: "Drafts", c: "3" },
+          { l: "Important" },
+          { l: "All Mail" },
+        ].map((row, i) => (
+          <div
+            key={row.l}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: `${10 * scale}px ${20 * scale}px`,
+              borderRadius: 999,
+              background: i === 0 ? "#D3E3FD" : "transparent",
+              fontSize: 14 * scale,
+              color: G_TEXT,
+              fontWeight: i === 0 ? 600 : 400,
+              marginBottom: 2 * scale,
+            }}
+          >
+            <span style={{ flex: 1 }}>{row.l}</span>
+            {row.c && <span>{row.c}</span>}
+          </div>
+        ))}
+      </div>
+
+      {/* Inbox column */}
+      <div
+        style={{
+          position: "absolute",
+          left: SIDEBAR_W,
+          top: 70 * scale,
+          width: INBOX_W,
+          bottom: 0,
+          background: "#fff",
+          borderLeft: `${1 * scale}px solid #E0E4EB`,
+          borderRight: `${1 * scale}px solid #E0E4EB`,
+          overflow: "hidden",
+        }}
+      >
+        {mails.map((m, i) => (
+          <div
+            key={i}
+            style={{
+              padding: `${14 * scale}px ${20 * scale}px`,
+              borderBottom: `${1 * scale}px solid #F0F2F5`,
+              background: i === 0 ? "#F0F7FF" : "transparent",
+              cursor: "pointer",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 * scale }}>
+              <div style={{ fontSize: 15 * scale, fontWeight: m.unread ? 700 : 500, color: G_TEXT }}>{m.name}</div>
+              <div style={{ fontSize: 13 * scale, color: G_LIGHT }}>{m.time}</div>
+            </div>
+            <div style={{ fontSize: 14 * scale, color: G_TEXT, fontWeight: m.unread ? 600 : 400, marginBottom: 2 * scale, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.subject}</div>
+            <div style={{ fontSize: 13 * scale, color: G_LIGHT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.snippet}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Reading pane */}
+      <div
+        style={{
+          position: "absolute",
+          left: SIDEBAR_W + INBOX_W,
+          right: 0,
+          top: 70 * scale,
+          bottom: 0,
+          padding: 32 * scale,
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ fontSize: 24 * scale, fontWeight: 500, color: G_TEXT, marginBottom: 14 * scale, lineHeight: 1.3 }}>
+          [acme/api] Pull request #2841 needs your review
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 * scale, marginBottom: 18 * scale }}>
+          <div style={{ width: 44 * scale, height: 44 * scale, borderRadius: "50%", background: "#1A73E8", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 * scale, fontWeight: 600 }}>G</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15 * scale, color: G_TEXT, fontWeight: 600 }}>GitHub <span style={{ color: G_LIGHT, fontWeight: 400 }}>&lt;noreply@github.com&gt;</span></div>
+            <div style={{ fontSize: 13 * scale, color: G_LIGHT }}>to me</div>
+          </div>
+          <div style={{ fontSize: 13 * scale, color: G_LIGHT }}>10:42 AM (5 minutes ago)</div>
+        </div>
+        <div style={{ fontSize: 16 * scale, color: G_TEXT, lineHeight: 1.6 }}>
+          <p>Hi @joey,</p>
+          <p>Ben Wallace (@ben-w) opened a pull request that requires review from your team:</p>
+          <p style={{ background: "#F6F8FC", padding: 12 * scale, borderRadius: 6 * scale, fontFamily: "monospace", fontSize: 14 * scale }}>
+            feat(orders): add idempotency keys to checkout endpoint<br/>
+            12 files changed, +384 −127 · branch feat/idempotent-checkout → main
+          </p>
+          <p>This PR introduces idempotency keys on POST /api/v1/orders to prevent duplicate charges when the client retries on flaky network.</p>
+          <p style={{ color: G_LIGHT, fontStyle: "italic" }}>"This is the fix for the duplicate-order bug from incident #4421. I'd love a second pair of eyes on the migration."</p>
+        </div>
+        {/* Reply All button */}
+        <div
+          style={{
+            marginTop: 28 * scale,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8 * scale,
+            padding: `${10 * scale}px ${22 * scale}px`,
+            border: `${1 * scale}px solid #DADCE0`,
+            borderRadius: 999,
+            fontSize: 15 * scale,
+            color: G_BLUE,
+            background: "#fff",
+            transform: `scale(${replyAllScale})`,
+            transformOrigin: "center",
+            boxShadow: replyAllScale !== 1 ? `0 ${4 * scale}px ${12 * scale}px rgba(26, 115, 232, 0.2)` : undefined,
+          }}
+        >
+          ↶ Reply all
+        </div>
+      </div>
+
+      {/* Reply sent confirmation */}
+      {replySentOpacity > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: replySentOpacity,
+          }}
+        >
+          <div style={{ width: width * 0.4, background: "#fff", borderRadius: 16 * scale, padding: 36 * scale, textAlign: "center" }}>
+            <div style={{ fontSize: 64 * scale, color: G_BLUE }}>✓</div>
+            <div style={{ fontSize: 24 * scale, fontWeight: 700, color: G_TEXT, marginTop: 12 * scale }}>Replied to 47 emails</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const GmailInbox: React.FC<GmailInboxProps> = ({
@@ -3877,7 +5216,23 @@ const GmailInbox: React.FC<GmailInboxProps> = ({
   scale,
   opacity,
   replyAllScale = 1,
+  variant = "mobile",
+  replySentOpacity = 0,
 }) => {
+  if (variant === "desktop") {
+    return (
+      <GmailInboxDesktop
+        driveFrame={driveFrame}
+        fps={fps}
+        width={width}
+        height={height}
+        scale={scale}
+        opacity={opacity}
+        replyAllScale={replyAllScale}
+        replySentOpacity={replySentOpacity}
+      />
+    );
+  }
   // Mobile-native scale. The reference iPhone screenshots have ~22pt
   // sender, ~18pt subject, ~16pt snippet, ~44px avatars, and rows
   // ~120px tall — but rendered on a 390px-wide canvas. Our canvas
@@ -5007,6 +6362,139 @@ type GoogleDocsProps = {
   turnInScale?: number;
   /** Opacity for the homework-submitted confirmation overlay. */
   submitConfirmOpacity?: number;
+  variant?: Variant;
+};
+
+const GoogleDocsDesktop: React.FC<
+  Omit<GoogleDocsProps, "variant">
+> = ({ driveFrame, fps, width, height, scale, opacity, turnInScale = 1 }) => {
+  const driveSec = driveFrame / fps;
+  const totalContentH = height + 800 * scale;
+  const maxScroll = Math.max(0, totalContentH - height);
+  const dwellTarget = Math.min(maxScroll, maxScroll * 0.55);
+  let baseScroll = 0;
+  if (driveSec >= 0.8 && driveSec < 3.0) {
+    baseScroll = interpolate(driveSec, [0.8, 3.0], [0, dwellTarget], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    });
+  } else if (driveSec >= 3.0) {
+    baseScroll = dwellTarget;
+  }
+  const pageY = -baseScroll;
+
+  const D_BG = "#F1F3F4";
+  const D_TEXT = "#3C4043";
+  const D_LIGHT = "#5F6368";
+  const D_BLUE = "#1A73E8";
+
+  const docW = Math.min(820 * scale, width * 0.65);
+  const docMarginX = (width - docW) / 2;
+
+  const paragraphs = [
+    "The Industrial Revolution, beginning in Britain in the late 18th century, fundamentally transformed economic and social structures across the Western world. Driven by innovations in textile manufacturing, steam power, and iron production, the period marked humanity's transition from agrarian economies to industrial ones — a shift that would reshape labor, urbanization, family life, and the very concept of time itself.",
+    "James Watt's improvements to the steam engine in the 1760s and 1770s catalyzed a wave of mechanization. Factories sprung up around coal-rich regions like Manchester and Birmingham, drawing rural laborers into rapidly growing cities. The factory system replaced the cottage-industry model that had dominated for centuries, concentrating production in large facilities where workers operated machines under strict supervision and rigid time discipline.",
+    "Social consequences of this transformation were profound and often brutal. Working conditions in early factories were harsh — twelve to sixteen hour days, dangerous machinery, child labor, and minimal regulatory oversight. Urban centers swelled with migrants but lacked sanitation infrastructure, leading to outbreaks of cholera and typhus. Yet the era also produced remarkable advances in transportation, communication, and material standards of living for those who survived its early decades.",
+    "Politically, the Industrial Revolution gave rise to new ideologies — laissez-faire capitalism, socialism, and trade unionism — each grappling with how to organize the relationship between capital, labor, and the state. The 1832 Reform Act in Britain, while still restrictive, expanded suffrage to include the new industrial middle class, foreshadowing the gradual democratization that would unfold over the next century.",
+  ];
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width,
+        height,
+        overflow: "hidden",
+        opacity,
+        pointerEvents: "none",
+        background: D_BG,
+        fontFamily: FONT_STACK,
+        filter: `blur(${1 * scale}px) brightness(0.99)`,
+      }}
+    >
+      {/* Top nav */}
+      <div
+        style={{
+          height: 64 * scale,
+          paddingLeft: 24 * scale,
+          paddingRight: 24 * scale,
+          display: "flex",
+          alignItems: "center",
+          gap: 16 * scale,
+          background: "#fff",
+          borderBottom: `${1 * scale}px solid #DADCE0`,
+        }}
+      >
+        <div style={{ width: 36 * scale, height: 36 * scale, background: D_BLUE, borderRadius: 4 * scale }} />
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ fontSize: 17 * scale, color: D_TEXT, fontWeight: 500 }}>World History Essay - Final</div>
+          <div style={{ display: "flex", gap: 14 * scale, fontSize: 13 * scale, color: D_LIGHT, marginTop: 2 * scale }}>
+            <span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Format</span><span>Tools</span><span>Extensions</span>
+          </div>
+        </div>
+        <div style={{ flex: 1 }} />
+        <div style={{ display: "flex", gap: 12 * scale, alignItems: "center" }}>
+          <div
+            style={{
+              padding: `${10 * scale}px ${24 * scale}px`,
+              background: D_BLUE,
+              color: "#fff",
+              borderRadius: 6 * scale,
+              fontSize: 14 * scale,
+              fontWeight: 500,
+              transform: `scale(${turnInScale})`,
+              transformOrigin: "center",
+            }}
+          >
+            Turn in
+          </div>
+          <div style={{ width: 36 * scale, height: 36 * scale, borderRadius: "50%", background: "#34A853", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 * scale, fontWeight: 600 }}>J</div>
+        </div>
+      </div>
+      {/* Toolbar */}
+      <div style={{ height: 50 * scale, background: "#FFFFFF", borderBottom: `${1 * scale}px solid #DADCE0`, display: "flex", alignItems: "center", paddingLeft: 24 * scale, gap: 18 * scale, fontSize: 14 * scale, color: D_LIGHT }}>
+        <span>↶</span><span>↷</span>
+        <div style={{ borderLeft: `${1 * scale}px solid #DADCE0`, height: 24 * scale }} />
+        <span>100% ▾</span>
+        <div style={{ borderLeft: `${1 * scale}px solid #DADCE0`, height: 24 * scale }} />
+        <span>Normal text ▾</span>
+        <span>Arial ▾</span>
+        <span>11 ▾</span>
+        <span style={{ fontWeight: 700 }}>B</span><span style={{ fontStyle: "italic" }}>I</span><span style={{ textDecoration: "underline" }}>U</span>
+      </div>
+      {/* Doc page */}
+      <div
+        style={{
+          position: "absolute",
+          left: docMarginX,
+          right: docMarginX,
+          top: 130 * scale,
+          width: docW,
+          transform: `translateY(${pageY}px)`,
+        }}
+      >
+        <div
+          style={{
+            background: "#FFFFFF",
+            padding: `${72 * scale}px ${96 * scale}px`,
+            boxShadow: `0 ${1 * scale}px ${3 * scale}px rgba(0,0,0,0.15)`,
+            fontSize: 16 * scale,
+            color: D_TEXT,
+            lineHeight: 1.6,
+            filter: `blur(${4 * scale}px)`,
+          }}
+        >
+          <div style={{ textAlign: "center", fontSize: 22 * scale, fontWeight: 700, marginBottom: 24 * scale }}>The Industrial Revolution: A Catalyst for Modern Society</div>
+          {[0, 1, 2].flatMap(() => paragraphs).map((p, i) => (
+            <p key={i} style={{ marginBottom: 14 * scale, textAlign: "justify" }}>{p}</p>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const GoogleDocs: React.FC<GoogleDocsProps> = ({
@@ -5018,7 +6506,22 @@ const GoogleDocs: React.FC<GoogleDocsProps> = ({
   opacity,
   turnInScale = 1,
   submitConfirmOpacity = 0,
+  variant = "mobile",
 }) => {
+  if (variant === "desktop") {
+    return (
+      <GoogleDocsDesktop
+        driveFrame={driveFrame}
+        fps={fps}
+        width={width}
+        height={height}
+        scale={scale}
+        opacity={opacity}
+        turnInScale={turnInScale}
+        submitConfirmOpacity={submitConfirmOpacity}
+      />
+    );
+  }
   const padX = 28 * scale;
   const navH = 100 * scale;
   const toolbarH = 70 * scale;
@@ -5973,6 +7476,11 @@ const Scene2: React.FC<Scene2Props> = ({
 
 type Scene3Props = SceneProps & {
   contentStartSec?: number;
+  /** When provided (desktop variant), backgrounds render at these
+   * full-canvas dimensions while the bubble column stays centered
+   * inside the existing `width`/`height` (the phone column). */
+  canvasWidth?: number;
+  canvasHeight?: number;
 };
 
 // Scene 3 — 5s–8s: "schedule a date with my crush"
@@ -5985,7 +7493,16 @@ const Scene3: React.FC<Scene3Props> = ({
   fadeOutAtSec,
   durationSec,
   contentStartSec = 0,
+  variant = "mobile",
+  canvasWidth,
+  canvasHeight,
 }) => {
+  // Background dimensions — full canvas in desktop, same as phone column otherwise.
+  const bgW = canvasWidth ?? width;
+  const bgH = canvasHeight ?? height;
+  // Horizontal offset of the phone column (where bubbles live) inside
+  // the wider canvas. Zero for mobile; centered for desktop.
+  const phoneColLeft = (bgW - width) / 2;
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { opacity: envOpacity, scaleEnv } = useSceneEnvelope({
@@ -7759,17 +9276,13 @@ const Scene3: React.FC<Scene3Props> = ({
             position: "absolute",
             left: 0,
             top: 0,
-            width,
-            height,
-            // Transform-origin lower-right so the card grows OUT of
-            // where an app icon would sit on the iOS home screen.
-            // The "Instagram" icon on most home screens is in the
-            // bottom rows, generally toward the right side.
-            transformOrigin: `${width * 0.78}px ${height * 0.82}px`,
+            width: bgW,
+            height: bgH,
+            transformOrigin:
+              variant === "desktop"
+                ? `${bgW * 0.5}px ${bgH * 0.5}px`
+                : `${width * 0.78}px ${height * 0.82}px`,
             transform: `translateY(${igExitDriftY}px) scale(${igOpenScale})`,
-            // Round the corners during the open so the card looks
-            // like an iOS app icon shrinking up. As the scale
-            // approaches 1, the corner radius reaches 0.
             borderRadius: igOpenRadius,
             overflow: "hidden",
             pointerEvents: "none",
@@ -7778,19 +9291,16 @@ const Scene3: React.FC<Scene3Props> = ({
           <InstagramProfile
             driveFrame={local - igFeedFadeStart}
             fps={fps}
-            width={width}
-            height={height}
+            width={bgW}
+            height={bgH}
             scale={scale}
             opacity={igFeedOpacity}
             tappedCellIndex={dwelledCellIndex}
             tappedCellScale={dwelledCellTapScale}
             focusedCellIndex={dwelledCellIndex}
             focusedCellImage={dwelledCellImage}
-            // Hide the original cell during flight — a brighter
-            // clone (rendered separately, above the IG layer) takes
-            // over. dwelledCellSourceOpacity ramps 1→0 during the
-            // flight, so the cell fades out as the clone flies away.
             tappedCellOpacity={dwelledCellSourceOpacity}
+            variant={variant}
           />
         </div>
       )}
@@ -7806,9 +9316,12 @@ const Scene3: React.FC<Scene3Props> = ({
             position: "absolute",
             left: 0,
             top: 0,
-            width,
-            height,
-            transformOrigin: `${width * 0.22}px ${height * 0.82}px`,
+            width: bgW,
+            height: bgH,
+            transformOrigin:
+              variant === "desktop"
+                ? `${bgW * 0.5}px ${bgH * 0.5}px`
+                : `${width * 0.22}px ${height * 0.82}px`,
             transform: `translateY(${amazonExitDriftY}px) scale(${amazonOpenScale})`,
             borderRadius: amazonOpenRadius,
             overflow: "hidden",
@@ -7818,11 +9331,12 @@ const Scene3: React.FC<Scene3Props> = ({
           <AmazonProduct
             driveFrame={local - amazonFadeStart}
             fps={fps}
-            width={width}
-            height={height}
+            width={bgW}
+            height={bgH}
             scale={scale}
             opacity={amazonOpacity}
             buyButtonScale={buyButtonTapScale}
+            variant={variant}
           />
         </div>
       )}
@@ -7838,9 +9352,12 @@ const Scene3: React.FC<Scene3Props> = ({
             position: "absolute",
             left: 0,
             top: 0,
-            width,
-            height,
-            transformOrigin: `${width * 0.5}px ${height * 0.85}px`,
+            width: bgW,
+            height: bgH,
+            transformOrigin:
+              variant === "desktop"
+                ? `${bgW * 0.5}px ${bgH * 0.5}px`
+                : `${width * 0.5}px ${height * 0.85}px`,
             transform: `translateY(${flightExitDriftY}px) scale(${flightOpenScale})`,
             borderRadius: flightOpenRadius,
             overflow: "hidden",
@@ -7850,18 +9367,17 @@ const Scene3: React.FC<Scene3Props> = ({
           <FlightSearch
             driveFrame={local - flightFadeStart}
             fps={fps}
-            width={width}
-            height={height}
+            width={bgW}
+            height={bgH}
             scale={scale}
             opacity={flightOpacity}
             cardTapScale={flightCardTapScale}
             tappedCardIndex={flightTappedCardIndex}
-            // Freeze scroll once the tap fires so the selected card
-            // stays in view while the confirmation overlays the page.
             scrollFreezeAtSec={
               local >= flightTapStart ? flightScrollFreezeAtSec : undefined
             }
             bookingConfirmOpacity={bookingConfirmOpacity}
+            variant={variant}
           />
         </div>
       )}
@@ -7876,9 +9392,12 @@ const Scene3: React.FC<Scene3Props> = ({
             position: "absolute",
             left: 0,
             top: 0,
-            width,
-            height,
-            transformOrigin: `${width * 0.78}px ${height * 0.18}px`,
+            width: bgW,
+            height: bgH,
+            transformOrigin:
+              variant === "desktop"
+                ? `${bgW * 0.5}px ${bgH * 0.5}px`
+                : `${width * 0.78}px ${height * 0.18}px`,
             transform: `translateY(${walletExitDriftY}px) scale(${walletOpenScale})`,
             borderRadius: walletOpenRadius,
             overflow: "hidden",
@@ -7888,13 +9407,14 @@ const Scene3: React.FC<Scene3Props> = ({
           <AppleWallet
             driveFrame={local - walletFadeStart}
             fps={fps}
-            width={width}
-            height={height}
+            width={bgW}
+            height={bgH}
             scale={scale}
             opacity={walletOpacity}
             payButtonScale={payButtonTapScale}
             paymentConfirmOpacity={paymentConfirmOpacity}
             paidLatched={walletPaidLatched}
+            variant={variant}
           />
         </div>
       )}
@@ -7909,9 +9429,12 @@ const Scene3: React.FC<Scene3Props> = ({
             position: "absolute",
             left: 0,
             top: 0,
-            width,
-            height,
-            transformOrigin: `${width * 0.22}px ${height * 0.18}px`,
+            width: bgW,
+            height: bgH,
+            transformOrigin:
+              variant === "desktop"
+                ? `${bgW * 0.5}px ${bgH * 0.5}px`
+                : `${width * 0.22}px ${height * 0.18}px`,
             transform: `translateY(${gmailExitDriftY}px) scale(${gmailOpenScale})`,
             borderRadius: gmailOpenRadius,
             overflow: "hidden",
@@ -7921,12 +9444,13 @@ const Scene3: React.FC<Scene3Props> = ({
           <GmailInbox
             driveFrame={local - gmailFadeStart}
             fps={fps}
-            width={width}
-            height={height}
+            width={bgW}
+            height={bgH}
             scale={scale}
             opacity={gmailOpacity}
             replyAllScale={replyAllScale}
             replySentOpacity={replySentOpacity}
+            variant={variant}
           />
         </div>
       )}
@@ -7941,9 +9465,12 @@ const Scene3: React.FC<Scene3Props> = ({
             position: "absolute",
             left: 0,
             top: 0,
-            width,
-            height,
-            transformOrigin: `${width * 0.5}px ${height * 0.18}px`,
+            width: bgW,
+            height: bgH,
+            transformOrigin:
+              variant === "desktop"
+                ? `${bgW * 0.5}px ${bgH * 0.5}px`
+                : `${width * 0.5}px ${height * 0.18}px`,
             transform: `translateY(${docsExitDriftY}px) scale(${docsOpenScale})`,
             borderRadius: docsOpenRadius,
             overflow: "hidden",
@@ -7953,26 +9480,29 @@ const Scene3: React.FC<Scene3Props> = ({
           <GoogleDocs
             driveFrame={local - docsFadeStart}
             fps={fps}
-            width={width}
-            height={height}
+            width={bgW}
+            height={bgH}
             scale={scale}
             opacity={docsOpacity}
             turnInScale={turnInScale}
             submitConfirmOpacity={submitConfirmOpacity}
+            variant={variant}
           />
         </div>
       )}
 
       {/* Bubble layer wrapper — applies a vertical mask so older
           bubbles fade as they ride up, while leaving the underlying
-          app background untouched. The mask's solid (visible) zone
-          starts ~38% down the canvas, with a soft falloff above so
-          the latest bubble at midline is fully crisp and bubbles
-          riding into the top third dissolve out. */}
+          app background untouched. In desktop variant, the wrapper
+          is constrained to a centered phone-shaped column so bubbles
+          stay in the middle of the wider canvas. */}
       <div
         style={{
           position: "absolute",
-          inset: 0,
+          left: phoneColLeft,
+          top: 0,
+          width,
+          height,
           pointerEvents: "none",
           WebkitMaskImage:
             "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.05) 12%, rgba(0,0,0,0.25) 22%, rgba(0,0,0,0.7) 32%, rgba(0,0,0,1) 37%, rgba(0,0,0,1) 100%)",
@@ -8607,9 +10137,9 @@ const Scene3: React.FC<Scene3Props> = ({
           <div
             style={{
               position: "absolute",
-              left: 0,
-              right: 0,
+              left: phoneColLeft,
               top: height * 0.06,
+              width,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -8685,16 +10215,23 @@ const Scene3: React.FC<Scene3Props> = ({
 };
 
 type MessagesAdContentProps = {
-  /** Layout width — drives `scale` and all positioning. May differ from the
-   * actual composition width when laying out into a sub-region (e.g. the
-   * 9:16 mobile-safe area inside a 16:9 canvas). */
+  /** Phone-column width — drives `scale` and bubble positioning. */
   layoutWidth: number;
   layoutHeight: number;
+  /** Variant — "mobile" or "desktop". */
+  variant?: Variant;
+  /** Full canvas dimensions — only used in desktop variant for the
+   * full-bleed background components. Defaults to layoutWidth/Height. */
+  canvasWidth?: number;
+  canvasHeight?: number;
 };
 
 const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
   layoutWidth,
   layoutHeight,
+  variant = "mobile",
+  canvasWidth,
+  canvasHeight,
 }) => {
   const { fps } = useVideoConfig();
   const scale = layoutWidth / 1080;
@@ -8725,6 +10262,9 @@ const MessagesAdContent: React.FC<MessagesAdContentProps> = ({
           scale={scale}
           width={layoutWidth}
           height={layoutHeight}
+          variant={variant}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
         />
       </Sequence>
     </AbsoluteFill>
@@ -8792,6 +10332,35 @@ export const MessagesAdHorizontal: React.FC<MessagesAdHorizontalProps> = ({
           safeHeight={safeHeight}
         />
       )}
+    </AbsoluteFill>
+  );
+};
+
+/**
+ * Horizontal 16:9 desktop composition. Renders desktop-style app
+ * backgrounds (web Instagram, Amazon desktop, Google Flights table,
+ * Chase web wallet, Gmail web, Google Docs web) full-bleed across
+ * the canvas, with the chat bubbles + Folk header centered in a
+ * mobile-shaped column on top.
+ */
+export const MessagesAdDesktop: React.FC = () => {
+  const { width, height } = useVideoConfig();
+
+  // Phone column inside the wider canvas. Width is sized so the
+  // bubbles render at roughly the same on-screen size as in the
+  // vertical composition.
+  const phoneColW = Math.round(height * (9 / 16));
+  const phoneColH = height;
+
+  return (
+    <AbsoluteFill style={{ background: BG_WHITE }}>
+      <MessagesAdContent
+        layoutWidth={phoneColW}
+        layoutHeight={phoneColH}
+        variant="desktop"
+        canvasWidth={width}
+        canvasHeight={height}
+      />
     </AbsoluteFill>
   );
 };
