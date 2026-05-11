@@ -4192,6 +4192,8 @@ type AppleWalletProps = {
 const AppleWalletDesktop: React.FC<
   Omit<AppleWalletProps, "variant">
 > = ({
+  driveFrame,
+  fps,
   width,
   height,
   opacity,
@@ -4204,6 +4206,17 @@ const AppleWalletDesktop: React.FC<
   const liveCountdown = interpolate(paymentConfirmOpacity, [0, 0.6], [2847.13, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const balanceCountdown = paidLatched ? 0 : liveCountdown;
   const balanceText = `$${balanceCountdown.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+
+  // Card float — gentle up/down sine bob over a 3.6s cycle, plus tiny rotation drift.
+  const t = driveFrame / fps;
+  const floatY = Math.sin(t * 1.75) * 6 * u;
+  const floatRotZ = Math.sin(t * 1.0) * 1.2;
+  const floatRotY = -8 + Math.sin(t * 0.7) * 1.5;
+  const floatRotX = 4 + Math.cos(t * 0.9) * 1;
+  // Diagonal gleam — sweeps across the card every 4s.
+  const gleamCycle = (t / 4) % 1; // 0..1
+  // Gleam X position drifts from -120% to +220% so it sweeps fully across.
+  const gleamX = -120 + gleamCycle * 340;
 
   // Aurora ambient glow.
   const AURORA = "radial-gradient(circle at 25% 30%, rgba(94, 92, 230, 0.45) 0%, transparent 45%), radial-gradient(circle at 75% 70%, rgba(255, 99, 178, 0.35) 0%, transparent 50%), radial-gradient(circle at 50% 100%, rgba(10, 132, 255, 0.4) 0%, transparent 55%)";
@@ -4253,7 +4266,8 @@ const AppleWalletDesktop: React.FC<
         <div style={{ width: 32 * u, height: 32 * u, borderRadius: "50%", background: "linear-gradient(135deg, #34C759 0%, #007AFF 100%)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 * u, fontWeight: 700 }}>J</div>
       </div>
 
-      {/* Hero card on the left — large, rotated, with iridescent shimmer */}
+      {/* Hero card on the left — large, floats with gentle bob, with
+          iridescent shimmer and an animated diagonal gleam sweep. */}
       <div
         style={{
           position: "absolute",
@@ -4263,18 +4277,33 @@ const AppleWalletDesktop: React.FC<
           height: 290 * u,
           borderRadius: 28 * u,
           background: "linear-gradient(135deg, #1F2228 0%, #3A3F47 28%, #7A8595 50%, #2D3138 78%, #0E1014 100%)",
-          boxShadow: `0 ${30 * u}px ${60 * u}px rgba(0,0,0,0.5), 0 0 0 ${1 * u}px rgba(255,255,255,0.05)`,
+          boxShadow: `0 ${30 * u + floatY * 0.6}px ${60 * u}px rgba(0,0,0,0.5), 0 0 0 ${1 * u}px rgba(255,255,255,0.05)`,
           padding: 28 * u,
           color: "#fff",
-          transform: "perspective(1200px) rotateY(-8deg) rotateX(4deg)",
+          transform: `translateY(${floatY}px) perspective(1200px) rotateY(${floatRotY}deg) rotateX(${floatRotX}deg) rotateZ(${floatRotZ * 0.3}deg)`,
           transformOrigin: "center",
           overflow: "hidden",
         }}
       >
         {/* Iridescent shimmer overlay */}
         <div style={{ position: "absolute", inset: 0, background: "conic-gradient(from 200deg at 30% 40%, rgba(122, 200, 255, 0.25), rgba(255, 180, 220, 0.20), rgba(255, 230, 160, 0.22), rgba(160, 255, 200, 0.18), rgba(180, 170, 255, 0.22), rgba(122, 200, 255, 0.25))", mixBlendMode: "screen", opacity: 0.85 }} />
-        {/* Glass sheen diagonal */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(115deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0) 70%)", mixBlendMode: "soft-light" }} />
+        {/* Static glass sheen diagonal */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(115deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0) 70%)", mixBlendMode: "soft-light" }} />
+        {/* ANIMATED diagonal gleam — bright narrow streak that sweeps L→R every 4s */}
+        <div
+          style={{
+            position: "absolute",
+            top: -50 * u,
+            left: `${gleamX}%`,
+            width: 200 * u,
+            height: 400 * u,
+            background:
+              "linear-gradient(115deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.45) 45%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0.45) 55%, rgba(255,255,255,0) 100%)",
+            transform: "skewX(-20deg)",
+            mixBlendMode: "screen",
+            pointerEvents: "none",
+          }}
+        />
         {/* Specular */}
         <div style={{ position: "absolute", left: -50 * u, top: -100 * u, width: 400 * u, height: 250 * u, background: "radial-gradient(ellipse at center, rgba(255,255,255,0.45) 0%, transparent 60%)", filter: `blur(${10 * u}px)` }} />
 
@@ -4342,13 +4371,10 @@ const AppleWalletDesktop: React.FC<
               letterSpacing: -2 * u,
               fontVariantNumeric: "tabular-nums",
               lineHeight: 1,
-              background: isPaid
-                ? "linear-gradient(135deg, #34C759 0%, #00C9A7 100%)"
-                : "linear-gradient(135deg, #FFFFFF 0%, #B8B8C8 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              filter: `drop-shadow(0 ${4 * u}px ${20 * u}px ${isPaid ? "rgba(52,199,89,0.4)" : "rgba(255,255,255,0.15)"})`,
+              color: isPaid ? "#34C759" : "#FFFFFF",
+              textShadow: isPaid
+                ? `0 ${4 * u}px ${28 * u}px rgba(52,199,89,0.45)`
+                : `0 ${4 * u}px ${24 * u}px rgba(255,255,255,0.18)`,
             }}
           >
             {balanceText}
@@ -4452,12 +4478,12 @@ const AppleWalletDesktop: React.FC<
           <div style={{ marginLeft: "auto", fontSize: 13 * u, color: "rgba(255,255,255,0.55)" }}>This week ▾</div>
         </div>
         <div style={{ display: "flex", gap: 14 * u }}>
-          {[
-            { name: "Whole Foods", icon: "groceries" as const, amount: "−$42.18", date: "Today" },
-            { name: "Uber", icon: "car" as const, amount: "−$14.50", date: "Yesterday" },
-            { name: "Spotify", icon: "music" as const, amount: "−$9.99", date: "May 5" },
-            { name: "Apple Store", icon: "shoppingBag" as const, amount: "−$29.83", date: "Apr 30" },
-          ].map((tx) => (
+          {([
+            { name: "Whole Foods", brand: "WF", bg: "#00674B", color: "#fff", amount: "−$42.18", date: "Today" },
+            { name: "Uber", brand: "Uber", bg: "#000000", color: "#fff", amount: "−$14.50", date: "Yesterday", weight: 800 },
+            { name: "Spotify", brand: "♪", bg: "#1ED760", color: "#000", amount: "−$9.99", date: "May 5" },
+            { name: "Apple Store", brand: "", bg: "#000000", color: "#fff", amount: "−$29.83", date: "Apr 30", isApple: true },
+          ] as { name: string; brand: string; bg: string; color: string; amount: string; date: string; weight?: number; isApple?: boolean }[]).map((tx) => (
             <div
               key={tx.name}
               style={{
@@ -4470,8 +4496,14 @@ const AppleWalletDesktop: React.FC<
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 10 * u }}>
-                <div style={{ width: 36 * u, height: 36 * u, borderRadius: 10 * u, background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon name={tx.icon} size={18 * u} color="#fff" strokeWidth={1.8} />
+                <div style={{ width: 40 * u, height: 40 * u, borderRadius: 10 * u, background: tx.bg, color: tx.color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: tx.weight ?? 700, fontSize: tx.brand === "♪" ? 22 * u : 14 * u, letterSpacing: -0.5 * u }}>
+                  {tx.isApple ? (
+                    <svg width={22 * u} height={26 * u} viewBox="0 0 384 512" fill="#fff">
+                      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+                    </svg>
+                  ) : (
+                    tx.brand
+                  )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14 * u, fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tx.name}</div>
