@@ -7529,6 +7529,40 @@ const GoogleDocsDesktop: React.FC<
     "In conclusion: gooning is not a crisis to be overcome, but a practice to be refined. It is a mirror in which we see, with uncomfortable clarity, our own capacity for focused attention. To dismiss it is to dismiss something essential about the male condition in late modernity. To study it is to study ourselves.",
   ];
 
+  // ── Typewriter ────────────────────────────────────────────────────
+  // Paragraph 0 always renders fully (it was "already typed" when the
+  // doc opens). Paragraphs 1+ get typed out rapid-fire over the dwell
+  // window. Fast char rate so all paragraphs land before the scroll
+  // settles on page 2.
+  const typeStart = 0.2; // begin typing shortly after open
+  const typeRate = 320; // chars per second — fast
+  const cursorBlinkPeriod = 0.4;
+  const typedSec = Math.max(0, driveSec - typeStart);
+  let charsBudget = Math.floor(typedSec * typeRate);
+  // Build visible-paragraph array: para 0 always full, then drain
+  // budget across paras 1..N.
+  const visibleParagraphs: { text: string; isTyping: boolean }[] = [];
+  for (let i = 0; i < paragraphs.length; i++) {
+    if (i === 0) {
+      visibleParagraphs.push({ text: paragraphs[i], isTyping: false });
+      continue;
+    }
+    const len = paragraphs[i].length;
+    if (charsBudget <= 0) {
+      visibleParagraphs.push({ text: "", isTyping: false });
+    } else if (charsBudget >= len) {
+      visibleParagraphs.push({ text: paragraphs[i], isTyping: false });
+      charsBudget -= len;
+    } else {
+      visibleParagraphs.push({ text: paragraphs[i].slice(0, charsBudget), isTyping: true });
+      charsBudget = 0;
+    }
+  }
+  // Cursor blink — blinks while there's still typing happening.
+  const stillTyping = visibleParagraphs.some((p) => p.isTyping);
+  const cursorOn = Math.floor(driveSec / cursorBlinkPeriod) % 2 === 0;
+  const showCursor = stillTyping && cursorOn;
+
   return (
     <div
       style={{
@@ -7715,8 +7749,8 @@ const GoogleDocsDesktop: React.FC<
             <div style={{ fontSize: 13 * u, fontStyle: "italic", color: D_LIGHT, textAlign: "center", marginBottom: 28 * u }}>
               {docSubtitle}
             </div>
-            {/* First half of paragraphs */}
-            {paragraphs.slice(0, Math.ceil(paragraphs.length / 2)).map((p, i) => (
+            {/* First half of paragraphs — typed live (para 0 always full) */}
+            {visibleParagraphs.slice(0, Math.ceil(paragraphs.length / 2)).map((vp, i) => (
               <p
                 key={i}
                 style={{
@@ -7729,7 +7763,19 @@ const GoogleDocsDesktop: React.FC<
                   textAlign: "justify",
                 }}
               >
-                {p}
+                {vp.text}
+                {vp.isTyping && showCursor && (
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: 2 * u,
+                      height: 14 * u,
+                      background: D_TEXT,
+                      marginLeft: 1 * u,
+                      transform: "translateY(2px)",
+                    }}
+                  />
+                )}
               </p>
             ))}
             <div style={{ textAlign: "center", marginTop: 36 * u, fontSize: 11 * u, color: D_LIGHT }}>1</div>
@@ -7748,8 +7794,8 @@ const GoogleDocsDesktop: React.FC<
               fontFamily: "'Times New Roman', 'Georgia', serif",
             }}
           >
-            {/* Second half of paragraphs */}
-            {paragraphs.slice(Math.ceil(paragraphs.length / 2)).map((p, i) => (
+            {/* Second half of paragraphs — typed live */}
+            {visibleParagraphs.slice(Math.ceil(paragraphs.length / 2)).map((vp, i) => (
               <p
                 key={i}
                 style={{
@@ -7762,7 +7808,19 @@ const GoogleDocsDesktop: React.FC<
                   textAlign: "justify",
                 }}
               >
-                {p}
+                {vp.text}
+                {vp.isTyping && showCursor && (
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: 2 * u,
+                      height: 14 * u,
+                      background: D_TEXT,
+                      marginLeft: 1 * u,
+                      transform: "translateY(2px)",
+                    }}
+                  />
+                )}
               </p>
             ))}
             <div style={{ textAlign: "center", marginTop: 36 * u, fontSize: 11 * u, color: D_LIGHT }}>2</div>
