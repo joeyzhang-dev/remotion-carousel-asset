@@ -7471,14 +7471,16 @@ const GoogleDocsDesktop: React.FC<
   const maxScroll = Math.max(0, totalContentH - visibleH);
   // Dwell at ~75% of the available scroll so we end up firmly on page 2.
   const dwellTarget = Math.min(maxScroll, maxScroll * 0.75);
+  // Slowed scroll so it finishes roughly in sync with the typewriter
+  // (which lands ~5.2s in). Was 0.6 → 3.4s; now 0.6 → 5.5s.
   let baseScroll = 0;
-  if (driveSec >= 0.6 && driveSec < 3.4) {
-    baseScroll = interpolate(driveSec, [0.6, 3.4], [0, dwellTarget], {
+  if (driveSec >= 0.6 && driveSec < 5.5) {
+    baseScroll = interpolate(driveSec, [0.6, 5.5], [0, dwellTarget], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
       easing: Easing.inOut(Easing.cubic),
     });
-  } else if (driveSec >= 3.4) {
+  } else if (driveSec >= 5.5) {
     baseScroll = dwellTarget;
   }
   const pageY = -baseScroll;
@@ -7515,7 +7517,7 @@ const GoogleDocsDesktop: React.FC<
   // window. Fast char rate so all paragraphs land before the scroll
   // settles on page 2.
   const typeStart = 0.2; // begin typing shortly after open
-  const typeRate = 320; // chars per second — fast
+  const typeRate = 600; // chars per second — fast, paced to the scroll
   const cursorBlinkPeriod = 0.4;
   const typedSec = Math.max(0, driveSec - typeStart);
   let charsBudget = Math.floor(typedSec * typeRate);
