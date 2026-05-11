@@ -4221,8 +4221,21 @@ const AppleWalletDesktop: React.FC<
   paidLatched = false,
 }) => {
   const u = width / 1280;
-  const isPaid = paidLatched || paymentConfirmOpacity > 0.4;
-  const liveCountdown = interpolate(paymentConfirmOpacity, [0, 0.6], [2847.13, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const isPaid = paidLatched || paymentConfirmOpacity > 0.7;
+  // Slow the balance countdown: hold at full until the confirm sheet
+  // is well-formed (0.4), then slowly tick down to 0 over the rest of
+  // the toast window (0.4 → 1.0). Cubic ease-in-out so the change
+  // feels paced rather than instant.
+  const liveCountdown = interpolate(
+    paymentConfirmOpacity,
+    [0, 0.4, 1.0],
+    [2847.13, 2847.13, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    },
+  );
   const balanceCountdown = paidLatched ? 0 : liveCountdown;
   const balanceText = `$${balanceCountdown.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 
@@ -6070,7 +6083,9 @@ const GmailInboxDesktop: React.FC<
         ))}
       </div>
 
-      {/* Inbox column — emails list with active highlighted */}
+      {/* Inbox column — emails list with active highlighted; the
+          list itself scrolls down as new emails are focused so there's
+          continuous visual motion. */}
       <div
         style={{
           position: "absolute",
@@ -6084,35 +6099,54 @@ const GmailInboxDesktop: React.FC<
           overflow: "hidden",
         }}
       >
-        {/* Mini toolbar */}
-        <div style={{ height: 44 * u, padding: `0 ${16 * u}px`, display: "flex", alignItems: "center", gap: 14 * u, color: G_LIGHT }}>
+        {/* Mini toolbar (sticky on top, doesn't scroll) */}
+        <div style={{ height: 44 * u, padding: `0 ${16 * u}px`, display: "flex", alignItems: "center", gap: 14 * u, color: G_LIGHT, borderBottom: `${1 * u}px solid #F0F2F5`, background: "#fff", position: "relative", zIndex: 1 }}>
           <Icon name="check" size={16 * u} color={G_LIGHT} strokeWidth={1.5} />
           <Icon name="chevronDown" size={16 * u} color={G_LIGHT} strokeWidth={1.6} />
           <Icon name="moreVert" size={16 * u} color={G_LIGHT} />
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: 12 * u }}>1–47 of 4,283</span>
         </div>
-        {mails.map((m, i) => {
-          const isActive = i === activeIdx;
+        {/* Scrolling list — pushed up as activeIdx advances so the
+            active row stays roughly mid-column. */}
+        {(() => {
+          const rowH = 80 * u; // approx row height (3 lines + padding + border)
+          // Keep the first ~3 rows in view, then start scrolling.
+          const scrollOffset = Math.max(0, (idxFloat - 2.5) * rowH);
           return (
             <div
-              key={i}
               style={{
-                padding: `${12 * u}px ${16 * u}px`,
-                borderBottom: `${1 * u}px solid #F0F2F5`,
-                background: isActive ? "#E8F0FE" : "transparent",
-                borderLeft: isActive ? `${3 * u}px solid ${G_BLUE}` : `${3 * u}px solid transparent`,
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: 44 * u,
+                transform: `translateY(${-scrollOffset}px)`,
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 * u }}>
-                <div style={{ fontSize: 15 * u, fontWeight: m.unread ? 700 : 500, color: G_TEXT }}>{m.name}</div>
-                <div style={{ fontSize: 12 * u, color: G_LIGHT }}>{m.time}</div>
-              </div>
-              <div style={{ fontSize: 14 * u, color: G_TEXT, fontWeight: m.unread ? 600 : 400, marginBottom: 2 * u, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.subject}</div>
-              <div style={{ fontSize: 12 * u, color: G_LIGHT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.snippet}</div>
+              {mails.map((m, i) => {
+                const isActive = i === activeIdx;
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      padding: `${12 * u}px ${16 * u}px`,
+                      borderBottom: `${1 * u}px solid #F0F2F5`,
+                      background: isActive ? "#E8F0FE" : "transparent",
+                      borderLeft: isActive ? `${3 * u}px solid ${G_BLUE}` : `${3 * u}px solid transparent`,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 * u }}>
+                      <div style={{ fontSize: 15 * u, fontWeight: m.unread ? 700 : 500, color: G_TEXT }}>{m.name}</div>
+                      <div style={{ fontSize: 12 * u, color: G_LIGHT }}>{m.time}</div>
+                    </div>
+                    <div style={{ fontSize: 14 * u, color: G_TEXT, fontWeight: m.unread ? 600 : 400, marginBottom: 2 * u, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.subject}</div>
+                    <div style={{ fontSize: 12 * u, color: G_LIGHT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.snippet}</div>
+                  </div>
+                );
+              })}
             </div>
           );
-        })}
+        })()}
       </div>
 
       {/* Reading pane — BIG */}
