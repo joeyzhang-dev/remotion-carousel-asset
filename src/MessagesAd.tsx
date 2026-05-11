@@ -1470,9 +1470,12 @@ type AmazonProductProps = {
 
 const AmazonProductDesktop: React.FC<
   Omit<AmazonProductProps, "variant">
-> = ({ driveFrame, fps, width, height, scale, opacity, buyButtonScale = 1 }) => {
+> = ({ driveFrame, fps, width, height, opacity, buyButtonScale = 1 }) => {
+  // Use canvas-relative units so the page reads at desktop scale,
+  // not the (smaller) phone-column scale.
+  const u = width / 1280;
   const driveSec = driveFrame / fps;
-  const totalContentH = height + 600 * scale;
+  const totalContentH = height + 600 * u;
   const maxScroll = Math.max(0, totalContentH - height);
   const dwellTarget = Math.min(maxScroll, maxScroll * 0.4);
   let baseScroll = 0;
@@ -1492,6 +1495,10 @@ const AmazonProductDesktop: React.FC<
   const AMAZON_ORANGE = "#FF9900";
   const AMAZON_YELLOW = "#FFD814";
   const SUB_NAV_BG = "#232F3E";
+  const TEXT = "#0F1111";
+  const LINK = "#007185";
+  const MUTED = "#565959";
+  const BORDER = "#E7E7E7";
 
   return (
     <div
@@ -1506,7 +1513,7 @@ const AmazonProductDesktop: React.FC<
         pointerEvents: "none",
         background: "#FFFFFF",
         fontFamily: FONT_STACK,
-        filter: `blur(${1 * scale}px) brightness(0.99)`,
+        filter: `blur(${0.6 * u}px) brightness(0.99)`,
       }}
     >
       {/* Top nav bar */}
@@ -1516,75 +1523,50 @@ const AmazonProductDesktop: React.FC<
           left: 0,
           top: 0,
           width,
-          height: 90 * scale,
+          height: 60 * u,
           background: NAV_BG,
           display: "flex",
           alignItems: "center",
-          paddingLeft: 32 * scale,
-          paddingRight: 32 * scale,
-          gap: 24 * scale,
+          paddingLeft: 16 * u,
+          paddingRight: 16 * u,
+          gap: 14 * u,
         }}
       >
-        <div
-          style={{
-            color: NAV_LINK,
-            fontSize: 36 * scale,
-            fontWeight: 700,
-            letterSpacing: -1 * scale,
-          }}
-        >
+        <div style={{ color: NAV_LINK, fontSize: 26 * u, fontWeight: 700, letterSpacing: -0.5 * u }}>
           amazon
         </div>
-        <div
-          style={{
-            color: NAV_LINK,
-            fontSize: 14 * scale,
-            opacity: 0.85,
-          }}
-        >
-          Deliver to<br/><strong style={{fontSize: 16 * scale}}>San Francisco 94110</strong>
+        <div style={{ color: NAV_LINK, fontSize: 11 * u, opacity: 0.85, lineHeight: 1.2 }}>
+          Deliver to<br/><strong style={{ fontSize: 13 * u }}>San Francisco 94110</strong>
         </div>
-        <div
-          style={{
-            flex: 1,
-            height: 50 * scale,
-            background: "#fff",
-            borderRadius: 6 * scale,
-            display: "flex",
-            alignItems: "center",
-            paddingLeft: 16 * scale,
-            fontSize: 16 * scale,
-            color: "#888",
-          }}
-        >
+        <div style={{ flex: 1, height: 38 * u, background: "#fff", borderRadius: 6 * u, display: "flex", alignItems: "center", paddingLeft: 12 * u, fontSize: 13 * u, color: "#888" }}>
           red rose bouquet pink ribbon
         </div>
-        <div style={{ color: NAV_LINK, fontSize: 14 * scale }}>
-          Hello, Joey<br/><strong style={{fontSize: 16 * scale}}>Account & Lists</strong>
+        <div style={{ color: NAV_LINK, fontSize: 11 * u, lineHeight: 1.2 }}>
+          Hello, Joey<br/><strong style={{ fontSize: 13 * u }}>Account & Lists</strong>
         </div>
-        <div style={{ color: NAV_LINK, fontSize: 14 * scale }}>
-          Returns<br/><strong style={{fontSize: 16 * scale}}>& Orders</strong>
+        <div style={{ color: NAV_LINK, fontSize: 11 * u, lineHeight: 1.2 }}>
+          Returns<br/><strong style={{ fontSize: 13 * u }}>& Orders</strong>
         </div>
-        <div style={{ color: NAV_LINK, fontSize: 18 * scale, fontWeight: 700 }}>Cart</div>
+        <div style={{ color: NAV_LINK, fontSize: 14 * u, fontWeight: 700 }}>🛒 Cart</div>
       </div>
       {/* Sub nav */}
       <div
         style={{
           position: "absolute",
           left: 0,
-          top: 90 * scale,
+          top: 60 * u,
           width,
-          height: 50 * scale,
+          height: 36 * u,
           background: SUB_NAV_BG,
           display: "flex",
           alignItems: "center",
-          gap: 24 * scale,
-          paddingLeft: 32 * scale,
+          gap: 18 * u,
+          paddingLeft: 16 * u,
           color: NAV_LINK,
-          fontSize: 16 * scale,
+          fontSize: 12 * u,
         }}
       >
-        {["All", "Today's Deals", "Customer Service", "Registry", "Gift Cards", "Sell"].map((l) => (
+        {["≡ All", "Today's Deals", "Customer Service", "Registry", "Gift Cards", "Sell"].map((l) => (
           <span key={l}>{l}</span>
         ))}
       </div>
@@ -1594,138 +1576,233 @@ const AmazonProductDesktop: React.FC<
         style={{
           position: "absolute",
           left: 0,
-          top: 160 * scale,
+          top: 96 * u,
           width,
           transform: `translateY(${pageY}px)`,
         }}
       >
         {/* Breadcrumb */}
-        <div style={{ padding: `${16 * scale}px ${48 * scale}px`, fontSize: 14 * scale, color: "#0066C0" }}>
-          Home & Kitchen › Home Décor › Artificial Flowers › Bouquets › <strong style={{ color: "#000" }}>FloraVie Red Rose Bouquet</strong>
+        <div style={{ padding: `${10 * u}px ${24 * u}px`, fontSize: 11 * u, color: LINK }}>
+          Home & Kitchen › Home Décor › Artificial Flowers › Bouquets › <strong style={{ color: TEXT }}>FloraVie Red Rose Bouquet</strong>
         </div>
-        {/* Two-column product layout */}
+        {/* Three-column product layout */}
         <div
           style={{
             display: "flex",
-            gap: 36 * scale,
-            paddingLeft: 48 * scale,
-            paddingRight: 48 * scale,
+            gap: 24 * u,
+            paddingLeft: 24 * u,
+            paddingRight: 24 * u,
           }}
         >
-          {/* LEFT: gallery */}
-          <div style={{ width: width * 0.4, display: "flex", flexDirection: "column", gap: 16 * scale }}>
-            <div
-              style={{
-                width: "100%",
-                aspectRatio: "1",
-                background: "#F0F0EB",
-                borderRadius: 4 * scale,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: `${1 * scale}px solid #E7E7E7`,
-              }}
-            >
-              <Img
-                src={staticFile("roses-bouquet.jpg")}
-                style={{ width: "85%", height: "85%", objectFit: "contain" }}
-              />
-            </div>
-            <div style={{ display: "flex", gap: 8 * scale }}>
-              {[0, 1, 2, 3, 4].map((i) => (
+          {/* LEFT: gallery (with thumb rail beside main image) */}
+          <div style={{ width: 380 * u, display: "flex", gap: 10 * u }}>
+            {/* Thumbnail rail */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 * u, width: 50 * u }}>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
                 <div
                   key={i}
                   style={{
-                    width: 70 * scale,
-                    height: 70 * scale,
-                    border: i === 0 ? `${2 * scale}px solid #E47911` : `${1 * scale}px solid #DDD`,
-                    borderRadius: 4 * scale,
-                    background: ["#FCE4EC", "#C2185B", "#7A4F36", "#FFB6C1", "#000000"][i],
+                    width: 50 * u,
+                    height: 50 * u,
+                    border: i === 0 ? `${2 * u}px solid #E47911` : `${1 * u}px solid #DDD`,
+                    borderRadius: 4 * u,
+                    background: ["#FCE4EC", "#C2185B", "#7A4F36", "#FFB6C1", "#FFE4E1", "#000"][i],
                   }}
                 />
               ))}
             </div>
+            {/* Main image */}
+            <div
+              style={{
+                flex: 1,
+                aspectRatio: "1",
+                background: "#F8F8F8",
+                borderRadius: 4 * u,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: `${1 * u}px solid ${BORDER}`,
+              }}
+            >
+              <Img
+                src={staticFile("roses-bouquet.jpg")}
+                style={{ width: "92%", height: "92%", objectFit: "contain" }}
+              />
+            </div>
           </div>
-          {/* CENTER: title + rating + price + buy */}
-          <div style={{ flex: 1, paddingTop: 8 * scale }}>
-            <div style={{ fontSize: 14 * scale, color: "#0066C0", marginBottom: 6 * scale }}>
-              Visit the FloraVie Store
+          {/* CENTER: long title + offers + color swatches + about block */}
+          <div style={{ flex: 1, paddingTop: 4 * u, fontSize: 13 * u, color: TEXT, lineHeight: 1.4 }}>
+            <div style={{ fontSize: 22 * u, fontWeight: 400, color: TEXT, lineHeight: 1.2, marginBottom: 8 * u }}>
+              FloraVie 12 Preserved Real Roses Bouquet for Mother's Day, Gifts for Wife, Mom, Grandma & Girlfriend — Red Roses That Last Years for Delivery, Anniversary & Birthday Present for Her
             </div>
-            <div style={{ fontSize: 32 * scale, fontWeight: 400, color: "#0F1111", lineHeight: 1.2, marginBottom: 12 * scale }}>
-              FloraVie Fresh Red Rose Bouquet (8 Stems) — Pink Ribbon Wrap, Same-Day Delivery
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 * scale, marginBottom: 12 * scale }}>
-              <div style={{ display: "flex", gap: 2 * scale }}>
+            <div style={{ fontSize: 12 * u, color: LINK, marginBottom: 6 * u }}>Visit the FloraVie Store</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 * u, marginBottom: 4 * u }}>
+              <div style={{ display: "flex", gap: 1.5 * u }}>
                 {[0, 1, 2, 3, 4].map((i) => (
-                  <div key={i} style={{ width: 22 * scale, height: 22 * scale, background: AMAZON_ORANGE, clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)" }} />
+                  <div key={i} style={{ width: 14 * u, height: 14 * u, background: AMAZON_ORANGE, clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)" }} />
                 ))}
               </div>
-              <span style={{ fontSize: 14 * scale, color: "#0066C0" }}>8,427 ratings</span>
+              <span style={{ fontSize: 12 * u, color: LINK }}>4.5 ★★★★★ (681)</span>
             </div>
-            <div style={{ borderTop: `${1 * scale}px solid #E7E7E7`, paddingTop: 16 * scale }}>
-              <div style={{ fontSize: 14 * scale, color: "#565959", textDecoration: "line-through" }}>List Price: $24.99</div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 6 * scale, marginTop: 4 * scale }}>
-                <span style={{ fontSize: 18 * scale, color: "#B12704" }}>$</span>
-                <span style={{ fontSize: 48 * scale, color: "#B12704", fontWeight: 400, lineHeight: 1 }}>17</span>
-                <span style={{ fontSize: 22 * scale, color: "#B12704" }}>.49</span>
+            <div style={{ fontSize: 11 * u, color: MUTED, marginBottom: 10 * u }}>
+              2k+ bought in past month
+            </div>
+            <div style={{ borderTop: `${1 * u}px solid ${BORDER}`, paddingTop: 10 * u }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 4 * u }}>
+                <span style={{ fontSize: 14 * u, color: TEXT }}>$</span>
+                <span style={{ fontSize: 32 * u, color: TEXT, fontWeight: 400, lineHeight: 1 }}>59</span>
+                <sup style={{ fontSize: 14 * u, color: TEXT }}>99</sup>
               </div>
-              <div style={{ fontSize: 14 * scale, color: "#565959", marginTop: 6 * scale }}>FREE delivery <strong>tomorrow</strong></div>
+              <div style={{ fontSize: 11 * u, color: TEXT, marginTop: 4 * u }}>FREE Returns ▾</div>
+              <div style={{ marginTop: 8 * u, padding: `${6 * u}px ${10 * u}px`, background: "#F7FFF8", border: `${1 * u}px solid #C8E6C9`, borderRadius: 4 * u, fontSize: 11 * u, color: TEXT }}>
+                Get a $50 Amazon Gift Card instantly upon approval for Amazon Visa. <span style={{ color: LINK }}>No annual fee</span>.
+              </div>
+            </div>
+            {/* Color swatches row */}
+            <div style={{ marginTop: 14 * u }}>
+              <div style={{ fontSize: 12 * u, color: TEXT }}>
+                Color: <strong>Preserved Red Roses Bouquet - 12 Roses</strong>
+              </div>
+              <div style={{ display: "flex", gap: 6 * u, marginTop: 6 * u }}>
+                {[
+                  { bg: "#C2185B", price: "$59.99" },
+                  { bg: "#FFB6C1", price: "$59.74" },
+                  { bg: "#FCE4EC", price: "$54.99" },
+                  { bg: "#FFE4E1", price: "$49.99" },
+                ].map((s, i) => (
+                  <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", border: i === 0 ? `${2 * u}px solid #E47911` : `${1 * u}px solid #DDD`, borderRadius: 4 * u, padding: 4 * u, width: 64 * u }}>
+                    <div style={{ width: 56 * u, height: 56 * u, borderRadius: 2 * u, background: s.bg }} />
+                    <div style={{ fontSize: 10 * u, color: TEXT, marginTop: 2 * u }}>{s.price}</div>
+                  </div>
+                ))}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: `${1 * u}px solid #DDD`, borderRadius: 4 * u, padding: 4 * u, width: 64 * u, fontSize: 10 * u, color: TEXT, lineHeight: 1.2 }}>
+                  See 12<br/>options<br/>with this<br/>featured<br/>offers
+                </div>
+              </div>
+            </div>
+            {/* "Bundles with this item" placeholder */}
+            <div style={{ marginTop: 16 * u, padding: `${10 * u}px 0`, borderTop: `${1 * u}px solid ${BORDER}`, borderBottom: `${1 * u}px solid ${BORDER}`, fontSize: 13 * u, color: TEXT, fontWeight: 600, display: "flex", justifyContent: "space-between" }}>
+              <span>Bundles with this item</span>
+              <span style={{ color: MUTED, fontWeight: 400 }}>▾</span>
+            </div>
+            {/* Spec table */}
+            <div style={{ marginTop: 12 * u, fontSize: 12 * u, color: TEXT }}>
+              {[
+                ["Brand", "FloraVie"],
+                ["Plant or Animal", "Zero maintenance: No water or sunlight needed"],
+                ["Product Type", "Preserved Red Roses Bouquet · 12 Roses"],
+                ["Color", "Preserved Red Roses Bouquet · 12 Roses"],
+                ["Number of Items", "1"],
+                ["Item dimensions L×W×H", "6.3 × 11.22 × 16.14 inches"],
+              ].map(([k, v]) => (
+                <div key={k} style={{ display: "flex", padding: `${4 * u}px 0`, borderBottom: `${1 * u}px solid #F4F4F4` }}>
+                  <div style={{ width: 130 * u, fontWeight: 700 }}>{k}</div>
+                  <div style={{ flex: 1, color: MUTED }}>{v}</div>
+                </div>
+              ))}
+            </div>
+            {/* About this item */}
+            <div style={{ marginTop: 18 * u, fontSize: 14 * u, fontWeight: 700, color: TEXT, marginBottom: 6 * u }}>
+              About this item
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 16 * u, fontSize: 12 * u, color: TEXT, lineHeight: 1.6 }}>
+              <li>Mother's Day Gifts for Her: Make her smile this Mother's Day with a gift she'll treasure for years.</li>
+              <li>Real preserved red roses arranged by hand with kraft paper and pink satin ribbon.</li>
+              <li>Zero maintenance — no water, no sunlight needed.</li>
+              <li>Includes complimentary care card and a handwritten note option at checkout.</li>
+            </ul>
+          </div>
+          {/* RIGHT: Prime + buy box */}
+          <div style={{ width: 230 * u, display: "flex", flexDirection: "column", gap: 10 * u }}>
+            {/* Prime banner */}
+            <div style={{ border: `${1 * u}px solid ${BORDER}`, borderRadius: 8 * u, padding: 12 * u, fontSize: 11 * u, color: TEXT, lineHeight: 1.4 }}>
+              <div style={{ fontSize: 16 * u, color: "#1399FF", fontWeight: 700, fontStyle: "italic" }}>prime</div>
+              <div style={{ marginTop: 4 * u }}>Enjoy fast, free delivery, exclusive deals, and award-winning movies & TV shows.</div>
+              <div style={{ marginTop: 4 * u, color: LINK }}>Join Prime</div>
+            </div>
+            {/* Main buy box */}
+            <div style={{ border: `${1 * u}px solid #D5D9D9`, borderRadius: 8 * u, padding: 12 * u }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 4 * u }}>
+                <span style={{ fontSize: 12 * u, color: TEXT }}>$</span>
+                <span style={{ fontSize: 30 * u, color: TEXT, fontWeight: 400, lineHeight: 1 }}>59</span>
+                <sup style={{ fontSize: 12 * u, color: TEXT }}>99</sup>
+              </div>
+              <div style={{ fontSize: 11 * u, color: TEXT, marginTop: 6 * u }}>
+                FREE delivery <strong>Saturday, May 16</strong>
+              </div>
+              <div style={{ fontSize: 11 * u, color: TEXT, marginTop: 4 * u }}>
+                Or Prime members get FREE delivery <strong>Wednesday, May 13</strong>. <span style={{ color: LINK }}>Join Prime</span>
+              </div>
+              <div style={{ marginTop: 8 * u, padding: 6 * u, background: "#F7F8F8", borderRadius: 4 * u, fontSize: 11 * u, color: TEXT }}>
+                <div>📍 Delivering to Duluth 30097</div>
+                <div style={{ color: LINK, marginTop: 2 * u }}>Update location</div>
+              </div>
+              <div style={{ marginTop: 8 * u, fontSize: 12 * u, color: "#007600", fontWeight: 700 }}>
+                Only 13 left in stock - order soon.
+              </div>
+              <div style={{ marginTop: 10 * u, padding: `${6 * u}px ${10 * u}px`, background: "#F0F2F2", borderRadius: 6 * u, fontSize: 12 * u, color: TEXT, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span>Quantity: 1</span>
+                <span style={{ color: MUTED }}>▾</span>
+              </div>
+              <div
+                style={{
+                  marginTop: 10 * u,
+                  padding: `${8 * u}px`,
+                  borderRadius: 999,
+                  background: AMAZON_YELLOW,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 13 * u,
+                  fontWeight: 500,
+                  color: TEXT,
+                  border: `${1 * u}px solid #FCD200`,
+                }}
+              >
+                Add to Cart
+              </div>
+              <div
+                style={{
+                  marginTop: 6 * u,
+                  padding: `${8 * u}px`,
+                  borderRadius: 999,
+                  background: AMAZON_ORANGE,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 13 * u,
+                  fontWeight: 500,
+                  color: TEXT,
+                  border: `${1 * u}px solid #FF8F00`,
+                  transform: `scale(${buyButtonScale})`,
+                  transformOrigin: "center",
+                }}
+              >
+                Buy Now
+              </div>
+              <div style={{ marginTop: 12 * u, fontSize: 11 * u, color: TEXT, lineHeight: 1.6 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: MUTED }}>Ships from</span><span>Amazon</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: MUTED }}>Sold by</span><span>FloraVie</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: MUTED }}>Returns</span><span style={{ color: LINK }}>FREE 30-day refund/replacement</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: MUTED }}>Payment</span><span>Secure transaction</span></div>
+                <div style={{ color: LINK, marginTop: 4 * u }}>+ See more</div>
+              </div>
+              <div
+                style={{
+                  marginTop: 12 * u,
+                  padding: `${6 * u}px`,
+                  borderRadius: 999,
+                  background: "#F7F8F8",
+                  border: `${1 * u}px solid #D5D9D9`,
+                  textAlign: "center",
+                  fontSize: 12 * u,
+                  color: TEXT,
+                }}
+              >
+                Add to List
+              </div>
             </div>
           </div>
-          {/* RIGHT: buy box */}
-          <div style={{ width: 260 * scale, border: `${1 * scale}px solid #D5D9D9`, borderRadius: 8 * scale, padding: 18 * scale, height: "fit-content" }}>
-            <div style={{ fontSize: 22 * scale, color: "#B12704", fontWeight: 400 }}>$17.49</div>
-            <div style={{ fontSize: 14 * scale, color: "#565959", marginTop: 6 * scale }}>FREE Returns</div>
-            <div style={{ fontSize: 14 * scale, color: "#0F1111", marginTop: 14 * scale, lineHeight: 1.4 }}>
-              <div style={{ color: "#007600", fontWeight: 600 }}>In Stock</div>
-              <div style={{ marginTop: 8 * scale }}>Qty: <span style={{ background: "#F0F2F2", padding: "2px 8px", borderRadius: 4 * scale }}>1 ▾</span></div>
-            </div>
-            <div
-              style={{
-                marginTop: 14 * scale,
-                padding: `${10 * scale}px`,
-                borderRadius: 999,
-                background: AMAZON_YELLOW,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 14 * scale,
-                fontWeight: 500,
-                color: "#0F1111",
-                border: `${1 * scale}px solid #FCD200`,
-              }}
-            >
-              Add to Cart
-            </div>
-            <div
-              style={{
-                marginTop: 8 * scale,
-                padding: `${10 * scale}px`,
-                borderRadius: 999,
-                background: AMAZON_ORANGE,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 14 * scale,
-                fontWeight: 500,
-                color: "#0F1111",
-                border: `${1 * scale}px solid #FF8F00`,
-                transform: `scale(${buyButtonScale})`,
-                transformOrigin: "center",
-              }}
-            >
-              Buy Now
-            </div>
-          </div>
-        </div>
-        {/* Description block */}
-        <div style={{ padding: `${36 * scale}px ${48 * scale}px`, fontSize: 14 * scale, color: "#565959", lineHeight: 1.6 }}>
-          <div style={{ fontSize: 18 * scale, color: "#0F1111", fontWeight: 700, marginBottom: 8 * scale }}>About this item</div>
-          • 8 fresh-cut red roses, individually wrapped<br/>
-          • Pink ribbon and kraft paper presentation<br/>
-          • Same-day delivery available within local zones<br/>
-          • Includes complimentary care card and floral preservative<br/>
-          • Hand-arranged for date-night, anniversary, or just-because moments
         </div>
       </div>
     </div>
@@ -3860,19 +3937,19 @@ const AppleWalletDesktop: React.FC<
 > = ({
   width,
   height,
-  scale,
   opacity,
   payButtonScale = 1,
   paymentConfirmOpacity = 0,
   paidLatched = false,
 }) => {
+  const u = width / 1280;
   const isPaid = paidLatched || paymentConfirmOpacity > 0.4;
   const liveCountdown = interpolate(paymentConfirmOpacity, [0, 0.6], [2847.13, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const balanceCountdown = paidLatched ? 0 : liveCountdown;
   const balanceText = `$${balanceCountdown.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 
-  const SIDEBAR_W = 280 * scale;
-  const CHASE_BLUE = "#117ACA";
+  // Aurora ambient glow.
+  const AURORA = "radial-gradient(circle at 25% 30%, rgba(94, 92, 230, 0.45) 0%, transparent 45%), radial-gradient(circle at 75% 70%, rgba(255, 99, 178, 0.35) 0%, transparent 50%), radial-gradient(circle at 50% 100%, rgba(10, 132, 255, 0.4) 0%, transparent 55%)";
 
   return (
     <div
@@ -3885,158 +3962,248 @@ const AppleWalletDesktop: React.FC<
         overflow: "hidden",
         opacity,
         pointerEvents: "none",
-        background: "#F2F4F7",
+        background: "#0A0E18",
         fontFamily: FONT_STACK,
-        filter: `blur(${1 * scale}px) brightness(0.99)`,
+        filter: `blur(${0.5 * u}px) brightness(0.98)`,
       }}
     >
-      {/* Top Chase nav */}
+      {/* Aurora backdrop */}
+      <div style={{ position: "absolute", inset: 0, background: AURORA }} />
+
+      {/* Floating top header — Folk wordmark left, glassy nav links + avatar right */}
       <div
         style={{
           position: "absolute",
-          left: 0,
-          top: 0,
-          width,
-          height: 70 * scale,
-          background: CHASE_BLUE,
+          left: 32 * u,
+          right: 32 * u,
+          top: 24 * u,
           display: "flex",
           alignItems: "center",
-          paddingLeft: 32 * scale,
-          paddingRight: 32 * scale,
+          gap: 14 * u,
           color: "#fff",
-          fontSize: 22 * scale,
-          fontWeight: 700,
-          letterSpacing: -0.4 * scale,
-          gap: 32 * scale,
         }}
       >
-        CHASE
-        <span style={{ fontSize: 16 * scale, fontWeight: 400, opacity: 0.9 }}>Accounts</span>
-        <span style={{ fontSize: 16 * scale, fontWeight: 400, opacity: 0.9 }}>Pay & transfer</span>
-        <span style={{ fontSize: 16 * scale, fontWeight: 400, opacity: 0.9 }}>Plan & track</span>
-        <span style={{ fontSize: 16 * scale, fontWeight: 400, opacity: 0.9 }}>Investments</span>
-        <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 14 * scale, fontWeight: 400 }}>Hello, Joey</span>
-        <span style={{ fontSize: 14 * scale, fontWeight: 400 }}>Sign out</span>
-      </div>
-
-      {/* Sidebar with cards list */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 70 * scale,
-          width: SIDEBAR_W,
-          bottom: 0,
-          background: "#FFFFFF",
-          borderRight: `${1 * scale}px solid #E0E4EB`,
-          padding: 24 * scale,
-          display: "flex",
-          flexDirection: "column",
-          gap: 14 * scale,
-        }}
-      >
-        <div style={{ fontSize: 14 * scale, color: "#5F6677", fontWeight: 600, letterSpacing: 1 * scale }}>YOUR CARDS</div>
-        {[{ name: "Sapphire Reserve", num: "4829", active: true }, { name: "Freedom Unlimited", num: "1147", active: false }, { name: "Slate Edge", num: "8821", active: false }].map((c) => (
-          <div
-            key={c.num}
-            style={{
-              padding: 14 * scale,
-              borderRadius: 10 * scale,
-              border: `${c.active ? 2 * scale : 1 * scale}px solid ${c.active ? CHASE_BLUE : "#E0E4EB"}`,
-              background: c.active ? "#F0F7FF" : "#FFFFFF",
-              fontSize: 14 * scale,
-              color: "#1A1F2E",
-            }}
-          >
-            <div style={{ fontWeight: 600 }}>{c.name}</div>
-            <div style={{ fontSize: 13 * scale, color: "#5F6677", marginTop: 2 * scale }}>···· {c.num}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 * u }}>
+          <div style={{ width: 36 * u, height: 36 * u, borderRadius: 8 * u, background: "rgba(255,255,255,0.12)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Img src={staticFile("folk-mark.png")} style={{ width: 22 * u, height: 22 * u, filter: "brightness(0) invert(1)" }} />
           </div>
+          <div style={{ fontSize: 18 * u, fontWeight: 700, letterSpacing: -0.3 * u }}>folk pay</div>
+        </div>
+        <div style={{ flex: 1 }} />
+        {["Cards", "Activity", "Send", "Settings"].map((l) => (
+          <div key={l} style={{ fontSize: 13 * u, color: "rgba(255,255,255,0.7)" }}>{l}</div>
         ))}
+        <div style={{ width: 32 * u, height: 32 * u, borderRadius: "50%", background: "linear-gradient(135deg, #34C759 0%, #007AFF 100%)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 * u, fontWeight: 700 }}>J</div>
       </div>
 
-      {/* Main content area */}
+      {/* Hero card on the left — large, rotated, with iridescent shimmer */}
       <div
         style={{
           position: "absolute",
-          left: SIDEBAR_W,
-          right: 0,
-          top: 70 * scale,
-          bottom: 0,
-          padding: `${36 * scale}px ${48 * scale}px`,
+          left: 100 * u,
+          top: 130 * u,
+          width: 460 * u,
+          height: 290 * u,
+          borderRadius: 28 * u,
+          background: "linear-gradient(135deg, #1F2228 0%, #3A3F47 28%, #7A8595 50%, #2D3138 78%, #0E1014 100%)",
+          boxShadow: `0 ${30 * u}px ${60 * u}px rgba(0,0,0,0.5), 0 0 0 ${1 * u}px rgba(255,255,255,0.05)`,
+          padding: 28 * u,
+          color: "#fff",
+          transform: "perspective(1200px) rotateY(-8deg) rotateX(4deg)",
+          transformOrigin: "center",
           overflow: "hidden",
         }}
       >
-        <div style={{ fontSize: 32 * scale, fontWeight: 600, color: "#1A1F2E", marginBottom: 24 * scale }}>
-          Sapphire Reserve · ···· 4829
+        {/* Iridescent shimmer overlay */}
+        <div style={{ position: "absolute", inset: 0, background: "conic-gradient(from 200deg at 30% 40%, rgba(122, 200, 255, 0.25), rgba(255, 180, 220, 0.20), rgba(255, 230, 160, 0.22), rgba(160, 255, 200, 0.18), rgba(180, 170, 255, 0.22), rgba(122, 200, 255, 0.25))", mixBlendMode: "screen", opacity: 0.85 }} />
+        {/* Glass sheen diagonal */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(115deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0) 70%)", mixBlendMode: "soft-light" }} />
+        {/* Specular */}
+        <div style={{ position: "absolute", left: -50 * u, top: -100 * u, width: 400 * u, height: 250 * u, background: "radial-gradient(ellipse at center, rgba(255,255,255,0.45) 0%, transparent 60%)", filter: `blur(${10 * u}px)` }} />
+
+        <div style={{ position: "absolute", left: 18 * u, top: 18 * u }}>
+          <Img src={staticFile("folk-mark.png")} style={{ width: 60 * u, height: 60 * u, filter: "brightness(0) invert(1)" }} />
         </div>
-        <div style={{ display: "flex", gap: 32 * scale, alignItems: "flex-start" }}>
-          {/* Card visual */}
+        <div style={{ position: "absolute", right: 24 * u, top: 30 * u, display: "flex", gap: 4 * u }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{ width: 16 * u, height: 28 * u, border: `${2 * u}px solid #fff`, borderRadius: `${16 * u}px ${16 * u}px ${16 * u}px ${16 * u}px / ${28 * u}px ${28 * u}px ${28 * u}px ${28 * u}px`, borderLeft: "none", borderTop: "none", borderBottom: "none", opacity: 0.4 + i * 0.2 }} />
+          ))}
+        </div>
+        <div style={{ position: "absolute", left: 28 * u, bottom: 60 * u, fontSize: 18 * u, fontFamily: "monospace", letterSpacing: 4 * u, color: "rgba(255,255,255,0.7)" }}>
+          ····  ····  ····  4829
+        </div>
+        <div style={{ position: "absolute", left: 28 * u, bottom: 24 * u, fontSize: 22 * u, fontWeight: 600, letterSpacing: 2 * u }}>JOEY ZHANG</div>
+        <div style={{ position: "absolute", right: 28 * u, bottom: 24 * u, fontSize: 18 * u, fontStyle: "italic", fontWeight: 800, opacity: 0.85 }}>VISA</div>
+      </div>
+
+      {/* Right column — Balance + Pay button */}
+      <div
+        style={{
+          position: "absolute",
+          right: 100 * u,
+          top: 130 * u,
+          width: 480 * u,
+          display: "flex",
+          flexDirection: "column",
+          gap: 20 * u,
+        }}
+      >
+        {/* Glass balance card */}
+        <div
+          style={{
+            padding: `${28 * u}px ${32 * u}px`,
+            borderRadius: 22 * u,
+            background: "rgba(255,255,255,0.08)",
+            backdropFilter: "blur(40px) saturate(180%)",
+            WebkitBackdropFilter: "blur(40px) saturate(180%)",
+            border: `${1 * u}px solid rgba(255,255,255,0.12)`,
+            boxShadow: `inset 0 ${1 * u}px 0 rgba(255,255,255,0.18)`,
+            color: "#fff",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 * u }}>
+            <div style={{ fontSize: 12 * u, color: "rgba(255,255,255,0.55)", fontWeight: 600, letterSpacing: 1.5 * u, textTransform: "uppercase" }}>
+              Statement Balance
+            </div>
+            <div style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6 * u, padding: `${5 * u}px ${12 * u}px`, borderRadius: 999, background: isPaid ? "rgba(52, 199, 89, 0.2)" : "rgba(255, 69, 58, 0.2)", border: `${1 * u}px solid ${isPaid ? "rgba(52, 199, 89, 0.45)" : "rgba(255, 69, 58, 0.45)"}`, color: isPaid ? "#34C759" : "#FF453A", fontSize: 11 * u, fontWeight: 600 }}>
+              {isPaid ? "✓ Paid" : "● Past due"}
+            </div>
+          </div>
           <div
             style={{
-              width: 480 * scale,
-              height: 302 * scale,
-              borderRadius: 20 * scale,
-              background: "linear-gradient(135deg, #1F2228 0%, #3A3F47 28%, #6E7682 52%, #2D3138 78%, #14161A 100%)",
-              boxShadow: `0 ${20 * scale}px ${40 * scale}px rgba(0,0,0,0.3)`,
-              padding: 24 * scale,
-              color: "#FFFFFF",
-              position: "relative",
-              flexShrink: 0,
+              marginTop: 14 * u,
+              fontSize: 64 * u,
+              fontWeight: 700,
+              letterSpacing: -2 * u,
+              fontVariantNumeric: "tabular-nums",
+              lineHeight: 1,
+              background: isPaid
+                ? "linear-gradient(135deg, #34C759 0%, #00C9A7 100%)"
+                : "linear-gradient(135deg, #FFFFFF 0%, #B8B8C8 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              filter: `drop-shadow(0 ${4 * u}px ${20 * u}px ${isPaid ? "rgba(52,199,89,0.4)" : "rgba(255,255,255,0.15)"})`,
             }}
           >
-            <div style={{ position: "absolute", left: 24 * scale, top: 24 * scale }}>
-              <Img
-                src={staticFile("folk-mark.png")}
-                style={{ width: 80 * scale, height: 80 * scale, filter: "brightness(0) invert(1)" }}
-              />
-            </div>
-            <div style={{ position: "absolute", left: 32 * scale, bottom: 32 * scale, fontSize: 22 * scale, fontWeight: 600, letterSpacing: 1.5 * scale }}>JOEY ZHANG</div>
-            <div style={{ position: "absolute", right: 32 * scale, bottom: 32 * scale, fontSize: 14 * scale, opacity: 0.7, fontFamily: "monospace", letterSpacing: 3 * scale }}>···· 4829</div>
+            {balanceText}
           </div>
-          {/* Right side — balance + actions */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 * scale }}>
-            <div style={{ background: "#FFFFFF", borderRadius: 12 * scale, padding: 24 * scale, boxShadow: `0 ${1 * scale}px ${4 * scale}px rgba(0,0,0,0.08)` }}>
-              <div style={{ fontSize: 14 * scale, color: "#5F6677", fontWeight: 500 }}>Statement balance · Due May 22</div>
-              <div style={{ fontSize: 48 * scale, fontWeight: 700, color: "#1A1F2E", marginTop: 4 * scale, fontVariantNumeric: "tabular-nums" }}>{balanceText}</div>
-              <div style={{ fontSize: 14 * scale, color: "#5F6677", marginTop: 4 * scale }}>{isPaid ? "$7,847.13 Available Credit" : "$5,000.00 Available Credit"}</div>
-              <div style={{ marginTop: 12 * scale, display: "inline-block", padding: `${6 * scale}px ${14 * scale}px`, borderRadius: 999, background: isPaid ? "#E6F4EA" : "#FEE7E5", color: isPaid ? "#1B6E2C" : "#B91C1C", fontSize: 13 * scale, fontWeight: 600 }}>
-                {isPaid ? "✓ Paid" : "● Past due"}
-              </div>
-            </div>
-            <div
-              style={{
-                background: isPaid ? "#34C759" : "#1C1C1E",
-                color: "#fff",
-                padding: `${16 * scale}px ${28 * scale}px`,
-                borderRadius: 999,
-                fontSize: 18 * scale,
-                fontWeight: 600,
-                textAlign: "center",
-                transform: `scale(${payButtonScale})`,
-                transformOrigin: "center",
-                boxShadow: `0 ${6 * scale}px ${16 * scale}px rgba(0,0,0,0.18)`,
-              }}
-            >
-              {isPaid ? "✓ Paid" : `Pay ${balanceText}`}
-            </div>
+          <div style={{ marginTop: 12 * u, fontSize: 13 * u, color: "rgba(255,255,255,0.5)" }}>
+            {isPaid ? "$7,847.13 available credit" : "$5,000.00 available credit · Due May 22"}
           </div>
         </div>
 
-        {/* Transactions */}
-        <div style={{ marginTop: 36 * scale, background: "#FFFFFF", borderRadius: 12 * scale, padding: 24 * scale, boxShadow: `0 ${1 * scale}px ${4 * scale}px rgba(0,0,0,0.08)` }}>
-          <div style={{ fontSize: 18 * scale, fontWeight: 700, color: "#1A1F2E", marginBottom: 14 * scale }}>Latest transactions</div>
+        {/* Pay button — gradient pill with glow */}
+        <div
+          style={{
+            position: "relative",
+            transform: `scale(${payButtonScale})`,
+            transformOrigin: "center",
+          }}
+        >
+          {/* Outer glow */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: 999,
+              background: isPaid
+                ? "linear-gradient(135deg, #34C759 0%, #00C9A7 100%)"
+                : "linear-gradient(135deg, #007AFF 0%, #5E5CE6 50%, #AF52DE 100%)",
+              filter: `blur(${24 * u}px)`,
+              opacity: 0.55,
+            }}
+          />
+          <div
+            style={{
+              position: "relative",
+              padding: `${20 * u}px ${36 * u}px`,
+              borderRadius: 999,
+              background: isPaid
+                ? "linear-gradient(135deg, #34C759 0%, #00C9A7 100%)"
+                : "linear-gradient(135deg, #007AFF 0%, #5E5CE6 50%, #AF52DE 100%)",
+              color: "#fff",
+              fontSize: 22 * u,
+              fontWeight: 700,
+              letterSpacing: -0.3 * u,
+              textAlign: "center",
+              boxShadow: `inset 0 ${1.5 * u}px 0 rgba(255,255,255,0.4), 0 ${10 * u}px ${24 * u}px rgba(0,0,0,0.35)`,
+            }}
+          >
+            {isPaid ? "✓ Paid" : `Pay ${balanceText}`}
+          </div>
+        </div>
+
+        {/* Quick-action chips row */}
+        <div style={{ display: "flex", gap: 10 * u }}>
           {[
-            { name: "Whole Foods", date: "May 7", amount: "$42.18" },
-            { name: "Uber", date: "May 6", amount: "$14.50" },
-            { name: "Spotify", date: "May 5", amount: "$9.99" },
-            { name: "LA Fitness", date: "May 4", amount: "$39.99" },
-            { name: "Apple Store", date: "Apr 30", amount: "$29.83" },
-          ].map((tx, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", padding: `${10 * scale}px 0`, borderBottom: i < 4 ? `${1 * scale}px solid #F0F2F5` : "none", fontSize: 16 * scale }}>
-              <div style={{ flex: 1, color: "#1A1F2E" }}>{tx.name}</div>
-              <div style={{ width: 140 * scale, color: "#5F6677" }}>{tx.date}</div>
-              <div style={{ width: 100 * scale, textAlign: "right", color: "#1A1F2E", fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>{tx.amount}</div>
+            { l: "Send", icon: "↑" },
+            { l: "Request", icon: "↓" },
+            { l: "Split", icon: "⇆" },
+            { l: "Top up", icon: "+" },
+          ].map((a) => (
+            <div
+              key={a.l}
+              style={{
+                flex: 1,
+                padding: `${14 * u}px 0`,
+                borderRadius: 14 * u,
+                background: "rgba(255,255,255,0.06)",
+                backdropFilter: "blur(20px)",
+                border: `${1 * u}px solid rgba(255,255,255,0.1)`,
+                color: "#fff",
+                textAlign: "center",
+                fontSize: 12 * u,
+                fontWeight: 500,
+              }}
+            >
+              <div style={{ fontSize: 18 * u, marginBottom: 4 * u }}>{a.icon}</div>
+              {a.l}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom — recent transactions on glass cards */}
+      <div
+        style={{
+          position: "absolute",
+          left: 100 * u,
+          right: 100 * u,
+          bottom: 80 * u,
+          color: "#fff",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "baseline", marginBottom: 14 * u }}>
+          <div style={{ fontSize: 22 * u, fontWeight: 700 }}>Recent activity</div>
+          <div style={{ marginLeft: "auto", fontSize: 13 * u, color: "rgba(255,255,255,0.55)" }}>This week ▾</div>
+        </div>
+        <div style={{ display: "flex", gap: 14 * u }}>
+          {[
+            { name: "Whole Foods", emoji: "🥬", amount: "−$42.18", date: "Today" },
+            { name: "Uber", emoji: "🚗", amount: "−$14.50", date: "Yesterday" },
+            { name: "Spotify", emoji: "🎵", amount: "−$9.99", date: "May 5" },
+            { name: "Apple Store", emoji: "", amount: "−$29.83", date: "Apr 30" },
+          ].map((tx) => (
+            <div
+              key={tx.name}
+              style={{
+                flex: 1,
+                padding: `${18 * u}px ${20 * u}px`,
+                borderRadius: 18 * u,
+                background: "rgba(255,255,255,0.06)",
+                backdropFilter: "blur(20px)",
+                border: `${1 * u}px solid rgba(255,255,255,0.1)`,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 * u }}>
+                <div style={{ width: 36 * u, height: 36 * u, borderRadius: 10 * u, background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 * u }}>{tx.emoji}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14 * u, fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tx.name}</div>
+                  <div style={{ fontSize: 11 * u, color: "rgba(255,255,255,0.5)" }}>{tx.date}</div>
+                </div>
+              </div>
+              <div style={{ marginTop: 12 * u, fontSize: 22 * u, fontWeight: 700, color: "#fff", fontVariantNumeric: "tabular-nums" }}>{tx.amount}</div>
             </div>
           ))}
         </div>
@@ -4047,24 +4214,34 @@ const AppleWalletDesktop: React.FC<
         <div
           style={{
             position: "absolute",
-            left: 0,
-            top: 0,
-            width,
-            height,
-            background: "rgba(0,0,0,0.45)",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
             opacity: paymentConfirmOpacity,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <div style={{ width: width * 0.4, background: "#fff", borderRadius: 16 * scale, padding: 40 * scale, display: "flex", flexDirection: "column", alignItems: "center", gap: 16 * scale }}>
-            <svg width={120 * scale} height={120 * scale} viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="44" stroke="#0A84FF" strokeWidth="4.5" fill="none" />
-              <path d="M30 52 L44 66 L72 36" stroke="#0A84FF" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <div
+            style={{
+              padding: `${44 * u}px ${56 * u}px`,
+              borderRadius: 28 * u,
+              background: "rgba(255,255,255,0.08)",
+              backdropFilter: "blur(40px) saturate(200%)",
+              border: `${1 * u}px solid rgba(255,255,255,0.18)`,
+              boxShadow: `0 ${30 * u}px ${80 * u}px rgba(0,0,0,0.5)`,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 18 * u,
+            }}
+          >
+            <svg width={120 * u} height={120 * u} viewBox="0 0 100 100" fill="none">
+              <circle cx="50" cy="50" r="44" stroke="#34C759" strokeWidth="4.5" fill="none" />
+              <path d="M30 52 L44 66 L72 36" stroke="#34C759" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             </svg>
-            <div style={{ fontSize: 28 * scale, fontWeight: 600, color: "#000" }}>Done</div>
-            <div style={{ fontSize: 16 * scale, color: "#666" }}>Payment of $2,847.13 sent to Chase Sapphire</div>
+            <div style={{ fontSize: 32 * u, fontWeight: 700, color: "#fff" }}>Payment sent</div>
+            <div style={{ fontSize: 16 * u, color: "rgba(255,255,255,0.7)" }}>$2,847.13 to Chase Sapphire</div>
           </div>
         </div>
       )}
@@ -6641,11 +6818,12 @@ type GoogleDocsProps = {
 
 const GoogleDocsDesktop: React.FC<
   Omit<GoogleDocsProps, "variant">
-> = ({ driveFrame, fps, width, height, scale, opacity, turnInScale = 1 }) => {
+> = ({ driveFrame, fps, width, height, opacity, turnInScale = 1 }) => {
+  const u = width / 1280;
   const driveSec = driveFrame / fps;
-  const totalContentH = height + 800 * scale;
+  const totalContentH = height + 1200 * u;
   const maxScroll = Math.max(0, totalContentH - height);
-  const dwellTarget = Math.min(maxScroll, maxScroll * 0.55);
+  const dwellTarget = Math.min(maxScroll, maxScroll * 0.45);
   let baseScroll = 0;
   if (driveSec >= 0.8 && driveSec < 3.0) {
     baseScroll = interpolate(driveSec, [0.8, 3.0], [0, dwellTarget], {
@@ -6658,19 +6836,36 @@ const GoogleDocsDesktop: React.FC<
   }
   const pageY = -baseScroll;
 
-  const D_BG = "#F1F3F4";
-  const D_TEXT = "#3C4043";
+  const D_BG = "#F9FBFD";
+  const D_TEXT = "#202124";
   const D_LIGHT = "#5F6368";
   const D_BLUE = "#1A73E8";
+  const D_BORDER = "#E0E0E0";
 
-  const docW = Math.min(820 * scale, width * 0.65);
+  // Wide doc page — real Google Docs default page is 8.5 inches at
+  // 96 DPI = 816px on a screen. Scale to canvas.
+  const docW = 816 * u;
   const docMarginX = (width - docW) / 2;
 
-  const paragraphs = [
-    "The Industrial Revolution, beginning in Britain in the late 18th century, fundamentally transformed economic and social structures across the Western world. Driven by innovations in textile manufacturing, steam power, and iron production, the period marked humanity's transition from agrarian economies to industrial ones — a shift that would reshape labor, urbanization, family life, and the very concept of time itself.",
-    "James Watt's improvements to the steam engine in the 1760s and 1770s catalyzed a wave of mechanization. Factories sprung up around coal-rich regions like Manchester and Birmingham, drawing rural laborers into rapidly growing cities. The factory system replaced the cottage-industry model that had dominated for centuries, concentrating production in large facilities where workers operated machines under strict supervision and rigid time discipline.",
-    "Social consequences of this transformation were profound and often brutal. Working conditions in early factories were harsh — twelve to sixteen hour days, dangerous machinery, child labor, and minimal regulatory oversight. Urban centers swelled with migrants but lacked sanitation infrastructure, leading to outbreaks of cholera and typhus. Yet the era also produced remarkable advances in transportation, communication, and material standards of living for those who survived its early decades.",
-    "Politically, the Industrial Revolution gave rise to new ideologies — laissez-faire capitalism, socialism, and trade unionism — each grappling with how to organize the relationship between capital, labor, and the state. The 1832 Reform Act in Britain, while still restrictive, expanded suffrage to include the new industrial middle class, foreshadowing the gradual democratization that would unfold over the next century.",
+  // Doc content as outline bullets, like the screenshot.
+  type Item = { text: string; depth: number };
+  const items: Item[] = [
+    { text: "Surrounding yourself with people that hate on you", depth: 0 },
+    { text: "They actually care", depth: 1 },
+    { text: 'When I don\'t give a fuck about you or your idea I just say "cool bro"', depth: 2 },
+    { text: "You need a high ego to be successful", depth: 0 },
+    { text: "I am right 98% of the time so statistically I'm going to believe in myself", depth: 1 },
+    { text: "That doesn't mean I'm ignorant — confident (aura)", depth: 2 },
+    { text: "SF has no bitches → good for productivity", depth: 0 },
+    { text: "If my team and I wanna relax we're flying out to NY and fucking ?", depth: 1 },
+    { text: "If you fail at something that means you don't try hard enough", depth: 0 },
+    { text: "Almost zero chance that you tried your absolute hardest and didn't succeed in some capacity", depth: 1 },
+    { text: "Why I dropped out of highschool AND/OR Why college is a waste of time", depth: 0 },
+    { text: "Why saving money is dumb", depth: 0 },
+    { text: "Time > money", depth: 1 },
+    { text: "Most ideas are dumb until they aren't", depth: 0 },
+    { text: "First time I heard about Bitcoin I laughed at the guy who told me", depth: 1 },
+    { text: "Now he's worth $40m and I'm writing this in a Google doc", depth: 2 },
   ];
 
   return (
@@ -6686,66 +6881,140 @@ const GoogleDocsDesktop: React.FC<
         pointerEvents: "none",
         background: D_BG,
         fontFamily: FONT_STACK,
-        filter: `blur(${1 * scale}px) brightness(0.99)`,
+        filter: `blur(${0.6 * u}px) brightness(0.99)`,
       }}
     >
-      {/* Top nav */}
+      {/* Top bar — title + menu strip + actions */}
       <div
         style={{
-          height: 64 * scale,
-          paddingLeft: 24 * scale,
-          paddingRight: 24 * scale,
+          height: 60 * u,
+          paddingLeft: 16 * u,
+          paddingRight: 16 * u,
           display: "flex",
           alignItems: "center",
-          gap: 16 * scale,
+          gap: 12 * u,
           background: "#fff",
-          borderBottom: `${1 * scale}px solid #DADCE0`,
         }}
       >
-        <div style={{ width: 36 * scale, height: 36 * scale, background: D_BLUE, borderRadius: 4 * scale }} />
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 17 * scale, color: D_TEXT, fontWeight: 500 }}>World History Essay - Final</div>
-          <div style={{ display: "flex", gap: 14 * scale, fontSize: 13 * scale, color: D_LIGHT, marginTop: 2 * scale }}>
-            <span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Format</span><span>Tools</span><span>Extensions</span>
+        {/* Docs logo */}
+        <div
+          style={{
+            width: 36 * u,
+            height: 48 * u,
+            background: D_BLUE,
+            borderRadius: 2 * u,
+            position: "relative",
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            paddingBottom: 6 * u,
+            color: "#fff",
+            fontSize: 10 * u,
+            fontWeight: 700,
+          }}
+        >
+          <div style={{ position: "absolute", top: 0, right: 0, width: 14 * u, height: 14 * u, background: "#0F5FB8", borderBottomLeftRadius: 4 * u }} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 * u }}>
+            <div style={{ fontSize: 18 * u, color: D_TEXT, fontWeight: 500 }}>aridotty script</div>
+            <span style={{ color: D_LIGHT, fontSize: 14 * u }}>☆</span>
+            <span style={{ color: D_LIGHT, fontSize: 14 * u }}>📁</span>
+            <span style={{ color: D_LIGHT, fontSize: 14 * u }}>☁</span>
+          </div>
+          <div style={{ display: "flex", gap: 14 * u, fontSize: 13 * u, color: D_TEXT, marginTop: 2 * u }}>
+            <span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Format</span><span>Tools</span><span>Extensions</span><span>Help</span>
           </div>
         </div>
-        <div style={{ flex: 1 }} />
-        <div style={{ display: "flex", gap: 12 * scale, alignItems: "center" }}>
+        {/* Right cluster — pencil/Editing dropdown + comments + meet + share + avatar */}
+        <div style={{ display: "flex", gap: 8 * u, alignItems: "center" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 * u, padding: `${6 * u}px ${10 * u}px`, borderRadius: 6 * u, background: "#F1F3F4", fontSize: 12 * u, color: D_TEXT }}>
+            ✎ Editing <span style={{ color: D_LIGHT }}>▾</span>
+          </div>
+          <div style={{ width: 32 * u, height: 32 * u, display: "flex", alignItems: "center", justifyContent: "center", color: D_LIGHT }}>💬</div>
+          <div style={{ width: 32 * u, height: 32 * u, display: "flex", alignItems: "center", justifyContent: "center", color: D_LIGHT }}>📹</div>
           <div
             style={{
-              padding: `${10 * scale}px ${24 * scale}px`,
-              background: D_BLUE,
-              color: "#fff",
-              borderRadius: 6 * scale,
-              fontSize: 14 * scale,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6 * u,
+              padding: `${8 * u}px ${16 * u}px`,
+              borderRadius: 999,
+              background: "#C2E7FF",
+              color: "#001D35",
+              fontSize: 13 * u,
               fontWeight: 500,
               transform: `scale(${turnInScale})`,
               transformOrigin: "center",
             }}
           >
-            Turn in
+            🔒 Share <span style={{ color: D_LIGHT }}>▾</span>
           </div>
-          <div style={{ width: 36 * scale, height: 36 * scale, borderRadius: "50%", background: "#34A853", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 * scale, fontWeight: 600 }}>J</div>
+          <div style={{ width: 32 * u, height: 32 * u, borderRadius: "50%", background: "#34A853", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 * u, fontWeight: 600 }}>J</div>
         </div>
       </div>
+
       {/* Toolbar */}
-      <div style={{ height: 50 * scale, background: "#FFFFFF", borderBottom: `${1 * scale}px solid #DADCE0`, display: "flex", alignItems: "center", paddingLeft: 24 * scale, gap: 18 * scale, fontSize: 14 * scale, color: D_LIGHT }}>
-        <span>↶</span><span>↷</span>
-        <div style={{ borderLeft: `${1 * scale}px solid #DADCE0`, height: 24 * scale }} />
-        <span>100% ▾</span>
-        <div style={{ borderLeft: `${1 * scale}px solid #DADCE0`, height: 24 * scale }} />
-        <span>Normal text ▾</span>
-        <span>Arial ▾</span>
-        <span>11 ▾</span>
-        <span style={{ fontWeight: 700 }}>B</span><span style={{ fontStyle: "italic" }}>I</span><span style={{ textDecoration: "underline" }}>U</span>
+      <div
+        style={{
+          height: 40 * u,
+          background: "#F9FBFD",
+          borderTop: `${1 * u}px solid ${D_BORDER}`,
+          borderBottom: `${1 * u}px solid ${D_BORDER}`,
+          display: "flex",
+          alignItems: "center",
+          paddingLeft: 16 * u,
+          gap: 8 * u,
+          fontSize: 13 * u,
+          color: D_TEXT,
+        }}
+      >
+        {[
+          "↶", "↷", "🖨", "✓", "🎨",
+          "100%▾",
+          "|",
+          "Normal text▾", "|", "Arial▾", "|", "−", "11", "+", "|",
+          "B", "I", "U", "A▾", "🔗", "▤", "≡", "⇆", "•", "1.",
+        ].map((t, i) => (
+          <span key={i} style={{ padding: `${4 * u}px ${6 * u}px`, color: t === "B" || t === "I" || t === "U" ? D_TEXT : D_LIGHT, fontWeight: t === "B" ? 700 : 400, fontStyle: t === "I" ? "italic" : "normal", textDecoration: t === "U" ? "underline" : "none" }}>
+            {t}
+          </span>
+        ))}
+        <div style={{ flex: 1 }} />
+        <div style={{ paddingRight: 16 * u, color: D_LIGHT, fontSize: 14 * u }}>↑</div>
       </div>
-      {/* Doc page */}
+
+      {/* Sidebar (right) — minimal column with icons */}
+      <div
+        style={{
+          position: "absolute",
+          right: 0,
+          top: 100 * u,
+          width: 50 * u,
+          bottom: 0,
+          background: "#fff",
+          borderLeft: `${1 * u}px solid ${D_BORDER}`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          paddingTop: 14 * u,
+          gap: 18 * u,
+          fontSize: 18 * u,
+          color: D_LIGHT,
+        }}
+      >
+        <span>📅</span>
+        <span>📌</span>
+        <span>✓</span>
+        <span>＋</span>
+      </div>
+
+      {/* Doc page (centered, white, large) */}
       <div
         style={{
           position: "absolute",
           left: docMarginX,
-          right: docMarginX,
-          top: 130 * scale,
+          top: 100 * u + 20 * u,
           width: docW,
           transform: `translateY(${pageY}px)`,
         }}
@@ -6753,17 +7022,30 @@ const GoogleDocsDesktop: React.FC<
         <div
           style={{
             background: "#FFFFFF",
-            padding: `${72 * scale}px ${96 * scale}px`,
-            boxShadow: `0 ${1 * scale}px ${3 * scale}px rgba(0,0,0,0.15)`,
-            fontSize: 16 * scale,
+            padding: `${64 * u}px ${72 * u}px`,
+            boxShadow: `0 ${2 * u}px ${10 * u}px rgba(0,0,0,0.08)`,
+            border: `${1 * u}px solid ${D_BORDER}`,
+            fontSize: 14 * u,
             color: D_TEXT,
-            lineHeight: 1.6,
-            filter: `blur(${4 * scale}px)`,
+            lineHeight: 1.5,
+            minHeight: 1056 * u, // 11" page
+            fontFamily: "'Arial', " + FONT_STACK,
           }}
         >
-          <div style={{ textAlign: "center", fontSize: 22 * scale, fontWeight: 700, marginBottom: 24 * scale }}>The Industrial Revolution: A Catalyst for Modern Society</div>
-          {[0, 1, 2].flatMap(() => paragraphs).map((p, i) => (
-            <p key={i} style={{ marginBottom: 14 * scale, textAlign: "justify" }}>{p}</p>
+          {items.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                paddingLeft: (item.depth * 28) * u,
+                marginBottom: 4 * u,
+                display: "flex",
+                gap: 8 * u,
+                color: D_TEXT,
+              }}
+            >
+              <span style={{ width: 12 * u, color: D_LIGHT }}>—</span>
+              <span style={{ filter: `blur(${3 * u}px)` }}>{item.text}</span>
+            </div>
           ))}
         </div>
       </div>
