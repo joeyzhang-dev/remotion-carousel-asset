@@ -8925,6 +8925,9 @@ const Scene3: React.FC<Scene3Props> = ({
   );
   // Bubble height shrinks slightly too, for a more natural chat-bubble shape.
   const bubbleHeight = inputHeight * 0.85 * bubbleSizeMul;
+  // Visual scale applied ONLY to bubbles that appear before sent #3
+  // (the closing punchline). Sent #3 stays at the base size.
+  const priorMul = 2.0;
   const animatedHeight = interpolate(
     morphP,
     [0, 1],
@@ -10872,7 +10875,7 @@ const Scene3: React.FC<Scene3Props> = ({
           position: "absolute",
           left: sentBubbleX,
           top: sentBubbleY,
-          transform: `translate(-50%, -50%) scale(${scaleEnv * bubbleScale})`,
+          transform: `translate(-50%, -50%) scale(${scaleEnv * bubbleScale * priorMul})`,
           display: "flex",
           alignItems: "center",
           gap: 16 * scale * (1 - morphP),
@@ -11162,14 +11165,9 @@ const Scene3: React.FC<Scene3Props> = ({
         <div
           style={{
             position: "absolute",
-            // Anchor to the bubble's TOP-LEFT corner (chatEdgeMargin
-            // from the screen left, typing2TopAnchorY from
-            // sentBubbleY). Since we use translate(-50%, -50%) the
-            // div is positioned by its center, so we add half the
-            // animated dimensions to convert from top-left to center.
             left: chatEdgeMargin + typing2AnimatedW / 2,
             top: sentBubbleY + typing2YOffset,
-            transform: `translate(-50%, -50%) scale(${typing2Scale})`,
+            transform: `translate(-50%, -50%) scale(${typing2Scale * priorMul})`,
             opacity: typing2Opacity * priorBubblesOpacity,
           }}
         >
@@ -11279,7 +11277,7 @@ const Scene3: React.FC<Scene3Props> = ({
             position: "absolute",
             left: chatEdgeMargin + received3Width / 2,
             top: sentBubbleY + received3YOffset,
-            transform: `translate(-50%, -50%) scale(${received3Scale})`,
+            transform: `translate(-50%, -50%) scale(${received3Scale * priorMul})`,
             opacity: received3Opacity * priorBubblesOpacity,
           }}
         >
@@ -11404,8 +11402,14 @@ const Scene3: React.FC<Scene3Props> = ({
             [0, 1],
             [0, imageBubbleCornerRadius],
           );
-          // During tap, mirror the cell's tap-pulse scale.
+          // During tap, mirror the cell's tap-pulse scale. After the
+          // flight lands, ramp up to priorMul so the settled image
+          // bubble matches the size of the other prior bubbles.
           const tapScale = local < igFlightStart ? dwelledCellTapScale : 1;
+          const settledMul = interpolate(flightProgress, [0.7, 1.0], [1, priorMul], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          });
           return (
             <div
               style={{
@@ -11417,7 +11421,7 @@ const Scene3: React.FC<Scene3Props> = ({
                 borderRadius: cloneRadius,
                 background: dwelledCellColor,
                 overflow: "hidden",
-                transform: `translate(-50%, -50%) scale(${tapScale})`,
+                transform: `translate(-50%, -50%) scale(${tapScale * settledMul})`,
                 opacity: dwelledCellHighlightOpacity * priorBubblesOpacity,
                 boxShadow:
                   flightProgress > 0.5
@@ -11503,6 +11507,8 @@ const Scene3: React.FC<Scene3Props> = ({
               fontFamily: FONT_STACK,
               pointerEvents: "none",
               opacity: headerOpacity,
+              transform: "scale(2)",
+              transformOrigin: "top center",
             }}
           >
             {/* Avatar — light-mode invert of the folk "f" icon
