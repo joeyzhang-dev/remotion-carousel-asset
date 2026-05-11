@@ -8936,19 +8936,23 @@ const Scene3: React.FC<Scene3Props> = ({
   const bubbleTextMul = 1.3;
   const naiveFontSize = fontSize * 0.78 * bubbleSizeMul * bubbleTextMul;
   // Find the longest naive bubble width across all bubble phrases so
-  // every bubble shrinks together if needed.
+  // every bubble shrinks together if needed. The factor scales only
+  // the TEXT (not the padding), so the correct fit equation is:
+  //   newTextWidth + 2*padX ≤ maxBubbleWidth
+  //   factor ≤ (maxBubbleWidth - 2*padX) / longestNaiveText
   const allBubblePhrases = [
     phrase, // sent #1
     "she posted italian food before", // received #2 (longest gray)
     "reserving table 7pm friday", // received #3
   ];
-  const longestNaiveWidth = allBubblePhrases.reduce((max, p) => {
-    const w = measureTextEm(p) * naiveFontSize + bubblePadX * 2;
-    return Math.max(max, w);
+  const longestNaiveText = allBubblePhrases.reduce((max, p) => {
+    return Math.max(max, measureTextEm(p) * naiveFontSize);
   }, 0);
-  const widthFitFactor = longestNaiveWidth > maxBubbleWidth
-    ? maxBubbleWidth / longestNaiveWidth
-    : 1;
+  const availableTextWidth = Math.max(0, maxBubbleWidth - bubblePadX * 2);
+  const widthFitFactor =
+    longestNaiveText > availableTextWidth && longestNaiveText > 0
+      ? availableTextWidth / longestNaiveText
+      : 1;
   const bubbleFontSize = naiveFontSize * widthFitFactor;
   const bubbleTextWidth = measureTextEm(phrase) * bubbleFontSize;
   const bubbleWidth = bubbleTextWidth + bubblePadX * 2;
@@ -10616,7 +10620,16 @@ const Scene3: React.FC<Scene3Props> = ({
 
   // Anchor for the entire conversation, so receipt indicators and the
   // received bubble all move with the sent bubble when it scrolls up.
-  const sentBubbleX = width / 2 + rowXOffset;
+  // After morph completes the right-anchored bubble can grow leftward;
+  // clamp the row's center X so the (currently rendered) bubble's
+  // LEFT edge never crosses a minimum canvas margin. We use
+  // fieldWidth (the animated current width) so the clamp tracks the
+  // morph — at morphP=0 fieldWidth=inputWidth (no clamp needed),
+  // at morphP=1 fieldWidth=bubbleWidth (clamp may engage).
+  const sentBubbleXNatural = width / 2 + rowXOffset;
+  const sentMinLeftMargin = 20 * scale;
+  const sentBubbleXMin = sentMinLeftMargin + fieldWidth / 2;
+  const sentBubbleX = Math.max(sentBubbleXNatural, sentBubbleXMin);
   const sentBubbleY = height * 0.5 + rowYOffset + conversationShift;
   // Right edge of the settled sent bubble, in screen coords. The row
   // (a flex container) is centered at sentBubbleX and contains the
