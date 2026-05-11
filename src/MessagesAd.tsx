@@ -42,6 +42,7 @@ type IconName =
   | "reply" | "replyAll" | "forward" | "moreVert" | "moreHoriz"
   | "pencil" | "attachment" | "smile" | "image" | "drive"
   | "shoppingBag" | "music" | "car" | "groceries" | "creditCard"
+  | "paperPlane" | "barChart" | "instagramMark"
   | "info";
 
 // Each icon is encoded as an SVG path string drawn at viewBox 0 0 24 24.
@@ -130,6 +131,9 @@ const ICONS: Record<IconName, IconDef> = {
   groceries: { paths: ["M5 7 H19 L18 21 H6 Z", "M8 11 H16 M8 15 H16"] },
   creditCard: { rects: [{ x: 2, y: 6, w: 20, h: 13, rx: 2 }], paths: ["M2 11 H22"] },
   info: { circles: [{ cx: 12, cy: 12, r: 9 }], paths: ["M12 11 V17", "M12 7 V7.01"] },
+  paperPlane: { paths: ["M3 12 L21 4 L17 22 L11 13 L3 12 Z", "M3 12 L11 13"] },
+  barChart: { paths: ["M5 21 V11", "M12 21 V5", "M19 21 V14"] },
+  instagramMark: { rects: [{ x: 3, y: 3, w: 18, h: 18, rx: 5 }], circles: [{ cx: 12, cy: 12, r: 4 }, { cx: 17.5, cy: 6.5, r: 0.6, fill: true }], paths: [] },
 };
 
 const Icon: React.FC<{
@@ -920,18 +924,20 @@ const InstagramProfileDesktop: React.FC<
           gap: 10 * u,
         }}
       >
-        {/* Tiny IG mark at top */}
-        <div style={{ width: 28 * u, height: 28 * u, borderRadius: 8 * u, background: "linear-gradient(135deg, #F58529 0%, #DD2A7B 50%, #515BD4 100%)", marginBottom: 16 * u }} />
-        {[
-          { name: "Home", filled: true },
-          { name: "Search" },
-          { name: "Explore" },
-          { name: "Reels" },
-          { name: "Messages", filled: true },
-          { name: "Notifications" },
-          { name: "Create" },
-          { name: "Profile" },
-        ].map((item, i) => (
+        {/* IG camera mark at top */}
+        <div style={{ marginBottom: 16 * u }}>
+          <Icon name="instagramMark" size={26 * u} color="#000" strokeWidth={1.8} />
+        </div>
+        {([
+          { name: "homeFilled" as IconName },
+          { name: "play" as IconName },
+          { name: "paperPlane" as IconName, badge: "4" },
+          { name: "search" as IconName },
+          { name: "compass" as IconName },
+          { name: "heart" as IconName },
+          { name: "plus" as IconName },
+          { name: "barChart" as IconName },
+        ]).map((item, i) => (
           <div
             key={i}
             style={{
@@ -940,26 +946,39 @@ const InstagramProfileDesktop: React.FC<
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 16 * u,
               color: "#000",
+              position: "relative",
             }}
           >
-            <div
-              style={{
-                width: 22 * u,
-                height: 22 * u,
-                borderRadius: item.name === "Search" || item.name === "Profile" ? "50%" : 4 * u,
-                border: `${1.6 * u}px solid #000`,
-                background: item.filled ? "#000" : "transparent",
-              }}
-            />
+            <Icon name={item.name} size={22 * u} color="#000" strokeWidth={1.8} />
+            {item.badge && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: -2 * u,
+                  right: -4 * u,
+                  minWidth: 14 * u,
+                  height: 14 * u,
+                  padding: `0 ${3 * u}px`,
+                  borderRadius: 999,
+                  background: "#FF3040",
+                  color: "#fff",
+                  fontSize: 9 * u,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  lineHeight: 1,
+                }}
+              >
+                {item.badge}
+              </div>
+            )}
           </div>
         ))}
-        {/* Bottom hamburger */}
-        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 4 * u }}>
-          {[0, 1, 2].map((i) => (
-            <div key={i} style={{ width: 18 * u, height: 2 * u, background: "#000", borderRadius: 999 }} />
-          ))}
+        {/* Profile avatar at bottom */}
+        <div style={{ marginTop: "auto", width: 28 * u, height: 28 * u, borderRadius: "50%", overflow: "hidden", border: `${1.5 * u}px solid #000` }}>
+          <Img src={staticFile("elsa-profile.jpg")} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         </div>
       </div>
 
@@ -4213,10 +4232,15 @@ const AppleWalletDesktop: React.FC<
   const floatRotZ = Math.sin(t * 1.0) * 1.2;
   const floatRotY = -8 + Math.sin(t * 0.7) * 1.5;
   const floatRotX = 4 + Math.cos(t * 0.9) * 1;
-  // Diagonal gleam — sweeps across the card every 4s.
-  const gleamCycle = (t / 4) % 1; // 0..1
-  // Gleam X position drifts from -120% to +220% so it sweeps fully across.
-  const gleamX = -120 + gleamCycle * 340;
+  // Diagonal gleam — fast sweep every 1.2s, with a hold gap between
+  // sweeps so it doesn't feel like a metronome.
+  const gleamPeriod = 1.6;
+  const gleamCycle = (t / gleamPeriod) % 1; // 0..1 across the period
+  // The streak only sweeps for the first 60% of the period; rest is
+  // off-canvas dwell so it feels like an occasional reflection.
+  const sweepP = Math.min(1, gleamCycle / 0.6);
+  // Gleam X position drifts from -130% to +130% in the sweep window.
+  const gleamX = -130 + sweepP * 260;
 
   // Aurora ambient glow.
   const AURORA = "radial-gradient(circle at 25% 30%, rgba(94, 92, 230, 0.45) 0%, transparent 45%), radial-gradient(circle at 75% 70%, rgba(255, 99, 178, 0.35) 0%, transparent 50%), radial-gradient(circle at 50% 100%, rgba(10, 132, 255, 0.4) 0%, transparent 55%)";
@@ -4289,17 +4313,19 @@ const AppleWalletDesktop: React.FC<
         <div style={{ position: "absolute", inset: 0, background: "conic-gradient(from 200deg at 30% 40%, rgba(122, 200, 255, 0.25), rgba(255, 180, 220, 0.20), rgba(255, 230, 160, 0.22), rgba(160, 255, 200, 0.18), rgba(180, 170, 255, 0.22), rgba(122, 200, 255, 0.25))", mixBlendMode: "screen", opacity: 0.85 }} />
         {/* Static glass sheen diagonal */}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(115deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0) 70%)", mixBlendMode: "soft-light" }} />
-        {/* ANIMATED diagonal gleam — bright narrow streak that sweeps L→R every 4s */}
+        {/* ANIMATED diagonal gleam — solid white parallelogram with
+            blurred edges, sweeps L→R every ~1.2s. Smaller and faster
+            than before so it feels like a passing reflection. */}
         <div
           style={{
             position: "absolute",
-            top: -50 * u,
+            top: -60 * u,
             left: `${gleamX}%`,
-            width: 200 * u,
-            height: 400 * u,
-            background:
-              "linear-gradient(115deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.45) 45%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0.45) 55%, rgba(255,255,255,0) 100%)",
-            transform: "skewX(-20deg)",
+            width: 70 * u,
+            height: 420 * u,
+            background: "rgba(255, 255, 255, 0.65)",
+            transform: "skewX(-22deg)",
+            filter: `blur(${10 * u}px)`,
             mixBlendMode: "screen",
             pointerEvents: "none",
           }}
@@ -5882,14 +5908,31 @@ const GmailInboxDesktop: React.FC<
       signature: ["Linear", "linear.app/inbox"],
       reply: "Triaged, on it.",
     },
+    { name: "Notion", initial: "N", color: "#000", senderEmail: "team@notion.so", subject: "Comment on \"Q2 roadmap\"", snippet: "Priya: \"can we slot in the auth migration before...\"", time: "Mon", unread: true, greeting: "Hi Joey,", paragraphs: ["Priya commented on \"Q2 roadmap\":", "\"Can we slot in the auth migration before the launch beat? Otherwise we're going to be doing it under fire in week 2.\"", "Reply or open in Notion to continue the discussion."], signoff: "—", signature: ["Notion"], reply: "Yes, slotting it in." },
+    { name: "Vercel", initial: "V", color: "#000", senderEmail: "no-reply@vercel.com", subject: "Production Deployment Ready", snippet: "main · 7e3c2f4 · Build succeeded in 1m 42s", time: "Sun", unread: false, greeting: "Hi Joey,", paragraphs: ["Your production deployment is ready.", "Project: folk-app · Branch: main · Commit: 7e3c2f4", "Build succeeded in 1m 42s. Ready to promote."], signoff: "—", signature: ["Vercel"], reply: "Promoting now." },
+    { name: "Calendly", initial: "C", color: "#006BFF", senderEmail: "no-reply@calendly.com", subject: "New event scheduled — Friday 2pm", snippet: "Maya Chen booked a 30 min slot...", time: "Sun", unread: true, greeting: "Hi Joey,", paragraphs: ["Maya Chen has scheduled a new event with you.", "Event: 30 min discovery call · Friday May 15, 2:00 PM PST", "Add to your calendar."], signoff: "—", signature: ["Calendly"], reply: "Added, confirmed." },
+    { name: "Slack", initial: "S", color: "#4A154B", senderEmail: "feedback@slack.com", subject: "3 new mentions in #design", snippet: "@joey can you review the logo iterations?", time: "Sat", unread: true, greeting: "Hi Joey,", paragraphs: ["You have 3 new mentions in #design.", "@joey can you review the logo iterations?", "@joey thoughts on the spacing?", "@joey ETA on the new spec?"], signoff: "—", signature: ["Slack"], reply: "Reviewing now." },
+    { name: "Figma", initial: "F", color: "#F24E1E", senderEmail: "no-reply@figma.com", subject: "Comment on Folk dashboard v3", snippet: "Sara: love this — one nit on the chart legend...", time: "Sat", unread: true, greeting: "Hi Joey,", paragraphs: ["Sara left a comment on \"Folk dashboard v3\":", "\"Love this — one nit on the chart legend, can we tighten the spacing between rows by ~4px?\"", "Reply or open in Figma."], signoff: "—", signature: ["Figma"], reply: "Tightening, will push." },
+    { name: "Apple", initial: "A", color: "#A2AAAD", senderEmail: "no-reply@apple.com", subject: "Your receipt from Apple", snippet: "iCloud+ 200GB · $2.99 · Visa ···· 4829", time: "Fri", unread: false, greeting: "Receipt for your records.", paragraphs: ["iCloud+ 200GB plan", "Total: $2.99 USD", "Billed to: Visa ···· 4829", "Order ID: MC9-A4XX-2026-05-09"], signoff: "—", signature: ["Apple"], reply: "Filed for expense." },
+    { name: "Substack", initial: "S", color: "#FF6719", senderEmail: "newsletters@substack.com", subject: "The future of vertical AI", snippet: "Why specialization is the next platform shift...", time: "Fri", unread: true, greeting: "Hi reader,", paragraphs: ["The future of vertical AI is going to look more like Bloomberg terminals than chatbots.", "In this issue: why specialization is the next platform shift, three companies leading the way, and what it means for the AI app layer."], signoff: "—", signature: ["Substack"], reply: "Saved, will read." },
+    { name: "Posthog", initial: "P", color: "#1D4AFF", senderEmail: "noreply@posthog.com", subject: "Weekly product summary", snippet: "DAU 12.4k (+8%) · WAU 41k · churn 2.1%", time: "Fri", unread: false, greeting: "Hi Joey,", paragraphs: ["This week at folk-app:", "DAU 12.4k (+8% WoW)", "WAU 41,283 (+3% WoW)", "Churn 2.1% (−0.4% WoW)", "Top event: chat_send (1.2M)"], signoff: "—", signature: ["Posthog"], reply: "Solid week." },
+    { name: "Stripe", initial: "S", color: "#635BFF", senderEmail: "alerts@stripe.com", subject: "Failed payment retry succeeded", snippet: "$49.00 · cus_NkXwx9Tza — recovered", time: "Thu", unread: false, greeting: "Hi Joey,", paragraphs: ["Good news — a previously failed payment has been recovered.", "Customer: cus_NkXwx9Tza", "Amount: $49.00 USD", "Recovered on the 2nd retry attempt."], signoff: "—", signature: ["Stripe"], reply: "Acknowledged." },
+    { name: "GitHub", initial: "G", color: "#1A73E8", senderEmail: "noreply@github.com", subject: "[acme/api] Issue #1284 closed", snippet: "Resolved by @ben-w in PR #2839", time: "Thu", unread: false, greeting: "Hi @joey,", paragraphs: ["Issue #1284 \"Race condition in queue dispatch\" was closed.", "Resolved by @ben-w in PR #2839.", "All checks passed before merge."], signoff: "—", signature: ["GitHub"], reply: "Nice, closing my watch." },
+    { name: "Mom", initial: "M", color: "#EA4335", senderEmail: "mom@gmail.com", subject: "Did you eat?", snippet: "Just checking. Don't skip lunch ❤", time: "Thu", unread: true, greeting: "Hi sweetie,", paragraphs: ["Just checking — did you eat lunch today?", "I know you forget when you're heads down. There's leftovers in the fridge from when you were home, eat something."], signoff: "Love,", signature: ["Mom"], reply: "Yes, ramen." },
+    { name: "LinkedIn", initial: "L", color: "#0A66C2", senderEmail: "messages@linkedin.com", subject: "5 people viewed your profile", snippet: "Recruiter at OpenAI, founder at Stripe...", time: "Thu", unread: true, greeting: "Hi Joey,", paragraphs: ["5 people viewed your profile this week:", "1. Recruiter at OpenAI", "2. Founder at Stripe", "3. PM at Anthropic", "4. Investor at a16z", "5. Designer at Linear"], signoff: "—", signature: ["LinkedIn"], reply: "Skip." },
+    { name: "Brex", initial: "B", color: "#F56F0D", senderEmail: "alerts@brex.com", subject: "Card transaction approved", snippet: "$14.99 · Substack · Recurring", time: "Wed", unread: false, greeting: "Hi Joey,", paragraphs: ["A new transaction was approved on your Brex card.", "Merchant: Substack", "Amount: $14.99 USD", "Type: Recurring subscription"], signoff: "—", signature: ["Brex"], reply: "Acknowledged." },
+    { name: "Notion", initial: "N", color: "#000", senderEmail: "team@notion.so", subject: "Page shared with you", snippet: "Maya: \"final brief — pls review by EOD\"", time: "Wed", unread: true, greeting: "Hi Joey,", paragraphs: ["Maya Chen shared a page with you:", "\"Q3 launch brief — final\"", "Note: pls review by EOD."], signoff: "—", signature: ["Notion"], reply: "Reviewing tonight." },
+    { name: "Doordash", initial: "D", color: "#EB1700", senderEmail: "no-reply@doordash.com", subject: "Order delivered — Sushi Hayashi", snippet: "Spicy tuna roll, salmon nigiri (×2)...", time: "Wed", unread: false, greeting: "Hi Joey,", paragraphs: ["Your order from Sushi Hayashi was delivered.", "Items: Spicy tuna roll, salmon nigiri (×2), miso soup", "Total: $34.18 · Tip: $5.00"], signoff: "—", signature: ["Doordash"], reply: "Filed." },
+    { name: "Twitch", initial: "T", color: "#9146FF", senderEmail: "no-reply@twitch.tv", subject: "Your favorite is live", snippet: "ludwig is streaming — \"chess vs my mom\"", time: "Tue", unread: true, greeting: "Hi Joey,", paragraphs: ["Ludwig just went live.", "Stream: \"chess vs my mom\"", "Watching now: 14,283"], signoff: "—", signature: ["Twitch"], reply: "Catching the VOD." },
+    { name: "Anthropic", initial: "A", color: "#D97757", senderEmail: "support@anthropic.com", subject: "Your Claude usage this week", snippet: "82% of plan limit — Pro tier", time: "Tue", unread: false, greeting: "Hi Joey,", paragraphs: ["This week's Claude usage:", "82% of monthly Pro tier limit consumed.", "Top model: claude-opus-4-7 · 4.2M tokens"], signoff: "—", signature: ["Anthropic"], reply: "Upgrading tier." },
+    { name: "Airbnb", initial: "A", color: "#FF5A5F", senderEmail: "automated@airbnb.com", subject: "Your Tokyo trip is in 12 days", snippet: "Check-in May 22 · 4 nights · Shibuya", time: "Tue", unread: true, greeting: "Hi Joey,", paragraphs: ["Your Tokyo trip is coming up in 12 days.", "Host: Yuki", "Check-in: May 22, 3:00 PM JST", "Address: Shibuya 3-chome (full address sent 24h before check-in)"], signoff: "—", signature: ["Airbnb"], reply: "Hyped, ready." },
   ];
 
-  // Rapid-fire cycle through emails — each gets ~0.9s of focus, then we
-  // advance. Within each window: select email + slide-in body, then type
-  // reply, then "send" reply (highlight + clear), then next.
+  // Rapid-fire cycle through emails — much faster, more emails. Each gets
+  // ~0.32s of focus.
   const driveSec = driveFrame / fps;
-  const perEmail = 0.95;
-  const cycleStart = 0.5;
+  const perEmail = 0.32;
+  const cycleStart = 0.4;
   const idxFloat = Math.max(0, (driveSec - cycleStart) / perEmail);
   const activeIdx = Math.min(mails.length - 1, Math.floor(idxFloat));
   const t = idxFloat - activeIdx; // 0..1 inside the email
@@ -5909,7 +5952,7 @@ const GmailInboxDesktop: React.FC<
   })();
   const replyVisible = active.reply.slice(0, replyVisibleChars);
   const isSending = t > 0.65 && t < 0.85;
-  const cursorOn = Math.floor(driveFrame / Math.round(fps * 0.5)) % 2 === 0;
+  const cursorOn = Math.floor(driveFrame / Math.round(fps * 0.15)) % 2 === 0;
   const showCursor = t > 0.05 && t < 0.7;
 
   return (
@@ -9374,21 +9417,57 @@ const Scene3: React.FC<Scene3Props> = ({
       ),
     ),
   );
-  const dwelledCellIndex = dwelledRow * igLayout.gridCols + 1; // middle column
-  const dwelledCellColor =
-    PROFILE_GRID_COLORS[dwelledCellIndex % PROFILE_GRID_COLORS.length];
+  let dwelledCellIndex = dwelledRow * igLayout.gridCols + 1; // middle column
   // Force the dwelled cell to display the "focus" photo (the roses
   // bouquet) so the image that flies into the chat matches the
   // closing punchline.
   const dwelledCellImage = "ig/focus.jpg";
   // Cell screen position during dwell. Layout coords minus the
   // current page-Y (which is -igDwellTarget during the dwell stage).
-  const dwelledCellLayoutX = cellLayoutX(dwelledCellIndex, igLayout);
-  const dwelledCellLayoutY = cellLayoutY(dwelledCellIndex, igLayout);
-  // Screen-space center of the cell during the dwell — used as the
-  // flight start point.
-  const dwelledCellScreenX = dwelledCellLayoutX;
-  const dwelledCellScreenY = dwelledCellLayoutY - igDwellTarget;
+  let dwelledCellScreenX = cellLayoutX(dwelledCellIndex, igLayout);
+  let dwelledCellScreenY = cellLayoutY(dwelledCellIndex, igLayout) - igDwellTarget;
+  let dwelledCellSize = igLayout.cellSize;
+
+  // ── Desktop overrides — InstagramProfileDesktop uses a different
+  //    geometry (slim 70u nav rail, centered 940u column, 5-col grid).
+  //    Compute the matching screen-space coords so the flight clone
+  //    pulls cleanly from the actual desktop focus cell. ────────────
+  if (variant === "desktop") {
+    const du = bgW / 1280;
+    const dNavW = 70 * du;
+    const dContentLeft = dNavW + 80 * du;
+    const dContentMaxW = Math.min(940 * du, bgW - dContentLeft - 80 * du);
+    const dGridCols = 5;
+    const dGridGap = 4 * du;
+    const dCellSize = (dContentMaxW - dGridGap * (dGridCols - 1)) / dGridCols;
+    const dGridRows = 4;
+    const dHeaderBlockH = 280 * du;
+    const dHighlightsRowH = 130 * du;
+    const dTabBarH = 50 * du;
+    const dTopSpacer = 60 * du; // matches the inner top spacer
+    const dGridTopY = dTopSpacer + dHeaderBlockH + dHighlightsRowH + dTabBarH;
+    const dTotalContentH =
+      dTopSpacer + dHeaderBlockH + dHighlightsRowH + dTabBarH +
+      dCellSize * dGridRows + dGridGap * (dGridRows - 1) + 200 * du;
+    const dMaxScroll = Math.max(0, dTotalContentH - bgH);
+    const dDwellTarget = Math.min(dMaxScroll, dMaxScroll * 0.45);
+    // Pick the visually-centered grid cell — row 1, col 2 (middle of
+    // a 5-col × 4-row grid) — so the photo sits comfortably mid-grid.
+    const dRow = 1;
+    const dCol = 2;
+    dwelledCellIndex = dRow * dGridCols + dCol; // 7
+    // Layout-space cell center.
+    const dCellLayoutX =
+      dContentLeft + dCol * (dCellSize + dGridGap) + dCellSize / 2;
+    const dCellLayoutY =
+      dGridTopY + dRow * (dCellSize + dGridGap) + dCellSize / 2;
+    // Screen position during dwell.
+    dwelledCellScreenX = dCellLayoutX;
+    dwelledCellScreenY = dCellLayoutY - dDwellTarget;
+    dwelledCellSize = dCellSize;
+  }
+  const dwelledCellColor =
+    PROFILE_GRID_COLORS[dwelledCellIndex % PROFILE_GRID_COLORS.length];
   // Dots animate via the same sine-driven pulse as typing #1, but
   // anchored to typing2PopEnd so the wave starts fresh for this
   // bubble.
@@ -11178,7 +11257,7 @@ const Scene3: React.FC<Scene3Props> = ({
           const cloneSize = interpolate(
             flightProgress,
             [0, 1],
-            [igLayout.cellSize, imageBubbleSize],
+            [dwelledCellSize, imageBubbleSize],
           );
           const cloneRadius = interpolate(
             flightProgress,
