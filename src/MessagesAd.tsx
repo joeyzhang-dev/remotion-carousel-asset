@@ -8999,11 +8999,8 @@ const Scene3: React.FC<Scene3Props> = ({
   // those removed we keep sent #1 centered at height/2.
   const rowYOffset = 0;
   const holdStart = morphEnd;
-  // Right-align the bubble like a real iMessage outbound.
-  const rowXOffset = interpolate(morphP, [0, 1], [
-    0,
-    (inputWidth - bubbleWidth) / 2,
-  ]);
+  // (rowXOffset removed — sentBubbleX now interpolates to a directly
+  // right-anchored canvas position, no per-row offset needed.)
   // Bubble shadow lifts as it forms.
   const bubbleShadow = interpolate(morphP, [0, 1], [0, 0.18]);
   // Tail extrude. The tail is animated to look like it physically grows
@@ -10618,18 +10615,26 @@ const Scene3: React.FC<Scene3Props> = ({
     },
   );
 
-  // Anchor for the entire conversation, so receipt indicators and the
-  // received bubble all move with the sent bubble when it scrolls up.
-  // After morph completes the right-anchored bubble can grow leftward;
-  // clamp the row's center X so the (currently rendered) bubble's
-  // LEFT edge never crosses a minimum canvas margin. We use
-  // fieldWidth (the animated current width) so the clamp tracks the
-  // morph — at morphP=0 fieldWidth=inputWidth (no clamp needed),
-  // at morphP=1 fieldWidth=bubbleWidth (clamp may engage).
-  const sentBubbleXNatural = width / 2 + rowXOffset;
-  const sentMinLeftMargin = 20 * scale;
-  const sentBubbleXMin = sentMinLeftMargin + fieldWidth / 2;
-  const sentBubbleX = Math.max(sentBubbleXNatural, sentBubbleXMin);
+  // Anchor for the entire conversation. Prior bubbles use a tighter
+  // chat margin (priorChatMargin) so blue bubbles can right-align
+  // close to the canvas right edge and gray bubbles can left-align
+  // close to the canvas left edge. During the morph, sentBubbleX
+  // interpolates from the input's center (morphP=0) to the
+  // right-anchored bubble position (morphP=1) so the Scene 2 → Scene 3
+  // cut still looks seamless.
+  const priorChatMargin = 20 * scale;
+  // Bubble's right edge target (when fully morphed) sits priorChatMargin
+  // from the canvas right. Account for sendButtonSize because the row
+  // contains [bubble | sendButton] so bubble's right is rowCenter +
+  // (bubbleWidth - sendButtonSize)/2.
+  const sentBubbleXMorphed =
+    width - priorChatMargin - (bubbleWidth - sendButtonSize) / 2;
+  const sentBubbleXInput = width / 2; // input field center (matches Scene 2)
+  const sentBubbleX = interpolate(
+    morphP,
+    [0, 1],
+    [sentBubbleXInput, sentBubbleXMorphed],
+  );
   const sentBubbleY = height * 0.5 + rowYOffset + conversationShift;
   // Right edge of the settled sent bubble, in screen coords. The row
   // (a flex container) is centered at sentBubbleX and contains the
