@@ -8465,7 +8465,7 @@ const Scene1: React.FC<SceneProps> = ({
   // Match Scene 2's chat-row geometry exactly so the handoff is invisible.
   const buttonDiameter = 72 * scale * priorMul;
   const inputHeight = 88 * scale * priorMul;
-  const inputWidth = width * 0.92;
+  const inputWidth = width * 0.78;
   const rowGap = 16 * scale * priorMul;
 
   // One continuous progress drives every morph attribute together.
@@ -8635,9 +8635,9 @@ const TypingField: React.FC<TypingFieldProps> = ({
   // Wider inputWidth and a slightly reduced font multiplier so the
   // long typed phrase ("does anything you tell it to do") fits.
   const priorMul = 1.7;
-  const fontMul = 1.4; // smaller than priorMul so the text fits
+  const fontMul = 1.2; // smaller than priorMul so the text fits
   const inputHeight = 88 * scale * priorMul;
-  const inputWidth = width * 0.92;
+  const inputWidth = width * 0.78;
   const fontSize = 38 * scale * fontMul;
   const padX = 32 * scale * priorMul;
   const buttonSize = 72 * scale * priorMul;
@@ -8862,9 +8862,9 @@ const Scene3: React.FC<Scene3Props> = ({
   // fontMul is smaller than priorMul so the typed phrase fits in the
   // pill at the start of the morph (matches Scene 2's TypingField).
   const priorMul = 1.7;
-  const fontMul = 1.4;
+  const fontMul = 1.2;
   const inputHeight = 88 * scale * priorMul;
-  const inputWidth = width * 0.92;
+  const inputWidth = width * 0.78;
   const fontSize = 38 * scale * fontMul;
   const padX = 32 * scale * priorMul;
 
