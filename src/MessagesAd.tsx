@@ -4467,7 +4467,8 @@ const AppleWalletDesktop: React.FC<
               key={a.l}
               style={{
                 flex: 1,
-                padding: `${14 * u}px 0`,
+                minWidth: 0,
+                padding: `${14 * u}px ${4 * u}px`,
                 borderRadius: 14 * u,
                 background: "rgba(255,255,255,0.06)",
                 backdropFilter: "blur(20px)",
@@ -4480,6 +4481,7 @@ const AppleWalletDesktop: React.FC<
                 flexDirection: "column",
                 alignItems: "center",
                 gap: 4 * u,
+                whiteSpace: "nowrap",
               }}
             >
               <Icon name={a.icon} size={20 * u} color="#fff" strokeWidth={1.8} />
@@ -4489,13 +4491,15 @@ const AppleWalletDesktop: React.FC<
         </div>
       </div>
 
-      {/* Bottom — recent transactions on glass cards */}
+      {/* Bottom-left — recent transactions on glass cards. Sits under
+          the floating credit-card hero, separate from the right column
+          so there's no positional overlap with the chips/pay button. */}
       <div
         style={{
           position: "absolute",
           left: 100 * u,
-          right: 100 * u,
-          bottom: 80 * u,
+          width: 460 * u,
+          bottom: 60 * u,
           color: "#fff",
         }}
       >
@@ -4503,7 +4507,7 @@ const AppleWalletDesktop: React.FC<
           <div style={{ fontSize: 22 * u, fontWeight: 700 }}>Recent activity</div>
           <div style={{ marginLeft: "auto", fontSize: 13 * u, color: "rgba(255,255,255,0.55)" }}>This week ▾</div>
         </div>
-        <div style={{ display: "flex", gap: 14 * u }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 * u }}>
           {([
             { name: "Whole Foods", brand: "WF", bg: "#00674B", color: "#fff", amount: "−$42.18", date: "Today" },
             { name: "Uber", brand: "Uber", bg: "#000000", color: "#fff", amount: "−$14.50", date: "Yesterday", weight: 800 },
@@ -4513,9 +4517,8 @@ const AppleWalletDesktop: React.FC<
             <div
               key={tx.name}
               style={{
-                flex: 1,
-                padding: `${18 * u}px ${20 * u}px`,
-                borderRadius: 18 * u,
+                padding: `${14 * u}px ${16 * u}px`,
+                borderRadius: 16 * u,
                 background: "rgba(255,255,255,0.06)",
                 backdropFilter: "blur(20px)",
                 border: `${1 * u}px solid rgba(255,255,255,0.1)`,
