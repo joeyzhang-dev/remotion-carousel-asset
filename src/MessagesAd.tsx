@@ -7714,34 +7714,34 @@ const GoogleDocsDesktop: React.FC<
           <div
             style={{
               background: "#FFFFFF",
-              padding: `${72 * u}px ${96 * u}px`,
+              padding: `${72 * u}px ${88 * u}px`,
               boxShadow: `0 ${2 * u}px ${10 * u}px rgba(0,0,0,0.08)`,
               border: `${1 * u}px solid ${D_BORDER}`,
-              fontSize: 13 * u,
+              fontSize: 16 * u,
               color: D_TEXT,
-              lineHeight: 1.6,
+              lineHeight: 1.7,
               minHeight: 1056 * u,
               fontFamily: "'Times New Roman', 'Georgia', serif",
             }}
           >
             {/* Title */}
-            <div style={{ fontSize: 22 * u, fontWeight: 700, color: D_TEXT, textAlign: "center", marginBottom: 6 * u, lineHeight: 1.3 }}>
+            <div style={{ fontSize: 26 * u, fontWeight: 700, color: D_TEXT, textAlign: "center", marginBottom: 8 * u, lineHeight: 1.3 }}>
               {docTitle}
             </div>
-            <div style={{ fontSize: 13 * u, fontStyle: "italic", color: D_LIGHT, textAlign: "center", marginBottom: 28 * u }}>
+            <div style={{ fontSize: 16 * u, fontStyle: "italic", color: D_LIGHT, textAlign: "center", marginBottom: 32 * u }}>
               {docSubtitle}
             </div>
-            {/* First half of paragraphs — typed live (para 0 always full) */}
-            {visibleParagraphs.slice(0, Math.ceil(paragraphs.length / 2)).map((vp, i) => (
+            {/* Page 1 — first 6 of 9 paragraphs, plus title block. */}
+            {visibleParagraphs.slice(0, 6).map((vp, i) => (
               <p
                 key={i}
                 style={{
                   marginTop: 0,
-                  marginBottom: 12 * u,
-                  textIndent: 28 * u,
+                  marginBottom: 14 * u,
+                  textIndent: 32 * u,
                   color: D_TEXT,
-                  fontSize: 13 * u,
-                  lineHeight: 1.65,
+                  fontSize: 16 * u,
+                  lineHeight: 1.7,
                   textAlign: "justify",
                 }}
               >
@@ -7766,27 +7766,27 @@ const GoogleDocsDesktop: React.FC<
           <div
             style={{
               background: "#FFFFFF",
-              padding: `${72 * u}px ${96 * u}px`,
+              padding: `${72 * u}px ${88 * u}px`,
               boxShadow: `0 ${2 * u}px ${10 * u}px rgba(0,0,0,0.08)`,
               border: `${1 * u}px solid ${D_BORDER}`,
-              fontSize: 13 * u,
+              fontSize: 16 * u,
               color: D_TEXT,
-              lineHeight: 1.6,
+              lineHeight: 1.7,
               minHeight: 1056 * u,
               fontFamily: "'Times New Roman', 'Georgia', serif",
             }}
           >
-            {/* Second half of paragraphs — typed live */}
-            {visibleParagraphs.slice(Math.ceil(paragraphs.length / 2)).map((vp, i) => (
+            {/* Page 2 — remaining 3 paragraphs. */}
+            {visibleParagraphs.slice(6).map((vp, i) => (
               <p
                 key={i}
                 style={{
                   marginTop: 0,
-                  marginBottom: 12 * u,
-                  textIndent: 28 * u,
+                  marginBottom: 14 * u,
+                  textIndent: 32 * u,
                   color: D_TEXT,
-                  fontSize: 13 * u,
-                  lineHeight: 1.65,
+                  fontSize: 16 * u,
+                  lineHeight: 1.7,
                   textAlign: "justify",
                 }}
               >
