@@ -8456,12 +8456,18 @@ const Scene1: React.FC<SceneProps> = ({
     easing: Easing.out(Easing.cubic),
   });
 
-  const logoBase = 280 * scale;
+  // Master scale-up: every chat-row element (input pill, button, logo)
+  // gets bumped by `priorMul` so Scene 1 / Scene 2 / pre-sent#3 elements
+  // all read 70% bigger. inputWidth ratio is widened (0.6864 → 0.85)
+  // because the bigger fontSize would otherwise overflow the original
+  // narrower pill.
+  const priorMul = 1.7;
+  const logoBase = 280 * scale * priorMul;
   // Match Scene 2's chat-row geometry exactly so the handoff is invisible.
-  const buttonDiameter = 72 * scale;
-  const inputHeight = 88 * scale;
-  const inputWidth = width * 0.6864;
-  const rowGap = 16 * scale;
+  const buttonDiameter = 72 * scale * priorMul;
+  const inputHeight = 88 * scale * priorMul;
+  const inputWidth = width * 0.85;
+  const rowGap = 16 * scale * priorMul;
 
   // One continuous progress drives every morph attribute together.
   const morphP = interpolate(frame, [morphStart, morphEnd], [0, 1], {
@@ -8626,10 +8632,14 @@ const TypingField: React.FC<TypingFieldProps> = ({
   visible,
   showCursor,
 }) => {
-  const inputHeight = 88 * scale;
-  const inputWidth = width * 0.6864;
-  const fontSize = 38 * scale;
-  const padX = 32 * scale;
+  // Same priorMul applied here as Scene 1 / Scene 3 morph baseline.
+  // Wider inputWidth so the larger fontSize fits.
+  const priorMul = 1.7;
+  const inputHeight = 88 * scale * priorMul;
+  const inputWidth = width * 0.85;
+  const fontSize = 38 * scale * priorMul;
+  const padX = 32 * scale * priorMul;
+  const buttonSize = 72 * scale * priorMul;
 
   const blinkPeriod = sec(0.5, fps);
   const cursorVisible = showCursor
@@ -8645,7 +8655,7 @@ const TypingField: React.FC<TypingFieldProps> = ({
         transform: "translate(-50%, -50%)",
         display: "flex",
         alignItems: "center",
-        gap: 16 * scale,
+        gap: 16 * scale * priorMul,
       }}
     >
       <div
@@ -8662,7 +8672,7 @@ const TypingField: React.FC<TypingFieldProps> = ({
           fontSize,
           color: "#1C1C1E",
           fontWeight: 500,
-          letterSpacing: -0.3 * scale,
+          letterSpacing: -0.3 * scale * priorMul,
           overflow: "hidden",
           whiteSpace: "nowrap",
         }}
@@ -8671,9 +8681,9 @@ const TypingField: React.FC<TypingFieldProps> = ({
         <span
           style={{
             display: "inline-block",
-            width: 2 * scale,
+            width: 2 * scale * priorMul,
             height: fontSize * 1.05,
-            marginLeft: 4 * scale,
+            marginLeft: 4 * scale * priorMul,
             background: IMESSAGE_BLUE,
             opacity: cursorVisible ? 1 : 0,
             transform: "translateY(2px)",
@@ -8682,20 +8692,20 @@ const TypingField: React.FC<TypingFieldProps> = ({
       </div>
       <div
         style={{
-          width: 72 * scale,
-          height: 72 * scale,
-          borderRadius: 36 * scale,
+          width: buttonSize,
+          height: buttonSize,
+          borderRadius: buttonSize / 2,
           background: IMESSAGE_BLUE,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          boxShadow: `0 ${4 * scale}px ${16 * scale}px rgba(0,122,255,0.35)`,
+          boxShadow: `0 ${4 * scale * priorMul}px ${16 * scale * priorMul}px rgba(0,122,255,0.35)`,
           flexShrink: 0,
         }}
       >
         <svg
-          width={72 * scale * 0.55}
-          height={72 * scale * 0.55}
+          width={buttonSize * 0.55}
+          height={buttonSize * 0.55}
           viewBox="0 0 24 24"
           fill="none"
         >
@@ -8842,10 +8852,17 @@ const Scene3: React.FC<Scene3Props> = ({
         );
   const visible = phrase.slice(0, Math.max(0, visibleCount));
 
-  const inputHeight = 88 * scale;
-  const inputWidth = width * 0.6864;
-  const fontSize = 38 * scale;
-  const padX = 32 * scale;
+  // Scene 3 morph baseline matches Scene 2's TypingField geometry so
+  // the Scene 2→Scene 3 hard-cut is invisible. priorMul = 1.7 also
+  // bakes 70%-bigger sizing into all bubbles derived from these
+  // constants (sent #1, image bubble, received #2/#3, typing dots #2).
+  // Sent #3 ("bet, order some roses") overrides these with the
+  // un-multiplied 1x base — see sent3FontSize/PadX/Height below.
+  const priorMul = 1.7;
+  const inputHeight = 88 * scale * priorMul;
+  const inputWidth = width * 0.85;
+  const fontSize = 38 * scale * priorMul;
+  const padX = 32 * scale * priorMul;
 
   const blinkPeriod = sec(0.5, fps);
   const cursorVisible =
@@ -8885,7 +8902,7 @@ const Scene3: React.FC<Scene3Props> = ({
     buttonScale = buttonScale + (pulseSpring - 1) * 0.02;
   }
 
-  const sendButtonSize = 72 * scale;
+  const sendButtonSize = 72 * scale * priorMul;
 
   // ── Bubble morph: the input + button collapse and graphic-match into a
   //    sent iMessage bubble. We measure the text width with a hidden ruler
@@ -8925,9 +8942,6 @@ const Scene3: React.FC<Scene3Props> = ({
   );
   // Bubble height shrinks slightly too, for a more natural chat-bubble shape.
   const bubbleHeight = inputHeight * 0.85 * bubbleSizeMul;
-  // Visual scale applied ONLY to bubbles that appear before sent #3
-  // (the closing punchline). Sent #3 stays at the base size.
-  const priorMul = 2.0;
   const animatedHeight = interpolate(
     morphP,
     [0, 1],
@@ -9136,7 +9150,7 @@ const Scene3: React.FC<Scene3Props> = ({
   // changes — closer to the height of the receipt indicator + a
   // line-height of breathing room — so both bubbles feel like
   // distinct moments in the conversation rather than touching.
-  const receivedGap = 36 * scale;
+  const receivedGap = 36 * scale * priorMul;
 
   // ── Sent bubble #2 timing (the second blue bubble, after the gray
   //    reply) ──────────────────────────────────────────────────────
@@ -9683,9 +9697,13 @@ const Scene3: React.FC<Scene3Props> = ({
   const sent3PhraseEdited2 = "pay off my credit card";
   const sent3PhraseEdited3 = "respond to all my emails";
   const sent3PhraseEdited4 = "do my homework plz";
-  const sent3FontSize = bubbleFontSize;
-  const sent3PadX = bubblePadX;
-  const sent3Height = bubbleHeight;
+  // Sent #3 ("bet, order some roses" / closing punchline) renders at
+  // the original 1× base — NOT scaled up by priorMul like the prior
+  // bubbles. This creates visual hierarchy: prior bubbles are big and
+  // attention-grabbing, sent #3 is the smaller, focused punchline.
+  const sent3FontSize = bubbleFontSize / priorMul;
+  const sent3PadX = bubblePadX / priorMul;
+  const sent3Height = bubbleHeight / priorMul;
   const sent3CornerRadius = sent3Height * 0.42;
   const sent3TailExt = sent3CornerRadius * 0.5;
   const sent3TailHook = sent3CornerRadius * 0.2;
@@ -10466,7 +10484,7 @@ const Scene3: React.FC<Scene3Props> = ({
     bubbleHeight / 2 + receivedGap;
   const imageBubbleYOffset = imageBubbleTopAnchorY + imageBubbleSize / 2;
   // Same-sender gap between consecutive gray bubbles (image → text replies).
-  const sameSenderGap = 8 * scale;
+  const sameSenderGap = 8 * scale * priorMul;
   // Typing #2 has TWO row positions:
   //   - Before the image arrives, it pulses at the image's row
   //     (`typing2TopAnchorBefore` — centered in the image slot).
@@ -10875,7 +10893,7 @@ const Scene3: React.FC<Scene3Props> = ({
           position: "absolute",
           left: sentBubbleX,
           top: sentBubbleY,
-          transform: `translate(-50%, -50%) scale(${scaleEnv * bubbleScale * priorMul})`,
+          transform: `translate(-50%, -50%) scale(${scaleEnv * bubbleScale})`,
           display: "flex",
           alignItems: "center",
           gap: 16 * scale * (1 - morphP),
@@ -11165,9 +11183,14 @@ const Scene3: React.FC<Scene3Props> = ({
         <div
           style={{
             position: "absolute",
+            // Anchor to the bubble's TOP-LEFT corner (chatEdgeMargin
+            // from the screen left, typing2TopAnchorY from
+            // sentBubbleY). Since we use translate(-50%, -50%) the
+            // div is positioned by its center, so we add half the
+            // animated dimensions to convert from top-left to center.
             left: chatEdgeMargin + typing2AnimatedW / 2,
             top: sentBubbleY + typing2YOffset,
-            transform: `translate(-50%, -50%) scale(${typing2Scale * priorMul})`,
+            transform: `translate(-50%, -50%) scale(${typing2Scale})`,
             opacity: typing2Opacity * priorBubblesOpacity,
           }}
         >
@@ -11277,7 +11300,7 @@ const Scene3: React.FC<Scene3Props> = ({
             position: "absolute",
             left: chatEdgeMargin + received3Width / 2,
             top: sentBubbleY + received3YOffset,
-            transform: `translate(-50%, -50%) scale(${received3Scale * priorMul})`,
+            transform: `translate(-50%, -50%) scale(${received3Scale})`,
             opacity: received3Opacity * priorBubblesOpacity,
           }}
         >
@@ -11402,14 +11425,8 @@ const Scene3: React.FC<Scene3Props> = ({
             [0, 1],
             [0, imageBubbleCornerRadius],
           );
-          // During tap, mirror the cell's tap-pulse scale. After the
-          // flight lands, ramp up to priorMul so the settled image
-          // bubble matches the size of the other prior bubbles.
+          // During tap, mirror the cell's tap-pulse scale.
           const tapScale = local < igFlightStart ? dwelledCellTapScale : 1;
-          const settledMul = interpolate(flightProgress, [0.7, 1.0], [1, priorMul], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          });
           return (
             <div
               style={{
@@ -11421,7 +11438,7 @@ const Scene3: React.FC<Scene3Props> = ({
                 borderRadius: cloneRadius,
                 background: dwelledCellColor,
                 overflow: "hidden",
-                transform: `translate(-50%, -50%) scale(${tapScale * settledMul})`,
+                transform: `translate(-50%, -50%) scale(${tapScale})`,
                 opacity: dwelledCellHighlightOpacity * priorBubblesOpacity,
                 boxShadow:
                   flightProgress > 0.5
@@ -11507,7 +11524,7 @@ const Scene3: React.FC<Scene3Props> = ({
               fontFamily: FONT_STACK,
               pointerEvents: "none",
               opacity: headerOpacity,
-              transform: "scale(2)",
+              transform: "scale(1.7)",
               transformOrigin: "top center",
             }}
           >
