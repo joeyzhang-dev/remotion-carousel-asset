@@ -1853,9 +1853,9 @@ const AmazonProductDesktop: React.FC<
           }}
         >
           {/* LEFT: gallery (with thumb rail beside main image) */}
-          <div style={{ width: 380 * u, display: "flex", gap: 10 * u }}>
+          <div style={{ width: 380 * u, display: "flex", gap: 10 * u, flexShrink: 0 }}>
             {/* Thumbnail rail */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 * u, width: 50 * u }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 * u, width: 50 * u, flexShrink: 0 }}>
               {[0, 1, 2, 3, 4, 5].map((i) => (
                 <div
                   key={i}
@@ -1869,22 +1869,24 @@ const AmazonProductDesktop: React.FC<
                 />
               ))}
             </div>
-            {/* Main image */}
+            {/* Main image — fixed square box, image clipped inside */}
             <div
               style={{
-                flex: 1,
-                aspectRatio: "1",
+                width: 320 * u,
+                height: 320 * u,
                 background: "#F8F8F8",
                 borderRadius: 4 * u,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 border: `${1 * u}px solid ${BORDER}`,
+                overflow: "hidden",
+                flexShrink: 0,
               }}
             >
               <Img
                 src={staticFile("roses-bouquet.jpg")}
-                style={{ width: "92%", height: "92%", objectFit: "contain" }}
+                style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain", display: "block" }}
               />
             </div>
           </div>
