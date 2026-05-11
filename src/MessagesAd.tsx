@@ -8458,15 +8458,14 @@ const Scene1: React.FC<SceneProps> = ({
 
   // Master scale-up: every chat-row element (input pill, button, logo)
   // gets bumped by `priorMul` so Scene 1 / Scene 2 / pre-sent#3 elements
-  // all read 70% bigger. inputWidth ratio is widened (0.6864 → 0.85)
-  // because the bigger fontSize would otherwise overflow the original
-  // narrower pill.
+  // all read 70% bigger. inputWidth widened to 0.92 so the bigger
+  // pill + send button row fits in the canvas with margin.
   const priorMul = 1.7;
   const logoBase = 280 * scale * priorMul;
   // Match Scene 2's chat-row geometry exactly so the handoff is invisible.
   const buttonDiameter = 72 * scale * priorMul;
   const inputHeight = 88 * scale * priorMul;
-  const inputWidth = width * 0.85;
+  const inputWidth = width * 0.92;
   const rowGap = 16 * scale * priorMul;
 
   // One continuous progress drives every morph attribute together.
@@ -8633,11 +8632,13 @@ const TypingField: React.FC<TypingFieldProps> = ({
   showCursor,
 }) => {
   // Same priorMul applied here as Scene 1 / Scene 3 morph baseline.
-  // Wider inputWidth so the larger fontSize fits.
+  // Wider inputWidth and a slightly reduced font multiplier so the
+  // long typed phrase ("does anything you tell it to do") fits.
   const priorMul = 1.7;
+  const fontMul = 1.4; // smaller than priorMul so the text fits
   const inputHeight = 88 * scale * priorMul;
-  const inputWidth = width * 0.85;
-  const fontSize = 38 * scale * priorMul;
+  const inputWidth = width * 0.92;
+  const fontSize = 38 * scale * fontMul;
   const padX = 32 * scale * priorMul;
   const buttonSize = 72 * scale * priorMul;
 
@@ -8858,10 +8859,13 @@ const Scene3: React.FC<Scene3Props> = ({
   // constants (sent #1, image bubble, received #2/#3, typing dots #2).
   // Sent #3 ("bet, order some roses") overrides these with the
   // un-multiplied 1x base — see sent3FontSize/PadX/Height below.
+  // fontMul is smaller than priorMul so the typed phrase fits in the
+  // pill at the start of the morph (matches Scene 2's TypingField).
   const priorMul = 1.7;
+  const fontMul = 1.4;
   const inputHeight = 88 * scale * priorMul;
-  const inputWidth = width * 0.85;
-  const fontSize = 38 * scale * priorMul;
+  const inputWidth = width * 0.92;
+  const fontSize = 38 * scale * fontMul;
   const padX = 32 * scale * priorMul;
 
   const blinkPeriod = sec(0.5, fps);
@@ -8917,22 +8921,33 @@ const Scene3: React.FC<Scene3Props> = ({
     easing: Easing.inOut(Easing.cubic),
   });
 
-  // Bubble width is sized to fit its phrase using `measureTextEm` —
-  // a per-character width lookup tuned against SF Pro Display @ 500.
-  // No extra safety pad: with text centered inside the bubble, any
-  // estimation slack would manifest as visible whitespace asymmetry
-  // (specifically extra room on the right). Trust the lookup; if a
-  // glyph overflows by 1-2px the deviation is invisible to the eye.
-  // Master bubble size multiplier. 0.78 was the pre-bump baseline; we
-  // upsize every bubble (font, padding, height) so the chat reads
-  // bigger on screen. 1.15 * 1.25 = 1.4375 (15% then another 25%).
+  // Bubble dimensions relative to the input field. Combined factor =
+  // priorMul × bubbleSizeMul × 0.78 ≈ 1.91× of base fontSize. The
+  // bubble width is then capped so it can't overflow the canvas —
+  // if the LONGEST bubble phrase is too long at 1.91× font, we
+  // shrink the font down for ALL bubbles to keep their text sizes
+  // consistent (a shared `widthFitFactor`).
   const bubbleSizeMul = 1.4375;
-  const bubbleFontShrink = 0.78 * bubbleSizeMul;
-  const bubbleFontSize = fontSize * bubbleFontShrink;
+  const bubbleHorizontalMargin = 60 * scale;
+  const maxBubbleWidth = width - bubbleHorizontalMargin;
+  const bubblePadX = 22 * scale * bubbleSizeMul * priorMul;
+  const naiveFontSize = fontSize * 0.78 * bubbleSizeMul;
+  // Find the longest naive bubble width across all bubble phrases so
+  // every bubble shrinks together if needed.
+  const allBubblePhrases = [
+    phrase, // sent #1
+    "she posted italian food before", // received #2 (longest gray)
+    "reserving table 7pm friday", // received #3
+  ];
+  const longestNaiveWidth = allBubblePhrases.reduce((max, p) => {
+    const w = measureTextEm(p) * naiveFontSize + bubblePadX * 2;
+    return Math.max(max, w);
+  }, 0);
+  const widthFitFactor = longestNaiveWidth > maxBubbleWidth
+    ? maxBubbleWidth / longestNaiveWidth
+    : 1;
+  const bubbleFontSize = naiveFontSize * widthFitFactor;
   const bubbleTextWidth = measureTextEm(phrase) * bubbleFontSize;
-  // Tighter horizontal padding (was 32) so the bubble snugs around
-  // the text the way real iMessage bubbles do.
-  const bubblePadX = 22 * scale * bubbleSizeMul;
   const bubbleWidth = bubbleTextWidth + bubblePadX * 2;
   // Animated font size during morph — text scales down as the bubble forms.
   const animatedFontSize = interpolate(
@@ -9657,10 +9672,10 @@ const Scene3: React.FC<Scene3Props> = ({
   // bubble — just wide enough to fit three dots with comfortable
   // padding. Width morphs to receivedWidth across the typing→message
   // transition.
-  const dotRadius = 8 * scale;
-  const dotGap = 12 * scale;
+  const dotRadius = 8 * scale * priorMul;
+  const dotGap = 12 * scale * priorMul;
   const typingInteriorW = dotRadius * 6 + dotGap * 2; // three dots + two gaps
-  const typingPadX = 26 * scale;
+  const typingPadX = 26 * scale * priorMul;
   const typingBubbleWidth = typingInteriorW + typingPadX * 2;
   // Typing indicator #2 reuses the same pill width as typing #1
   // (`typingBubbleWidth`) directly — the longer-message variant
